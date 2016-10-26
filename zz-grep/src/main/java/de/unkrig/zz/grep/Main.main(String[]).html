@@ -1,0 +1,153 @@
+<html>
+  <body>
+<h2>Usage:</h2>
+<dl>
+  <dt><code>zzgrep</code> [ <var>option</var> ... ] [ <code>-</code> ] <var>regex</var> <var>file-or-dir</var> ...</dt>
+  <dd>
+    Reads <var>file</var> or all files under <var>dir</var> and prints all lines which contain matches of the
+    <var>regex</var>.
+  </dd>
+  <dt><code>zzgrep</code> [ <var>option</var> ... ] <var>regex</var></dt>
+  <dd>
+    Reads STDIN and prints all lines which contain matches of the <var>regex</var>.
+  </dd>
+</dl>
+
+<h2>Options:</h2>
+
+<dl>
+  <dt><code>--help</code></dt>
+  <dd>Print this text and terminate.</dd>
+
+</dl>
+
+<h3>File Selection:</h3>
+<dl>
+  <dt><code>--dont-sort-directory-members</code></dt>
+  <dd>By default directory members are sorted lexicographically in order to achieve deterministic results.</dd>
+  <dt><code>--look-into</code> <var>glob</var></dt>
+  <dd>Look into compressed and archive contents if "<var>format</var>:<var>path</var>" matches the glob.
+The default is to look into any recognised archive or compressed contents.
+<br />
+Supported archive formats in this runtime configuration are:
+<br />
+<code>${archive.formats}</code>
+<br />
+Supported compression formats in this runtime configuration are:
+<br />
+<code>${compression.formats}</code></dd>
+  <dt><code>--exclude</code> <var>regex</var></dt>
+  <dt><code>--include</code> <var>regex</var></dt>
+  <dd>Excludes files and archive entries from the search iff the file's / archive entry's path matches the
+<var>regex</var>.
+<p>
+  Any number of <code>--exclude</code> and <code>--include</code> options can be given, and later take precedence over
+  the earlier.
+</p>
+<p>
+  The default is that <em>all</em> files and archive entries are included; thus you would always begin with a
+  <code>--exclude</code> option.
+</p></dd>
+  <dt><code>--zip</code></dt>
+  <dt><code>--zz</code></dt>
+  <dt><code>--nested-zip</code></dt>
+  <dt><code>--gzip</code></dt>
+  <dd><i><b>Deprecated</b> - Use <code>--look-into</code> instead.</i></dd>
+
+</dl>
+
+<h3>Contents Processing:</h3>
+<dl>
+  <dt><code>--encoding</code> <var>charset</var></dt>
+  <dd>Contents encoding, default is "${file.encoding}".</dd>
+  <dt><code>-i</code></dt>
+  <dt><code>--ignore-case</code></dt>
+  <dd>Ignore case distinctions.</dd>
+  <dt><code>-v</code></dt>
+  <dt><code>--inverted</code></dt>
+  <dd>Select non-matching lines.</dd>
+  <dt><code>--da</code></dt>
+  <dt><code>--disassemble-class-files</code></dt>
+  <dd>Disassemble .class files on-the-fly.</dd>
+  <dt><code>--da-no-lines</code></dt>
+  <dt><code>--disassemble-class-files-but-hide-lines</code></dt>
+  <dd>Don't print line numbers in the disassembly.</dd>
+  <dt><code>--da-no-vars</code></dt>
+  <dt><code>--disassemble-class-files-but-hide-vars</code></dt>
+  <dd>Don't print variable names in the disassembly.</dd>
+
+</dl>
+
+<h3>Output Generation:</h3>
+<dl>
+  <dt><code>-l</code></dt>
+  <dt><code>--list</code></dt>
+  <dd>Print only names of files containing matches.</dd>
+  <dt><code>-q</code></dt>
+  <dt><code>--quiet</code></dt>
+  <dd>Suppress all normal output.</dd>
+  <dt><code>--nowarn</code></dt>
+  <dd>Suppress all messages except errors.</dd>
+  <dt><code>--verbose</code></dt>
+  <dd>Print verbose messages.</dd>
+  <dt><code>--debug</code></dt>
+  <dd>Print verbose and debug messages.</dd>
+  <dt><code>--log</code> <var>level</var>:<var>logger</var>:<var>handler</var>:<var>formatter</var>:<var>format</var></dt>
+  <dd>Add logging at level <code>FINE</code> on logger "<code>de.unkrig</code>" to STDERR using the <code>FormatFormatter</code>
+and <code>SIMPLE</code> format, or the given arguments (which are all optional).</dd>
+
+</dl>
+
+<h3>Example <var>glob</var>s:</h3>
+<dl>
+  <dt><code>dir/file</code></dt>
+  <dd>
+    File "<code>file</code>" in directory "<code>dir</code>"
+  </dd>
+  <dt><code>file.gz%</code></dt>
+  <dd>
+    Compressed file "<code>file.gz</code>"
+  </dd>
+  <dt><code>file.zip!dir/file</code></dt>
+  <dd>
+    Entry "<code>dir/file</code>" in archive file "<code>dir/file.zip</code>"
+  </dd>
+  <dt><code>file.tar.gz%!dir/file</code></dt>
+  <dd>
+    Entry "<code>dir/file</code>" in the compressed archive file "<code>file.tar.gz</code>"
+  </dd>
+  <dt><code>&#42;/x</code></dt>
+  <dd>
+    File "<code>x</code>" in an immediate subdirectory
+  </dd>
+  <dt><code>*&#42;/x</code></dt>
+  <dd>
+    File "<code>x</code>" in any subdirectory
+  </dd>
+  <dt><code>**&#42;/x</code></dt>
+  <dd>
+    File "<code>x</code>" in any subdirectory, or any entry "<code>*&#42;/x</code>" in any archive file in any
+    subdirectory
+  </dd>
+  <dt><code>a,dir/file.7z!dir/b</code></dt>
+  <dd>
+    File "<code>a</code>" and entry "<code>dir/b</code>" in archive file "<code>dir/file.7z</code>"
+  </dd>
+  <dt><code>~*.c</code></dt>
+  <dd>
+    Files that don't end with "<code>.c</code>"
+  </dd>
+  <dt><code>~*.c~*.h</code></dt>
+  <dd>
+    Files that don't end with "<code>.c</code>" or "<code>.h</code>"
+  </dd>
+  <dt><code>~*.c~*.h,foo.c</code></dt>
+  <dd>
+    "<code>foo.c</code>" plus all files that don't end with "<code>.c</code>" or "<code>.h</code>"
+  </dd>
+</dl>
+<p>
+  Exit status is 0 if any line was selected, 1 otherwise; if any error occurs, the exit status is 2.
+</p>
+  </body>
+</html>
