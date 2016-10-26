@@ -1,0 +1,34 @@
+<project>
+
+	<taskdef name="zzfind" classname="de.unkrig.zz.find.AntTask" />
+
+	<componentdef name="and"    classname="de.unkrig.zz.find.AntTask$AndElement"   />
+	<componentdef name="false"  classname="de.unkrig.zz.find.AntTask$FalseElement" />
+	<componentdef name="name"   classname="de.unkrig.zz.find.AntTask$NameElement"  />
+	<componentdef name="or"     classname="de.unkrig.zz.find.AntTask$OrElement"    />
+	<componentdef name="print"  classname="de.unkrig.zz.find.AntTask$PrintElement" />
+	<componentdef name="true"   classname="de.unkrig.zz.find.AntTask$TrueElement"  />
+
+	<target name="find1">
+		<zzfind lookInto="zip:**">
+			<path path="files" />
+			<name value="**file1" />
+			<print />
+		</zzfind>
+	</target>
+
+	<target name="find2">
+		<zzfind lookInto="zip:***">
+			<fileset dir="files" />
+			<name value="**file1" />
+			<and>
+				<true />
+				<or>
+					<false />
+					<true />
+				</or>
+			</and>
+			<print />
+		</zzfind>
+	</target>
+</project>

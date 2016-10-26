@@ -1,0 +1,277 @@
+A command line utility to find files, directories and archive entries by
+various criteria, and optionally execute some actions.
+
+Usage
+=====
+
+  zzfind [ <option> ] ... <file-or-dir> ... [ <expression> ]
+      Apply "<expression>" to "<file-or-dir> ..." and all nested directory
+      members, archive entries and compressed files.
+File name "-" stands for STDIN.
+
+Options
+=======
+
+  --help
+      Print this text and terminate.
+  --look-into <format-glob>:<path-glob>
+      Look into compressed and archive contents if the format and the path
+      match the globs. The default is to look into any recognised archive or
+      compressed contents.
+      Supported archive formats in this runtime configuration are:
+      ${archive.formats}
+      Supported compression formats in this runtime configuration are:
+      ${compression.formats}
+  --depth
+      Process each directory's contents before the directory itself, and each
+      archive's entries before the archive itself, and each compressed contents
+      before the enclosing file or archive entry.
+  --min-depth <levels>
+      Do not apply any tests or actions at levels less than <levels>. E.g. "1"
+      means "process all files except the top level files and directories".
+  --max-depth <levels>
+      Descend at most <levels> of directories below the top level files and
+      directories. "0" means "only apply the tests and actions to the top level
+      files and directories".
+      If in doubt, try:
+      zzfind ... -print -echo @{depth}
+  --nowarn
+      Suppress all messages except errors.
+  --quiet
+      Suppress normal output.
+  --verbose
+      Print verbose messages.
+  --debug
+      Print verbose and debug messages.
+  --log <level>:<logger>:<handler>:<formatter>:<format>
+      Add logging at level FINE on logger "de.unkrig" to STDERR using the
+      "FormatFormatter" and "SIMPLE" format, or the given arguments, which are
+      all optional.
+  -zip
+  -zz
+  -nested-zip
+  -z
+      (These are no longer supported; use "--look-into" instead.)
+
+Expressions
+===========
+
+<Expression>s are either tests or actions. Both evaluate to a boolean value.
+
+Tests
+-----
+
+  -name <glob>
+      Name matches "<glob>" (see below).
+  -path <glob>
+      The full path (e.g. "dir/file.zip!dir/file.zip!dir/file" or "dir/file")
+      matches "<glob>" (see below).
+  -type <glob>
+      Whether the type matches the <glob>. See the "type" property, described
+      below. If you are unsure about types, run zzfind with -echo "@{type}
+      @{path}" first.
+  -readable
+      Whether this file is readable.
+  -writable
+      Whether this file is writable.
+  -executable
+      Whether this file is executable.
+  -size <N>
+  -size -<N>
+  -size +<N>
+      Whether the size is exactly/less than/more than <N> (e.g. "100", "-1K",
+      "+10M").
+  -mtime <N>
+  -mtime +<N>
+  -mtime -<N>
+      Whether this file/archive entry was last modified (exactly/more than/less
+      than) <N> days ago (N=0: 0...24h, N=1: 24...48h, ...).
+  -mmin <N>
+  -mmin +<N>
+  -mmin -<N>
+      Whether this file/archive entry was last modified (exactly/more than/less
+      than) <N> minutes ago (N=0: 0...59sec, N=1: 60...119sec, ...).
+  <exp1> -a <exp2>
+  <exp1> <exp2>
+      Whether both <exp1> and <exp2> are true. <exp2> is not evaluated if
+      <exp1> is false.
+  <exp1> -o <exp2>
+      Whether <exp1> or <exp2> is true. <exp2> is not evaluated if <exp1> is
+      true.
+  <exp1> , <exp2>
+      Evaluates both expressions and returns the result of <exp2>.
+  -not <exp>
+  ! <exp>
+      Whether <exp> is false.
+  ( <exp> )
+      Whether <exp> is true.
+
+Actions
+-------
+
+  -print
+      Print file path and return true.
+  -echo <message>
+      Print the <message> and return true. All occurrences of "@{<property-
+      name>}" in the <message> are replaced with the value of the property. For
+      the list of supported properties, see section "Properties of files and
+      archive entries", below.
+  -ls
+      Print file type, readability, writability, executability, size,
+      modification time and path, and return true.
+  -exec <word>... ;
+      Execute "<word>..." as an external command; "{}" is replaced with the
+      current file's path (which may contain "!" and would then NOT denote a
+      physical file in the file system).
+  -pipe <word>... ;
+      Copy the file contents to the standard input of an external command
+      "<word>..."; "{}" is replaced with the current file's path (which may
+      contain "!" and would then NOT denote a physical file in the file
+      system).
+  -cat
+      Print file contents and return true.
+  -copy <tofile>
+      Copy file contents to the named file. All occurrences of "@{<property-
+      name>}" in the <tofile> are replaced with the value of the property. For
+      the list of supported properties, see section "Properties of files and
+      archive entries", below.
+  -disassemble [ -hideLines ] [ -hideVars ]
+      Disassembles a Java class file.
+  -digest <algorithm>
+      Calculate a "message digest" of the contents, print it and return true.
+      Algorithms available in this environment are: ${digest.providers}
+  -checksum CRC32|ADLER32
+      Calculate a checksum of the contents, print it and return true.
+  -true
+      Return true.
+  -false
+      Return false.
+If no action is given, then "-print" is implicitly added.
+
+Properties of files and archive entries
+---------------------------------------
+
+Various tests and actions (e.g. "-echo") have access to a set of "properties"
+of the current file or archive entry.
+  "name":
+      The last component of the path.
+  "path":
+      The path to the resources as it was found. "!" indicates an archive, "%"
+      a compressed file.
+  "depth":
+      Zero for the files/directories specified on the command line, +1 for
+      files/directories in a subdirectory, +1 for compressed content, and +1
+      for the entries of archive files.
+  "type":
+      The "type" of the current subject; the actual types are:
+        directory
+            A directory
+        file
+            A (non-archive, not-compressed) file
+        archive-file
+            An archive file
+        compressed-file
+            A compressed file
+        archive
+            A nested archive
+        normal-contents
+            Normal (non-archive, not-compressed) content
+        directory-entry
+            A "directory entry" in an archive.
+  "absolutePath":
+      The absolute path of the file or directory, typically by resolving
+      relative paths against the current user directory. For all other types:
+      That of the enclosing file.
+  "canonicalPath":
+      The absolute path of the file or directory, typically by resolving
+      relative paths against the current user directory and resolving all "."
+      and ".." infixes. For all other types: That of the enclosing file.
+  "lastModifiedDate":
+      The date and time of the last modification of the file, directory or
+      archive entry, in the format "dow mon dd hh:mm:ss zzz yyyy".
+  "size":
+      The size, in bytes, for types "archive", "archive-file", "compressed-
+      contents", "compressed-file", "file" or "normal-contents", -1 for type
+      "directory-entry", and 0 for type "directory".
+  "isDirectory":
+      Whether the type is "directory" or "directory-entry".
+  "isFile":
+      Whether the type is "archive", "archive-file", "compressed-contents",
+      "compressed-file", "directory-entry", "file" or "normal-contents".
+  "isHidden":
+      Whether the file or directory is "hidden" in the file system; false for
+      all other types.
+  "isReadable":
+      Whether the file or directory is "readable" in the file system; false for
+      all other types.
+  "isWritable":
+      Whether the file or directory is "writable" in the file system; false for
+      all other types.
+  "isExecutable":
+      Whether the file or directory is "executable" in the file system; false
+      for all other types.
+  "archiveFormat":
+      For types "archive" and "archive-file": The format.
+      For types "normal-contents", "compressed-contents" and "directory-entry":
+      The format of the immediately enclosing archive.
+      For all other types: Empty.
+  "compressionFormat":
+      For types "compressed-contents" and "compressed-file": The format.
+      For type "normal-contents": The format of the immediately enclosing
+      compressed contents.
+      For all other types: Empty.
+Some archive entries have additional properties:
+  Archive format "ar":
+      "groupId", "mode", "userId"
+  Archive format "arj":
+      "hostOs", "method", "mode", "unixMode", "isHostOsUnix"
+  Archive format "cpio":
+      "alignmentBoundary", "chksum", "dataPadCount", "device", "format", "gID",
+      "headerPadCount", "headerSize", "inode", "mode", "numberOfLinks",
+      "remoteDevice", "uID", "isBlockDevice", "isNetwork", "isPipe",
+      "isRegularFile", "isSocket", "isSymbolicLink"
+  Archive format "dump":
+      "accessTime", "creationTime", "entrySize", "generation", "groupId",
+      "headerCount", "headerHoles", "headerType", "ino", "mode", "nlink",
+      "offset", "originalName", "permissions", "simpleName", userId", "volume",
+      "isBlkDev", "isChrDev", isDeleted", "isFifo", isSocket"
+  Archive format "7z":
+      "accessDate", "crcValue", "creationDate", hasAccessDate", "hasCrc",
+      hasCreationDate", "hasLastModifiedDate", "hasWindowsAttributes",
+      "windowsAttributes", "isAntiItem"
+  Archive format "tar":
+      "devMajor", "devMinor", "groupId", "groupName", "linkName", "mode",
+      "modTime", "realSize", "userId", "userName", "isBlockDevice",
+      "isCharacterDevice", "isExtended", "isFIFO", isGlobalPaxHeader",
+      "isGNULongLinkEntry", "isGNULongNameEntry", "isGNUSparse", "isLink",
+      "isPaxHeader", "isSymbolicLink"
+  Archive format "zip":
+      "externalAttributes", "internalAttributes", "method", "platform",
+      "unixMode", "isUnixSymlink"
+
+Example <glob>s
+===============
+
+  dir/file
+      File "file" in directory "dir"
+  file.gz%
+      Compressed file "file.gz"
+  file.zip!dir/file
+      Entry "dir/file" in archive file "dir/file.zip"
+  file.tar.gz%!dir/file
+      Entry "dir/file" in the compressed archive file "file.tar.gz"
+  */x
+      File "x" in an immediate subdirectory
+  **/x
+      File "x" in any subdirectory
+  ***/x
+      File "x" in any subdirectory, or any entry "**/x" in any archive file in
+      any subdirectory
+  a,dir/file.7z!dir/b
+      File "a" and entry "dir/b" in archive file "dir/file.7z"
+  ~*.c
+      Files that don't end with ".c"
+  ~*.c~*.h
+      Files that don't end with ".c" or ".h"
+  ~*.c~*.h,foo.c
+      "foo.c" plus all files that don't end with ".c" or ".h"
