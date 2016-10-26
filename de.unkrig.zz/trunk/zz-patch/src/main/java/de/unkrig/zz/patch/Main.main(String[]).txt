@@ -1,0 +1,178 @@
+Usage
+=====
+
+  zzpatch [ <option> ... ]
+      Transforms STDIN to STDOUT.
+  zzpatch [ <option> ... ] <file-or-dir>
+      Transforms <file-or-dir> in-place.
+  zzpatch [ <option> ... ] <file-or-dir> <new-file-or-dir>
+      Transforms <file-or-dir> into <new-file-or-dir>.
+  zzpatch [ <option> ... ] <file-or-dir> ... <existing-dir>
+      Transforms <file-or-dir> ..., creating the output in <existing-dir>.
+
+Options
+=======
+
+File transformation options:
+----------------------------
+
+  --update <glob>=<update-file> [ <condition> ... ]
+      Replace the contents of files/archive entries that match <glob> (see
+      below) with that of the <update-file>.
+  --substitute <glob> <pattern> <replacement> [ <condition> ... ]
+      Replace all matches of <pattern> in files/archive entries that match
+      <glob> (see below) with the <replacement> string. "$0", "$1", "$2", etc.
+      expand to the captured groups of the match.
+      Conditions (see below) apply per match; the parameters of the "--report"
+      and "--iff" conditions are:
+        <path>
+            The "path" of the file or ZIP entry that contains the match
+        <match>
+            The matching text
+  --patch <glob> <patch-file> [ <condition> ... ]
+      Apply <patch-file> to all files/archive entries that match <glob> (see
+      below). <patch-file> can be in traditional, context or unified diff
+      format.
+      Conditions (see below) apply per match; the parameters of the "--report"
+      and "--iff" conditions are:
+        <path>
+            The "path" of the file or ZIP entry being patched
+        <hunks>
+            The hunks being applied
+        <hunkIndex>
+            The index of the current hunk
+        <lineNumber>
+            The line number where the hunk starts
+  --remove <glob> [ <condition> ... ]
+      Remove all files/archive entries that match <glob> (see below).
+  --rename <glob> [ <condition> ... ]
+      Rename files/archive entries according to <glob> (see below), e.g.
+      "(*).c=$1.c.orig". Multiple "--rename" options are applied in the given
+      order.
+  --add <glob> <name> <contents-file> [ <condition> ... ]
+      To all directories and archives that match <glob>, add a member/entry
+      <name>, and fill it from <contents-file>.
+
+File transformation conditions:
+-------------------------------
+
+These control the preceding file transformation.
+  --report <expr>
+      Evaluate and print the <expr> each time the preceding file transformation
+      is executed, e.g. "path + ": Add '" + name + "' from '" + contentsFile +
+      "'"". The parameters of the <expr> depend on the file transformation (see
+      above).
+  --iff <expr>
+      Execute the preceding file transformation only iff <expr> evaluates to
+      true. The parameters of the <expr> depend on the file transformation (see
+      above).
+
+File processing options:
+------------------------
+
+  --look-into <format-glob>:<path-glob>
+      Look into compressed and archive contents if the format and the path
+      match the glob. The default is to look into any recognised archive or
+      compressed contents.
+      Supported archive formats in this runtime configuration are:
+      ${archive.formats}
+      Supported compression formats in this runtime configuration are:
+      ${compression.formats}
+  --dont-sort-directory-members
+      By default directory members are processed in lexicographical sequence to
+      achieve deterministic results.
+  --patch-file-encoding <charset>
+      Encoding of patch files (only relevant for "--patch"); the default is
+      "${file.encoding}".
+  --check
+      Do not create or modify any files; exit with status 1 if this is an in-
+      place transformation, and at least one of the files would be changed.
+      "--check --verbose" also prints the path of the <first> file or archive
+      entry that would be changed.
+      "--check --verbose --keep-going" prints the pathes of <all> files and
+      archive entries that would be changed.
+  --check-before-transformation
+      Before modifying a file, check whether the change is redundant, i.e.
+      yields an identical result. Could improve performance if few or no files
+      are actually modified.
+  --keep
+      If existing files would be overwritten, keep copies of the originals.
+  --input-encoding <charset>
+      Encoding of input files (only relevant for "--substitute" and "--patch");
+      the default is "${file.encoding}".
+  --output-encoding <charset>
+      Encoding of output files (only relevant for "--substitute" and
+      "--patch"); the default is "${file.encoding}".
+  --encoding <charset>
+      All of "--patch-file-encoding", "--input-encoding" and "--output-
+      encoding".
+
+General options:
+----------------
+
+  --help
+      Print this text and terminate.
+  --keep-going
+      Print error and continue with next file.
+  --no-warn
+      Suppress all messages except errors.
+  --quiet
+      Suppress normal output.
+  --verbose
+      Print verbose messages.
+  --debug
+      Print verbose and debug messages.
+  --log <level>:<logger>:<handler>:<formatter>:<format>
+      Add logging at level FINE on logger "de.unkrig" to STDERR using the
+      "FormatFormatter" and "SIMPLE" format, or the given arguments, which are
+      all optional.
+
+Globs
+=====
+
+Check the descriptions of wildcards (see
+"http://commons.unkrig.de/javadoc/de/unkrig/commons/text/pattern/Pattern2.html#WILDCARD"),
+includes / excludes (see
+"http://commons.unkrig.de/javadoc/de/unkrig/commons/text/pattern/Glob.html#INCLUDES_EXCLUDES")
+and replacements (see
+"http://commons.unkrig.de/javadoc/de/unkrig/commons/text/pattern/Glob.html#REPLACEMENT").
+Examples:
+  dir/file
+      File "file" in directory "dir"
+  file.gz%
+      Compressed file "file.gz"
+  file.zip!dir/file
+      Entry "dir/file" in archive file "dir/file.zip"
+  file.tar.gz%!dir/file
+      Entry "dir/file" in the compressed archive file "file.tar.gz"
+  */x
+      File "x" in an immediate subdirectory
+  **/x
+      File "x" in any subdirectory
+  ***/x
+      File "x" in any subdirectory, or any entry "**/x" in any archive file in
+      any subdirectory
+  a,dir/file.7z!dir/b
+      File "a" and entry "dir/b" in archive file "dir/file.7z"
+  ~*.c
+      Files that don't end with ".c"
+  ~*.c~*.h
+      Files that don't end with ".c" or ".h"
+  ~*.c~*.h,foo.c
+      "foo.c" plus all files that don't end with ".c" or ".h"
+
+Regular expressions and replacements
+====================================
+
+For the precise description of the supported regular-expression constructs, see
+here (see
+"http://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html#sum").
+For the precise description of the replacement format, see here (see
+"http://docs.oracle.com/javase/7/docs/api/java/util/regex/Matcher.html#appendReplacement%28java.lang.StringBuffer,%20java.lang.String%29").
+
+Expressions
+===========
+
+For the precise description of the supported expression constructs, see here
+(see
+"http://commons.unkrig.de/javadoc/index.html?de/unkrig/commons/text/expression/Parser.html").
