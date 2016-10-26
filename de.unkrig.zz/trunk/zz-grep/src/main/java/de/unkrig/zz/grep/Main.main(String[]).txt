@@ -1,0 +1,112 @@
+Usage:
+======
+
+  zzgrep [ <option> ... ] [ - ] <regex> <file-or-dir> ...
+      Reads <file> or all files under <dir> and prints all lines which contain
+      matches of the <regex>.
+  zzgrep [ <option> ... ] <regex>
+      Reads STDIN and prints all lines which contain matches of the <regex>.
+
+Options:
+========
+
+  --help
+      Print this text and terminate.
+
+File Selection:
+---------------
+
+  --dont-sort-directory-members
+      By default directory members are sorted lexicographically in order to
+      achieve deterministic results.
+  --look-into <glob>
+      Look into compressed and archive contents if "<format>:<path>" matches
+      the glob. The default is to look into any recognised archive or
+      compressed contents.
+      Supported archive formats in this runtime configuration are:
+      ${archive.formats}
+      Supported compression formats in this runtime configuration are:
+      ${compression.formats}
+  --exclude <regex>
+  --include <regex>
+      Excludes files and archive entries from the search iff the file's /
+      archive entry's path matches the <regex>.
+      Any number of --exclude and --include options can be given, and later
+      take precedence over the earlier.
+      The default is that <all> files and archive entries are included; thus
+      you would always begin with a --exclude option.
+  --zip
+  --zz
+  --nested-zip
+  --gzip
+      <*Deprecated* - Use --look-into instead.>
+
+Contents Processing:
+--------------------
+
+  --encoding <charset>
+      Contents encoding, default is "${file.encoding}".
+  -i
+  --ignore-case
+      Ignore case distinctions.
+  -v
+  --inverted
+      Select non-matching lines.
+  --da
+  --disassemble-class-files
+      Disassemble .class files on-the-fly.
+  --da-no-lines
+  --disassemble-class-files-but-hide-lines
+      Don't print line numbers in the disassembly.
+  --da-no-vars
+  --disassemble-class-files-but-hide-vars
+      Don't print variable names in the disassembly.
+
+Output Generation:
+------------------
+
+  -l
+  --list
+      Print only names of files containing matches.
+  -q
+  --quiet
+      Suppress all normal output.
+  --nowarn
+      Suppress all messages except errors.
+  --verbose
+      Print verbose messages.
+  --debug
+      Print verbose and debug messages.
+  --log <level>:<logger>:<handler>:<formatter>:<format>
+      Add logging at level FINE on logger "de.unkrig" to STDERR using the
+      FormatFormatter and SIMPLE format, or the given arguments (which are all
+      optional).
+
+Example <glob>s:
+----------------
+
+  dir/file
+      File "file" in directory "dir"
+  file.gz%
+      Compressed file "file.gz"
+  file.zip!dir/file
+      Entry "dir/file" in archive file "dir/file.zip"
+  file.tar.gz%!dir/file
+      Entry "dir/file" in the compressed archive file "file.tar.gz"
+  */x
+      File "x" in an immediate subdirectory
+  **/x
+      File "x" in any subdirectory
+  ***/x
+      File "x" in any subdirectory, or any entry "**/x" in any archive file in
+      any subdirectory
+  a,dir/file.7z!dir/b
+      File "a" and entry "dir/b" in archive file "dir/file.7z"
+  ~*.c
+      Files that don't end with ".c"
+  ~*.c~*.h
+      Files that don't end with ".c" or ".h"
+  ~*.c~*.h,foo.c
+      "foo.c" plus all files that don't end with ".c" or ".h"
+Exit status is 0 if any line was selected, 1 otherwise; if any error occurs,
+the exit status is 2.
