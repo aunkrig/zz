@@ -1,0 +1,49 @@
+<project>
+	<taskdef
+		name="zzpatch"
+		classname="de.unkrig.zz.patch.AntTask"
+		classpath="../de.unkrig.zz.patch/bin:../de.unkrig.commons.lang/bin:../de.unkrig.commons.file/bin"
+	/>
+
+	<componentdef
+		name="patch"
+		classname="de.unkrig.zz.patch.AntFilter"
+		classpath="../de.unkrig.zz.patch/bin:../de.unkrig.commons.lang/bin:../de.unkrig.commons.file/bin"
+	/>
+
+	<target name="testRemoveFile1">
+		<zzpatch>
+			<fileset dir="files" />
+			<remove name="dir1/dir2/file1" />
+		</zzpatch>
+	</target>
+
+	<target name="testRemoveFile2">
+		<zzpatch>
+			<fileset dir="." includes="files/**" />
+			<remove name="files/dir1/dir2/file1" />
+		</zzpatch>
+	</target>
+
+	<target name="testRemoveZipEntry1">
+		<zzpatch lookInto="zip:**">
+			<fileset dir="files" />
+			<remove name="dir1/dir2/file.zip!/dir1/dir2/file1" />
+		</zzpatch>
+	</target>
+
+	<target name="testRemoveZipEntry2">
+		<zzpatch>
+			<fileset dir="files" />
+			<remove name="dir1/dir2/file.zip!***/dir?/dir?/file1" />
+		</zzpatch>
+	</target>
+
+	<target name="testFilter1">
+		<copy file="files/old.txt" tofile="files/new.txt">
+			<filterchain>
+				<patch patchFile="files/patch.txt" />
+			</filterchain>
+		</copy>
+	</target>
+</project>
