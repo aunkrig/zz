@@ -17,8 +17,6 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/org.apache.ant-1.8.4/lib/ant.jar" sourcepath="/org.apache.ant-1.8.4/src/org.apache.ant.source_1.8.4.jar"/>
-	<classpathentry kind="lib" path="/org.apache.commons.compress-1.9/lib/commons-compress-1.9.jar" sourcepath="/org.apache.commons.compress-1.9/src/commons-compress-1.9-src.zip"/>
 	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
