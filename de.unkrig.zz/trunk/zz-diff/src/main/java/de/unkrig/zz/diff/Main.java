@@ -112,7 +112,7 @@ class Main {
      *   A <var>glob</var> can have the form
      * </p>
      * <pre>
-     *   {@code *~*.c~*.h+foo.c}
+     *   {@code *~*.c~*.h~foo.c}
      * </pre>
      * <p>
      *   , which means "foo.c plus all that don't end with .c or .h".
