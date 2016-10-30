@@ -8,6 +8,7 @@
 		<groupId>de.unkrig.zz</groupId>
 		<artifactId>zz-parent</artifactId>
 		<version>1.3.0</version>
+		<relativePath>../zz-parent</relativePath>
 	</parent>
 	<dependencies>
 		<dependency>
@@ -39,7 +40,7 @@
 		<dependency>
 			<groupId>de.unkrig.commons</groupId>
 			<artifactId>commons-junit4</artifactId>
-			<version>1.2.1-SNAPSHOT</version>
+			<version>1.2.1</version>
 			<exclusions>
 				<exclusion>
 					<groupId>de.unkrig</groupId>
@@ -54,4 +55,162 @@
 			<scope>runtime</scope>
 		</dependency>
 	</dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+            <phase>package</phase> <!-- bind to the packaging phase -->
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.4</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.6.7</version>
+        <extensions>true</extensions>
+        <configuration>
+           <serverId>ossrh</serverId>
+           <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+           <autoReleaseAfterClose>false</autoReleaseAfterClose>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.4</version>
+        <executions>
+
+          <!-- Generate the API docs. -->
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+
+            <configuration>
+              <javadocVersion>1.8</javadocVersion>
+              <additionalparam>-Xdoclint:none</additionalparam>
+              <quiet>true</quiet>
+              <tags>
+                <tag><name>ant.defaultValue</name><placement>a</placement><head>Default value:</head></tag>
+                <tag><name>ant.valueExplanation</name><placement>X</placement></tag>
+                <tag><name>main.commandLineOptions</name><placement>X</placement></tag>
+                <tag><name>main.commandLineOptionGroup</name><placement>a</placement><head>Option group:</head></tag>
+              </tags>
+            </configuration>
+          </execution>
+
+          <!-- Generate the command-line help doc. -->
+          <execution>
+            <id>make-maindoc</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>javadoc</goal>
+            </goals>
+
+            <configuration>
+              <useStandardDocletOptions>false</useStandardDocletOptions>
+              <additionalparam>-Xdoclint:none</additionalparam>
+
+              <!-- The MAIN doclet requires JAVADOC 8. -->
+              <javadocExecutable>${jdk.8.home}/bin/javadoc.exe</javadocExecutable>
+
+              <quiet>true</quiet>
+
+              <doclet>de.unkrig.doclet.main.MainDoclet</doclet>
+              <docletArtifact>
+                <groupId>de.unkrig</groupId>
+                <artifactId>doclet-main</artifactId>
+                <version>1.0.1</version>
+              </docletArtifact>
+
+              <additionalparam>
+                -charset     UTF-8
+                -docencoding UTF-8
+              </additionalparam>
+
+              <destDir>../../classes</destDir>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.5.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>de.unkrig</groupId>
+            <artifactId>html2txt</artifactId>
+            <version>1.0.0</version>
+          </dependency>
+        </dependencies>
+        
+        <executions>
+
+          <!-- Convert the HTML usage document into TXT format for "-help". -->
+          <execution>
+            <id>html2txt-maindoc</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <includePluginDependencies>true</includePluginDependencies>
+              <mainClass>de.unkrig.html2txt.Main</mainClass>
+              <arguments>
+                <argument>${basedir}/target/classes/de/unkrig/zz/patch/Main.main(String[]).html</argument>
+                <argument>${basedir}/target/classes/de/unkrig/zz/patch/Main.main(String[]).txt</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

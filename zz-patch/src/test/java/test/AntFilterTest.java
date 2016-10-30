@@ -32,7 +32,6 @@ import org.apache.tools.ant.BuildFileTest;
 import org.junit.Test;
 
 import de.unkrig.commons.file.FileUtil;
-import de.unkrig.commons.junit4.Files;
 import junit.framework.TestCase;
 
 /**

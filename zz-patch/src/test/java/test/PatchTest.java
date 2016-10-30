@@ -41,8 +41,6 @@ import org.junit.Test;
 
 import de.unkrig.commons.file.FileUtil;
 import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
-import de.unkrig.commons.junit4.AssertPrinters;
-import de.unkrig.commons.junit4.Files;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.text.pattern.Glob;
