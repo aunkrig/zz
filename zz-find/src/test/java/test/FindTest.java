@@ -36,7 +36,6 @@ import org.junit.Test;
 
 import de.unkrig.commons.file.FileUtil;
 import de.unkrig.commons.junit4.AssertRegex;
-import de.unkrig.commons.junit4.Files;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
 import de.unkrig.commons.lang.protocol.ProducerUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
