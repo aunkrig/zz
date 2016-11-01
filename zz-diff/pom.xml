@@ -64,6 +64,7 @@
 			<plugin>
 				<groupId>com.akathist.maven.plugins.launch4j</groupId>
 				<artifactId>launch4j-maven-plugin</artifactId>
+				<version>1.7.12</version>
 				<executions>
 					<execution>
 						<id>l4j-zz-diff</id>
@@ -88,7 +89,8 @@
 								<txtProductVersion>${project.version}</txtProductVersion>
 								<productName>${project.name}</productName>
 								<internalName>${project.name}</internalName>
-								<originalFilename>original.exe</originalFilename>
+								<originalFilename>zzdiff.exe</originalFilename>
+								<languageIndex>0x0409</languageIndex>
 							</versionInfo>
 						</configuration>
 					</execution>
