@@ -72,6 +72,7 @@ import de.unkrig.commons.file.fileprocessing.SelectiveFileProcessor;
 import de.unkrig.commons.io.ByteFilterInputStream;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.ExceptionUtil;
+import de.unkrig.commons.lang.ThreadUtil;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
@@ -106,7 +107,8 @@ class Diff {
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     private static final ExecutorService PARALLEL_EXECUTOR_SERVICE = new ScheduledThreadPoolExecutor(
-        Runtime.getRuntime().availableProcessors() * 3
+        Runtime.getRuntime().availableProcessors() * 3,
+        ThreadUtil.DAEMON_THREAD_FACTORY
     );
 
     /**
