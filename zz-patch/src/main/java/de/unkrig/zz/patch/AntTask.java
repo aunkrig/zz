@@ -527,7 +527,7 @@ class AntTask extends Task {
     public static
     class Element_path extends ProjectComponent { // SUPPRESS CHECKSTYLE TypeName
 
-    	protected int flags = Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES;
+        protected int flags = Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES;
 
         /**
          * The glob that specifies the applicable pathes.
@@ -552,7 +552,7 @@ class AntTask extends Task {
      */
     public static
     class Element_path2 extends Element_path { // SUPPRESS CHECKSTYLE TypeName
-    	{ this.flags |= Glob.REPLACEMENT; }
+        { this.flags |= Glob.REPLACEMENT; }
     }
 
     /** An element that handles text. */
