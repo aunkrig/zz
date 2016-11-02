@@ -880,15 +880,7 @@ class AntTask extends AbstractElementWithOperands {
      * @see #setDir(File)
      */
     public void
-    addConfigured(ResourceCollection value) {
-
-
-    	new Throwable().printStackTrace();
-    	System.err.println(value.getClass().getName());
-
-
-
-    	this.resourceCollections.add(value); }
+    addConfigured(ResourceCollection value) { this.resourceCollections.add(value); }
 
     // END CONFIGURATION SETTERS
 
