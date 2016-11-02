@@ -314,7 +314,10 @@ class Find {
         Test FALSE = new ConstantTest(false);
     }
 
-    static
+    /**
+     * Evaluates to a constant boolean value.
+     */
+    public static
     class ConstantTest implements Test {
 
         private final boolean value;
@@ -329,7 +332,10 @@ class Find {
         toString() { return String.valueOf(this.value); }
     }
 
-    abstract static
+    /**
+     * A {@link Test} with one operand expression.
+     */
+    public abstract static
     class UnaryTest implements Test {
 
         /** The single operand of this test. */
@@ -338,7 +344,10 @@ class Find {
         UnaryTest(Expression operand) { this.operand = operand; }
     }
 
-    abstract static
+    /**
+     * A {@link Test} with two operand expressions.
+     */
+    public abstract static
     class BinaryTest implements Test {
 
         /** The two operands of this test. */
@@ -350,7 +359,7 @@ class Find {
     /**
      * Evaluates {@code lhs}, then {@code rhs}, and reutrns the result of the latter evaluation.
      */
-    static
+    public static
     class CommaTest extends BinaryTest {
 
         CommaTest(Expression lhs, Expression rhs) { super(lhs, rhs); }
@@ -369,7 +378,7 @@ class Find {
      * Iff {@code lhs} evaluates to FALSE, then {@code rhs} is evaluated and its result is returned. Otherwise, TRUE
      * is returned.
      */
-    static
+    public static
     class OrTest extends BinaryTest {
 
         OrTest(Expression lhs, Expression rhs) { super(lhs, rhs); }
@@ -387,7 +396,7 @@ class Find {
      * Iff {@code lhs} evaluates to TRUE, then {@code rhs} is evaluated and its result is returned. Otherwise, FALSE
      * is returned.
      */
-    static
+    public static
     class AndTest extends BinaryTest {
 
         AndTest(Expression lhs, Expression rhs) { super(lhs, rhs); }
@@ -401,7 +410,10 @@ class Find {
         toString() { return "(" + this.lhs + " && " + this.rhs + ")"; }
     }
 
-    static
+    /**
+     * Evaluates a delegate expression and negates its result.
+     */
+    public static
     class NotExpression extends UnaryTest {
 
         NotExpression(Expression operand) { super(operand); }
@@ -413,8 +425,10 @@ class Find {
         toString() { return "(not " + this.operand + ")"; }
     }
 
-    /** @see #evaluate(Mapping) */
-    private static
+    /**
+     * Gets and returns the value of a boolean property, or {@code false} if that property is not set.
+     */
+    public static
     class BooleanTest implements Test {
 
         private final String propertyName;
@@ -436,7 +450,11 @@ class Find {
         toString() { return this.propertyName; }
     }
 
-    private static
+    /**
+     * Evaluates a predicate for a property's value and returns the result, or {@code null} iff the property is not
+     * set.
+     */
+    public static abstract
     class PredicateTest<T> implements Test {
 
         private final Predicate<? super T> predicate;
@@ -449,7 +467,7 @@ class Find {
             this.predicate    = predicate;
         }
 
-        @Override public boolean
+        @Override public final boolean
         evaluate(Mapping<String, Object> properties) {
             T propertyValue = Mappings.get(properties, this.propertyName, this.propertyType);
             return propertyValue != null && this.predicate.evaluate(propertyValue);
@@ -459,7 +477,10 @@ class Find {
         toString() { return "( " + this.propertyName + " =* '" + this.predicate + "')"; }
     }
 
-    private static
+    /**
+     * Evaluates a property's value, converted to {@link String}, against a predicate.
+     */
+    public static
     class StringPredicateTest implements Test {
 
         private final Predicate<? super String> predicate;
@@ -480,7 +501,10 @@ class Find {
         toString() { return "( " + this.propertyName + " =* '" + this.predicate + "')"; }
     }
 
-    private static
+    /**
+     * Matches a {@link Glob} with a property value.
+     */
+    public static
     class GlobTest extends StringPredicateTest {
 
         GlobTest(String propertyName, String pattern) {
@@ -488,43 +512,57 @@ class Find {
         }
     }
 
-    /** Tests the value of property "name" against a given pattern. */
+    /**
+     * Tests the value of property "name" against a {@link Glob}.
+     */
     public static
     class NameTest extends GlobTest {
         public NameTest(String nameGlob) { super("name", nameGlob); }
     }
 
-    /** Tests the value of property "path" against a given pattern. */
+    /**
+     * Tests the value of property "path" against a {@link Glob}.
+     */
     public static
     class PathTest extends GlobTest {
         public PathTest(String pathGlob) { super("path", pathGlob); }
     }
 
-    /** Tests the value of property "type" against a given pattern. */
+    /**
+     * Tests the value of property "type" against a {@link Glob}.
+     */
     public static
     class TypeTest extends GlobTest {
         public TypeTest(String typeGlob) { super("type", typeGlob); }
     }
 
-    /** Tests the value of the boolean property "canRead". */
+    /**
+     * Tests the value of the boolean property "canRead".
+     */
     public static
     class ReadabilityTest extends BooleanTest {
         public ReadabilityTest() { super("canRead"); }
     }
 
-    /** Tests the value of the boolean property "canWrite". */
+    /**
+     * Tests the value of the boolean property "canWrite".
+     */
     public static
     class WritabilityTest extends BooleanTest {
         public WritabilityTest() { super("canWrite"); }
     }
 
-    /** Tests the value of the boolean property "canExecute". */
+    /**
+     * Tests the value of the boolean property "canExecute".
+     */
     public static
     class ExecutabilityTest extends BooleanTest {
         public ExecutabilityTest() { super("canExecute"); }
     }
 
-    /** Tests the value of the LONG property "size". */
+    /**
+     * Tests the value of the LONG property "size".
+     */
     public static
     class SizeTest extends PredicateTest<Long> {
 
@@ -611,7 +649,7 @@ class Find {
     /**
      * Prints the path of the current file and returns {@code true}.
      */
-    static
+    public static
     class PrintAction implements Action {
 
         @Override public boolean
@@ -627,7 +665,7 @@ class Find {
     /**
      * Prints the path of the current file and returns {@code true}.
      */
-    static
+    public static
     class EchoAction implements Action {
 
         private final String message;
@@ -654,7 +692,7 @@ class Find {
      * Prints the file type ('d' or '-'), readability ('r' or '-'), writability ('w' or '-'), size, modification time
      * and path to the given {@link Writer} and evaluates to {@code true}.
      */
-    static
+    public static
     class LsAction implements Action {
 
         @Override public boolean
@@ -679,10 +717,10 @@ class Find {
     }
 
     /**
-     * Executes an external command; the special string '{}' within the command is replaced with the full path of
-     * the current file.
+     * Executes an external command; the special string "<code>{}</code>" within the command is replaced with the full
+     * path of the current file, directory or archive entry.
      */
-    static
+    public static
     class ExecAction implements Action {
 
         private final List<String> command;
@@ -726,9 +764,10 @@ class Find {
     }
 
     /**
-     * Copies the contents of the current file to a given {@link OutputStream} and evaluates to {@code true}.
+     * Copies the contents of the current file or archive entry to a given {@link OutputStream} and evaluates to {@code
+     * true}.
      */
-    static
+    public static
     class CatAction implements Action {
 
         private final OutputStream out;
@@ -751,9 +790,9 @@ class Find {
     }
 
     /**
-     * Copies the contents of the current file to a given file and evaluates to TRUE.
+     * Copies the contents of the current file or archive entry to a given file and evaluates to {@code true}.
      */
-    static
+    public static
     class CopyAction implements Action {
 
         private final File    tofile;
@@ -791,10 +830,10 @@ class Find {
     }
 
     /**
-     * Copies the contents of the current file to the STDIN of a given command and returns whether the command exited
-     * with status 0.
+     * Copies the contents of the current file or archive entry to the STDIN of a given command and returns whether the
+     * command exited with status 0.
      */
-    static
+    public static
     class PipeAction implements Action {
 
         private final List<String>   command;
@@ -837,9 +876,9 @@ class Find {
     }
 
     /**
-     * Disassembles a Java class file
+     * Disassembles a Java class file.
      */
-    static
+    public static
     class DisassembleAction implements Action {
 
         private final boolean        hideLines;
@@ -894,7 +933,7 @@ class Find {
     /**
      * Calculates a "message digest" of an input stream's content and prints it to {@link Printers#info(String)}.
      */
-    static
+    public static
     class DigestAction implements Action {
 
         private final String algorithm;
@@ -958,7 +997,7 @@ class Find {
     /**
      * Calculates a "checksum" of an input stream's content and prints it to {@link Printers#info(String)}.
      */
-    static
+    public static
     class ChecksumAction implements Action {
 
         enum ChecksumType {
