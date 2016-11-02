@@ -31,33 +31,231 @@
 	</dependencies>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<version>2.6</version>
+					<configuration>
+						<descriptorRefs>
+							<descriptorRef>jar-with-dependencies</descriptorRef>
+						</descriptorRefs>
+						<archive>
+							<manifest>
+								<mainClass>${jar-with-dependencies.mainClass}</mainClass>
+							</manifest>
+						</archive>
+					</configuration>
+					<executions>
+						<execution>
+							<id>make-assembly</id>
+							<phase>package</phase>
+							<goals><goal>single</goal></goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>com.akathist.maven.plugins.launch4j</groupId>
+					<artifactId>launch4j-maven-plugin</artifactId>
+					<version>1.7.12</version>
+					<executions>
+						<execution>
+							<id>attach-windows-exe</id>
+	
+							<goals><goal>launch4j</goal></goals>
+	
+							<configuration>
+								<headerType>console</headerType>
+								<outfile>target/${project.name}-${project.version}.exe</outfile>
+								<jar>target/${project.name}-${project.version}-jar-with-dependencies.jar</jar>
+								<errTitle>${project.name}</errTitle>
+								<classPath>
+									<addDependencies>false</addDependencies>
+									<mainClass>${jar-with-dependencies.mainClass}</mainClass>
+								</classPath>
+								<jre><minVersion>1.6.0</minVersion></jre>
+								<versionInfo>
+									<fileVersion>0.0.0.0</fileVersion>
+									<txtFileVersion>${project.version}</txtFileVersion>
+									<fileDescription>${project.name}</fileDescription>
+									<copyright>Copyright Arno Unkrig 2016. All rights reserved.</copyright>
+									<productVersion>0.0.0.0</productVersion>
+									<txtProductVersion>${project.version}</txtProductVersion>
+									<productName>${project.name}</productName>
+									<internalName>${project.name}</internalName>
+									<originalFilename>${project.name}-${project.version}.exe</originalFilename>
+									<languageIndex>0x0409</languageIndex>
+								</versionInfo>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>build-helper-maven-plugin</artifactId>
+					<version>1.12</version>
+					<executions>
+						<execution>
+							<id>attach-artifacts</id>
+							<phase>package</phase>
+							<goals><goal>attach-artifact</goal></goals>
+							<configuration>
+								<artifacts>
+									<artifact>
+										<file>target/${project.name}-${project.version}.exe</file>
+										<type>exe</type>
+									</artifact>
+								</artifacts>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-source-plugin</artifactId>
+					<version>2.4</version>
+					<executions>
+						<execution>
+							<id>attach-sources</id>
+							<goals><goal>jar</goal></goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.sonatype.plugins</groupId>
+					<artifactId>nexus-staging-maven-plugin</artifactId>
+					<version>1.6.7</version>
+					<extensions>true</extensions>
+					<configuration>
+						 <serverId>ossrh</serverId>
+						 <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+						 <autoReleaseAfterClose>false</autoReleaseAfterClose>
+					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-gpg-plugin</artifactId>
+					<version>1.5</version>
+					<executions>
+						<execution>
+							<id>sign-artifacts</id>
+							<phase>verify</phase>
+							<goals><goal>sign</goal></goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-javadoc-plugin</artifactId>
+					<version>2.10.4</version>
+					<executions>
+	
+						<!-- Generate the API docs. -->
+						<execution>
+							<id>attach-javadocs</id>
+							<goals>
+								<goal>jar</goal>
+							</goals>
+	
+							<configuration>
+								<javadocVersion>1.8</javadocVersion>
+								<additionalparam>-Xdoclint:none</additionalparam>
+								<quiet>true</quiet>
+								<tags>
+									<tag><name>ant.defaultValue</name><placement>a</placement><head>Default value:</head></tag>
+									<tag><name>ant.valueExplanation</name><placement>X</placement></tag>
+									<tag><name>main.commandLineOptions</name><placement>X</placement></tag>
+									<tag><name>main.commandLineOptionGroup</name><placement>a</placement><head>Option group:</head></tag>
+								</tags>
+							</configuration>
+						</execution>
+	
+						<!-- Generate the command-line help doc. -->
+						<execution>
+							<id>make-maindoc</id>
+							<phase>compile</phase>
+							<goals>
+								<goal>javadoc</goal>
+							</goals>
+	
+							<configuration>
+								<useStandardDocletOptions>false</useStandardDocletOptions>
+								<additionalparam>-Xdoclint:none</additionalparam>
+	
+								<!-- The MAIN doclet requires JAVADOC 8. -->
+								<javadocExecutable>${jdk.8.home}/bin/javadoc.exe</javadocExecutable>
+	
+								<quiet>true</quiet>
+	
+								<doclet>de.unkrig.doclet.main.MainDoclet</doclet>
+								<docletArtifact>
+									<groupId>de.unkrig</groupId>
+									<artifactId>doclet-main</artifactId>
+									<version>1.0.1</version>
+								</docletArtifact>
+	
+								<additionalparam>
+									-charset     UTF-8
+									-docencoding UTF-8
+								</additionalparam>
+	
+								<destDir>../../classes</destDir>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>exec-maven-plugin</artifactId>
+					<version>1.5.0</version>
+					<dependencies>
+						<dependency>
+							<groupId>de.unkrig</groupId>
+							<artifactId>html2txt</artifactId>
+							<version>1.0.0</version>
+						</dependency>
+					</dependencies>
+	
+					<executions>
+	
+						<!-- Convert the HTML usage document into TXT format for "-help". -->
+						<execution>
+							<id>html2txt-maindoc</id>
+							<phase>compile</phase>
+							<goals>
+								<goal>java</goal>
+							</goals>
+							<configuration>
+								<includePluginDependencies>true</includePluginDependencies>
+								<mainClass>de.unkrig.html2txt.Main</mainClass>
+								<arguments>
+									<argument>${basedir}/target/classes/${jar-with-dependencies.mainClass2}.main(String[]).html</argument>
+									<argument>${basedir}/target/classes/${jar-with-dependencies.mainClass2}.main(String[]).txt</argument>
+								</arguments>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+
 		<plugins>
 
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<version>1.6.7</version>
-				<extensions>true</extensions>
-				<configuration>
-					 <serverId>ossrh</serverId>
-					 <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-					 <autoReleaseAfterClose>false</autoReleaseAfterClose>
-				</configuration>
 			</plugin>
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.5</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>
