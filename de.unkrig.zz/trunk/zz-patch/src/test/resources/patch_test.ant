@@ -1,15 +1,6 @@
 <project>
-	<taskdef
-		name="zzpatch"
-		classname="de.unkrig.zz.patch.AntTask"
-		classpath="../de.unkrig.zz.patch/bin:../de.unkrig.commons.lang/bin:../de.unkrig.commons.file/bin"
-	/>
 
-	<componentdef
-		name="patch"
-		classname="de.unkrig.zz.patch.AntFilter"
-		classpath="../de.unkrig.zz.patch/bin:../de.unkrig.commons.lang/bin:../de.unkrig.commons.file/bin"
-	/>
+	<taskdef file="target/classes/antlib.xml" />
 
 	<target name="testRemoveFile1">
 		<zzpatch>
