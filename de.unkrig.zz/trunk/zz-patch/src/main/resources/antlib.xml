@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<antlib>
+	<taskdef      name="zzpatch" classname="de.unkrig.zz.patch.AntTask"   />
+	<componentdef name="patch"   classname="de.unkrig.zz.patch.AntFilter" />
+</antlib>

@@ -33,6 +33,8 @@
 	<build>
 		<pluginManagement>
 			<plugins>
+
+				<!-- Creates an all-inclusive JAR file. -->
 				<plugin>
 					<artifactId>maven-assembly-plugin</artifactId>
 					<version>2.6</version>
@@ -55,6 +57,7 @@
 					</executions>
 				</plugin>
 
+				<!-- Creates an MS WINDOWS executable. -->
 				<plugin>
 					<groupId>com.akathist.maven.plugins.launch4j</groupId>
 					<artifactId>launch4j-maven-plugin</artifactId>
@@ -92,6 +95,7 @@
 					</executions>
 				</plugin>
 
+				<!-- Attaches the MS WINDOWS executable artifact (so that it is INSTALLed and DEPLOYed). -->
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>build-helper-maven-plugin</artifactId>
@@ -113,6 +117,7 @@
 					</executions>
 				</plugin>
 
+				<!-- Creates and attaches a JAR file containing the sources. -->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-source-plugin</artifactId>
@@ -125,6 +130,7 @@
 					</executions>
 				</plugin>
 
+				<!-- Stages (uploads) the artifact to oss.sonatype.org. -->
 				<plugin>
 					<groupId>org.sonatype.plugins</groupId>
 					<artifactId>nexus-staging-maven-plugin</artifactId>
@@ -137,6 +143,7 @@
 					</configuration>
 				</plugin>
 
+				<!-- Signs the artifacts with GPG (oss.sonatype.org requires that). -->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-gpg-plugin</artifactId>
@@ -150,6 +157,10 @@
 					</executions>
 				</plugin>
 
+				<!--
+					Creates a JAR file containing the API documentation (javadoc) and an HTML help document for the
+					command line tool (MAINDOC).
+				-->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
@@ -211,10 +222,15 @@
 					</executions>
 				</plugin>
 
+				<!--
+					Converts the an HTML help document into TXT format and stores it in "target/classes", so that
+					"-help" can print it.
+				-->
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>exec-maven-plugin</artifactId>
 					<version>1.5.0</version>
+
 					<dependencies>
 						<dependency>
 							<groupId>de.unkrig</groupId>
@@ -223,42 +239,44 @@
 						</dependency>
 					</dependencies>
 	
-					<executions>
-	
-						<!-- Convert the HTML usage document into TXT format for "-help". -->
-						<execution>
-							<id>html2txt-maindoc</id>
-							<phase>compile</phase>
-							<goals>
-								<goal>java</goal>
-							</goals>
-							<configuration>
-								<includePluginDependencies>true</includePluginDependencies>
-								<mainClass>de.unkrig.html2txt.Main</mainClass>
-								<arguments>
-									<argument>${basedir}/target/classes/${jar-with-dependencies.mainClass2}.main(String[]).html</argument>
-									<argument>${basedir}/target/classes/${jar-with-dependencies.mainClass2}.main(String[]).txt</argument>
-								</arguments>
-							</configuration>
-						</execution>
-					</executions>
+					<executions><execution>
+						<id>html2txt-maindoc</id>
+						<phase>compile</phase>
+						<goals><goal>java</goal></goals>
+						<configuration>
+							<includePluginDependencies>true</includePluginDependencies>
+							<mainClass>de.unkrig.html2txt.Main</mainClass>
+							<arguments>
+								<argument>${basedir}/target/classes/${jar-with-dependencies.mainClass2}.main(String[]).html</argument>
+								<argument>${basedir}/target/classes/${jar-with-dependencies.mainClass2}.main(String[]).txt</argument>
+							</arguments>
+						</configuration>
+					</execution></executions>
 				</plugin>
 			</plugins>
 		</pluginManagement>
 
 		<plugins>
-
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
 			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>have_gpg</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 	<description>de.unkrig.zz - A set of command-line tools and ANT tasks that handle not only directories and files, but also archive and compressed files, and even nested archive files.</description>
 
