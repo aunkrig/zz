@@ -1,13 +1,6 @@
 <project>
 
-	<taskdef name="zzfind" classname="de.unkrig.zz.find.AntTask" />
-
-	<componentdef name="and"    classname="de.unkrig.zz.find.AntTask$AndElement"   />
-	<componentdef name="false"  classname="de.unkrig.zz.find.AntTask$FalseElement" />
-	<componentdef name="name"   classname="de.unkrig.zz.find.AntTask$NameElement"  />
-	<componentdef name="or"     classname="de.unkrig.zz.find.AntTask$OrElement"    />
-	<componentdef name="print"  classname="de.unkrig.zz.find.AntTask$PrintElement" />
-	<componentdef name="true"   classname="de.unkrig.zz.find.AntTask$TrueElement"  />
+	<taskdef file="target/classes/antlib.xml" />
 
 	<target name="find1">
 		<zzfind lookInto="zip:**">
