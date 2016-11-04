@@ -82,6 +82,15 @@ import de.unkrig.zz.patch.diff.DiffParser.Hunk;
  *   <li>Optionally keeps copies of the original files</li>
  *   <li>Adds, removes and renames files, directories and archive entries</li>
  * </ul>
+ * <p>
+ *   To use this task, add this to your ANT build script:
+ * </p>
+ * <pre>{@code
+<taskdef
+    classpath="path/to/zz-patch-x.y.z-jar-with-dependencies.jar"
+    resource="antlib.xml"
+/>
+ * }</pre>
  */
 public
 class AntTask extends Task {

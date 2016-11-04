@@ -57,7 +57,16 @@ import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 
 /**
- * The 'de.unkrig.zz.pack' ANT task; see 'src/de/unkrig/zz/antlib.xml'.
+ * The 'de.unkrig.zz.pack' ANT task.
+ * <p>
+ *   To use this task, add this to your ANT build script:
+ * </p>
+ * <pre>{@code
+<taskdef
+    classpath="path/to/zz-pack-x.y.z-jar-with-dependencies.jar"
+    resource="antlib.xml"
+/>
+ * }</pre>
  */
 public
 class AntTask extends Task {
