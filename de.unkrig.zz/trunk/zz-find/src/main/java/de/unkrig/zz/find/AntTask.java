@@ -93,6 +93,15 @@ import de.unkrig.zz.find.Find.WritabilityTest;
  *   The execution of tests and actions stops when one of them evaluates to {@code false}, i.e. they are implicitly
  *   AND-related.
  * </p>
+ * <p>
+ *   To use this task, add this to your ANT build script:
+ * </p>
+ * <pre>{@code
+<taskdef
+    classpath="path/to/zz-find-x.y.z-jar-with-dependencies.jar"
+    resource="antlib.xml"
+/>
+ * }</pre>
  *
  * @ant.subelementOrder inheritedFirst
  */

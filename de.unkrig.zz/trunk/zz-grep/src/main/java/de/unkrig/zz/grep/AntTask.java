@@ -52,6 +52,15 @@ import de.unkrig.zz.grep.Grep.Operation;
 
 /**
  * Finds lines in files in directory trees, archives an compressed files by regular expressions.
+ * <p>
+ *   To use this task, add this to your ANT build script:
+ * </p>
+ * <pre>{@code
+<taskdef
+    classpath="path/to/zz-grep-x.y.z-jar-with-dependencies.jar"
+    resource="antlib.xml"
+/>
+ * }</pre>
  */
 public
 class AntTask extends Task {

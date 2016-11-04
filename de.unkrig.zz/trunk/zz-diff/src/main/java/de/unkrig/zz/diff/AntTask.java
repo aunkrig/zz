@@ -54,6 +54,15 @@ import de.unkrig.zz.diff.Diff.Tokenization;
 /**
  * Computes the differences between files, directory trees, archive file entries and compressed files, and prints them
  * in various formats.
+ * <p>
+ *   To use this task, add this to your ANT build script:
+ * </p>
+ * <pre>{@code
+<taskdef
+    classpath="path/to/zz-diff-x.y.z-jar-with-dependencies.jar"
+    resource="antlib.xml"
+/>
+ * }</pre>
  */
 public
 class AntTask extends Task {
