@@ -1,4 +1,4 @@
 <?xml version="1.0"?>
 <antlib>
-	<taskdef name="zzpack"  classname="de.unkrig.zz.pack.AntTask" />
+	<taskdef name="zzpack" classname="de.unkrig.zz.pack.AntTask" />
 </antlib>

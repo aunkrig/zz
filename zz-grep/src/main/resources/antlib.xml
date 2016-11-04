@@ -1,4 +1,4 @@
 <?xml version="1.0"?>
 <antlib>
-	<taskdef name="zzgrep"  classname="de.unkrig.zz.grep.AntTask" />
+	<taskdef name="zzgrep" classname="de.unkrig.zz.grep.AntTask" />
 </antlib>
