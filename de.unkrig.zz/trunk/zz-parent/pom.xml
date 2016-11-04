@@ -65,9 +65,9 @@
 					<executions>
 						<execution>
 							<id>attach-windows-exe</id>
-	
+
 							<goals><goal>launch4j</goal></goals>
-	
+
 							<configuration>
 								<headerType>console</headerType>
 								<outfile>target/${project.name}-${project.version}.exe</outfile>
@@ -158,22 +158,22 @@
 				</plugin>
 
 				<!--
-					Creates a JAR file containing the API documentation (javadoc) and an HTML help document for the
-					command line tool (MAINDOC).
+					Creates a JAR file containing the API documentation (javadoc), an HTML help document for the
+					command line tool (MAINDOC), and documentation for the ANT tasks, types, etc. (ANTDOC).
 				-->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
 					<version>2.10.4</version>
 					<executions>
-	
+
 						<!-- Generate the API docs. -->
 						<execution>
 							<id>attach-javadocs</id>
 							<goals>
 								<goal>jar</goal>
 							</goals>
-	
+
 							<configuration>
 								<javadocVersion>1.8</javadocVersion>
 								<additionalparam>-Xdoclint:none</additionalparam>
@@ -186,37 +186,90 @@
 								</tags>
 							</configuration>
 						</execution>
-	
+
 						<!-- Generate the command-line help doc. -->
 						<execution>
+
 							<id>make-maindoc</id>
 							<phase>compile</phase>
-							<goals>
-								<goal>javadoc</goal>
-							</goals>
-	
+							<goals><goal>javadoc</goal></goals>
+
 							<configuration>
 								<useStandardDocletOptions>false</useStandardDocletOptions>
 								<additionalparam>-Xdoclint:none</additionalparam>
-	
-								<!-- The MAIN doclet requires JAVADOC 8. -->
-								<javadocExecutable>${jdk.8.home}/bin/javadoc.exe</javadocExecutable>
-	
+
 								<quiet>true</quiet>
-	
+
 								<doclet>de.unkrig.doclet.main.MainDoclet</doclet>
 								<docletArtifact>
 									<groupId>de.unkrig</groupId>
 									<artifactId>doclet-main</artifactId>
 									<version>1.0.1</version>
 								</docletArtifact>
-	
+
 								<additionalparam>
 									-charset     UTF-8
 									-docencoding UTF-8
 								</additionalparam>
-	
+
 								<destDir>../../classes</destDir>
+							</configuration>
+						</execution>
+
+						<!-- Generate documentation for the ANT tasks, types, etc. (ANTDOC). -->
+						<execution>
+							<id>make-antdoc</id>
+							<phase>package</phase>
+							<goals><goal>javadoc</goal></goals>
+
+							<configuration>
+
+								<quiet>true</quiet>
+								<author>false</author>
+								<use>false</use>
+								<version>false</version>
+								<includeDependencySources>true</includeDependencySources>
+<!--
+								<sourcepath>../../../../zz-diff/src/main/java;../../../../zz-find/src/main/java;../../../../zz-grep/src/main/java;../../../../zz-pack/src/main/java;../../../../zz-patch/src/main/java</sourcepath>
+-->
+			 
+								<doclet>de.unkrig.doclet.ant.AntDoclet</doclet>
+								<docletArtifacts>
+									<docletArtifact>
+										<groupId>de.unkrig</groupId>
+										<artifactId>doclet-ant</artifactId>
+										<version>1.0.3-SNAPSHOT</version>
+									</docletArtifact>
+
+									<!--
+										The ANT doclet reads the "org/apache/tools/ant/taskdefs/defaults.properties"
+										resource from "ant.jar", and thus requires it on its runtime path.
+									-->
+									<docletArtifact>
+										<groupId>org.apache.ant</groupId>
+										<artifactId>ant</artifactId>
+										<version>1.8.4</version>
+									</docletArtifact>
+								</docletArtifacts>
+
+								<additionalparam>
+									-antlib-file ${basedir}/target/classes/antlib.xml
+									-theme       JAVA7
+								</additionalparam>
+
+<!--
+								<offlineLinks>
+									<offlineLink>
+										<url>http://commons.unkrig.de/javadoc</url>
+										<location>../../package-lists/de.unkrig.commons</location>
+									</offlineLink>
+									<offlineLink>
+										<url>http://api.dpml.net/org/apache/ant/1.7.0</url>
+										<location>../../package-lists/org.apache.ant</location>
+									</offlineLink>
+								</offlineLinks>
+-->
+								<destDir>../../antdoc</destDir>
 							</configuration>
 						</execution>
 					</executions>
@@ -238,7 +291,7 @@
 							<version>1.0.0</version>
 						</dependency>
 					</dependencies>
-	
+
 					<executions><execution>
 						<id>html2txt-maindoc</id>
 						<phase>compile</phase>
@@ -257,6 +310,7 @@
 		</pluginManagement>
 
 		<plugins>
+
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
@@ -265,6 +319,8 @@
 	</build>
 
 	<profiles>
+
+		<!-- Signs all artifacts with GPG (oss.sonatype.org requires that). -->
 		<profile>
 			<id>have_gpg</id>
 			<build>
@@ -313,5 +369,6 @@
 		<module>../zz-grep</module>
 		<module>../zz-pack</module>
 		<module>../zz-patch</module>
+		<module>../zz-all</module>
 	</modules>
 </project>

@@ -1,56 +1,19 @@
 <project default="default">
 
 	<!--
-		This ANT build script is only there to upload JAVADOC, ANTDOC and MAINDOC to a web server so that they are
-		publicly accessible from the internet.
+		This ANT build script is only there to to the following:
+		* Upload JAVADOC, ANTDOC and MAINDOC to a web server so that they are publicly accessible from the internet.
 	-->
 
 	<property file="local_build.properties" />
 	<property file="build.properties" />
-	<property name="commons.version" value="1.2.0" />
 
 	<taskdef
 		classpath="${maven.repo}/de/unkrig/antology/2.0.1/antology-2.0.1-jar-with-dependencies.jar"
 		resource="de/unkrig/antology/ant.xml"
 	/>
 
-	<target name="default" depends="build.antdoc, publish.docs" />
-	
-	<target name="build.antdoc">
-	
-		<echo message="*** Building ANTDOC..." />
-		<mkdir dir="target/antdoc" />
-		<javadoc destdir="target/antdoc">
-
-			<doclet
-				name="de.unkrig.doclet.ant.AntDoclet"
-				path="${maven.repo}/de/unkrig/doclet-ant/1.0.2/doclet-ant-1.0.2-jar-with-dependencies.jar"
-			/>
-			<classpath>
-				<pathelement location="${maven.repo}/de/unkrig/commons/commons-file/${commons.version}/commons-file-${commons.version}.jar" />
-				<pathelement location="${maven.repo}/de/unkrig/commons/commons-io/${commons.version}/commons-io-${commons.version}.jar" />
-				<pathelement location="${maven.repo}/de/unkrig/commons/commons-lang/${commons.version}/commons-lang-${commons.version}.jar" />
-				<pathelement location="${maven.repo}/de/unkrig/commons/commons-nullanalysis/${commons.version}/commons-nullanalysis-${commons.version}.jar" />
-				<pathelement location="${maven.repo}/de/unkrig/commons/commons-text/${commons.version}/commons-text-${commons.version}.jar" />
-				<pathelement location="${maven.repo}/de/unkrig/commons/commons-util/${commons.version}/commons-util-${commons.version}.jar" />
-
-				<pathelement location="${maven.repo}/de/unkrig/jdisasm/jdisasm/1.0.0/jdisasm-1.0.0.jar" />
-
-				<pathelement location="${maven.repo}/org/apache/ant/ant/1.8.4/ant-1.8.4.jar" />
-				<pathelement location="${maven.repo}/org/apache/commons/commons-compress/1.9/commons-compress-1.9.jar" />
-			</classpath>
-
-			<arg value="-antlib-file" />
-			<arg file="src/main/resources/antlib.xml" />
-
-			<fileset dir="src" />
-			<fileset dir="../zz-diff/src/main/java" />
-			<fileset dir="../zz-find/src/main/java" />
-			<fileset dir="../zz-grep/src/main/java" />
-			<fileset dir="../zz-pack/src/main/java" />
-			<fileset dir="../zz-patch/src/main/java" />
-		</javadoc>
-	</target>
+	<target name="default" depends="publish.docs" />
 
 	<target name="publish.docs">
 

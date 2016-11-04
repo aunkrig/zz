@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+	xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>zz-all</artifactId>
+
+	<parent>
+		<groupId>de.unkrig.zz</groupId>
+		<artifactId>zz-parent</artifactId>
+		<version>1.3.1-SNAPSHOT</version>
+	</parent>
+
+	<dependencies>
+		<dependency><groupId>de.unkrig.zz</groupId><artifactId>zz-diff</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>de.unkrig.zz</groupId><artifactId>zz-find</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>de.unkrig.zz</groupId><artifactId>zz-grep</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>de.unkrig.zz</groupId><artifactId>zz-pack</artifactId><version>${project.version}</version></dependency>
+		<dependency><groupId>de.unkrig.zz</groupId><artifactId>zz-patch</artifactId><version>${project.version}</version></dependency>
+		<dependency>
+			<groupId>org.apache.ant</groupId>
+			<artifactId>ant</artifactId>
+			<version>1.8.4</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+</project>
