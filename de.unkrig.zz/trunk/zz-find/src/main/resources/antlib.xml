@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <antlib>
-	<taskdef name="zzfind"  classname="de.unkrig.zz.find.AntTask" />
+	<taskdef name="zzfind" classname="de.unkrig.zz.find.AntTask" />
 
 	<!--
 		de.unkrig.zz.find.AntTask.ExpressionElement-s for the de.unkrig.zz.find.AntTask.

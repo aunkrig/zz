@@ -1,4 +1,4 @@
 <?xml version="1.0"?>
 <antlib>
-	<taskdef name="zzdiff"  classname="de.unkrig.zz.diff.AntTask" />
+	<taskdef name="zzdiff" classname="de.unkrig.zz.diff.AntTask" />
 </antlib>
