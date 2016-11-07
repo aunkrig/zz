@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<antlib>
+	<taskdef resource="de/unkrig/zz/zz-diff.xml"  />
+	<taskdef resource="de/unkrig/zz/zz-find.xml"  />
+	<taskdef resource="de/unkrig/zz/zz-grep.xml"  />
+	<taskdef resource="de/unkrig/zz/zz-pack.xml"  />
+	<taskdef resource="de/unkrig/zz/zz-patch.xml" />
+</antlib>
