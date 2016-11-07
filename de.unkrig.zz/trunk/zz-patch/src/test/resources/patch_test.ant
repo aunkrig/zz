@@ -1,6 +1,6 @@
 <project>
 
-	<taskdef file="target/classes/antlib.xml" />
+	<taskdef file="target/classes/de/unkrig/zz/zz-patch.xml" />
 
 	<target name="testRemoveFile1">
 		<zzpatch>
