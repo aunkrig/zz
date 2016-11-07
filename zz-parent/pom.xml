@@ -253,7 +253,7 @@
 								</docletArtifacts>
 
 								<additionalparam>
-									-antlib-file ${basedir}/target/classes/antlib.xml
+									-antlib-file ${basedir}/target/classes/de/unkrig/zz/${project.name}.xml
 									-theme       JAVA7
 								</additionalparam>
 
