@@ -148,7 +148,15 @@ class PatchTextTransformer implements TextTransformer {
                     {
                         String line = lineReader.produce();
                         if (line == null) throw new DiffException("Context line beyond end-of-file");
-                        if (!lc.text.equals(line)) throw new DiffException("Context mismatch");
+                        if (!lc.text.equals(line)) {
+                            throw new DiffException(
+                                "Context mismatch; expected \""
+                                + lc.text
+                                + "\", but was \""
+                                + line
+                                + "\""
+                            );
+                        }
                     }
                     writer.write(lc.text);
                     i++;
@@ -162,7 +170,15 @@ class PatchTextTransformer implements TextTransformer {
                     {
                         String line = lineReader.produce();
                         if (line == null) throw new DiffException("Deleted line beyond end-of-file");
-                        if (!lc.text.equals(line)) throw new DiffException("Deleted line mismatch");
+                        if (!lc.text.equals(line)) {
+                            throw new DiffException(
+                                "Deleted line mismatch; expected \""
+                                + lc.text
+                                + "\", but was \""
+                                + line
+                                + "\""
+                            );
+                        }
                     }
                     i++;
                     break;
