@@ -131,12 +131,28 @@ class PatchTextTransformer implements TextTransformer {
 
             if (!this.condition.evaluate(path, this.hunks, hunkIndex, hunk, hunk.from1 + 1)) continue;
 
-            if (i > hunk.from1) throw new DiffException("Changes overlap");
+            if (i > hunk.from1) {
+                throw new DiffException(
+                    "Changes overlap (hunk starts at line "
+                    + hunk.from1
+                    + ", but "
+                    + i
+                    + " lines have already been read)"
+                );
+            }
 
             // Copy lines between hunks.
             for (; i < hunk.from1; i++) {
                 String line = lineReader.produce();
-                if (line == null) throw new DiffException("Hunk begins beyond end-of-file");
+                if (line == null) {
+                    throw new DiffException(
+                        "Hunk begins at line "
+                        + hunk.from1
+                        + ", but the file contains only "
+                        + i
+                        + " lines"
+                    );
+                }
                 writer.write(line);
             }
 
@@ -147,10 +163,12 @@ class PatchTextTransformer implements TextTransformer {
                 case CONTEXT:
                     {
                         String line = lineReader.produce();
-                        if (line == null) throw new DiffException("Context line beyond end-of-file");
+                        if (line == null) {
+                            throw new DiffException("Context line \"" + lc.text + "\" is past the end-of-file");
+                        }
                         if (!lc.text.equals(line)) {
                             throw new DiffException(
-                                "Context mismatch; expected \""
+                                "Context line mismatch; expected \""
                                 + lc.text
                                 + "\", but was \""
                                 + line
@@ -169,7 +187,9 @@ class PatchTextTransformer implements TextTransformer {
                 case DELETED:
                     {
                         String line = lineReader.produce();
-                        if (line == null) throw new DiffException("Deleted line beyond end-of-file");
+                        if (line == null) {
+                            throw new DiffException("Deleted line \"" + lc.text + "\" is beyond the end-of-file");
+                        }
                         if (!lc.text.equals(line)) {
                             throw new DiffException(
                                 "Deleted line mismatch; expected \""
@@ -189,18 +209,10 @@ class PatchTextTransformer implements TextTransformer {
             }
 
             if (hunk.from1 == i) {
-                PatchTextTransformer.LOGGER.log(
-                    Level.CONFIG,
-                    "{0}: Patching after line {1}",
-                    new Object[] { path, i }
-                );
+                PatchTextTransformer.LOGGER.log(Level.CONFIG, "{0}: Patching after line {1}", new Object[] { path, i });
             } else
             if (hunk.from1 == i - 1) {
-                PatchTextTransformer.LOGGER.log(
-                    Level.CONFIG,
-                    "{0}: Patching line {1}",
-                    new Object[] { path, i }
-                );
+                PatchTextTransformer.LOGGER.log(Level.CONFIG, "{0}: Patching line {1}", new Object[] { path, i });
             } else
             {
                 PatchTextTransformer.LOGGER.log(
