@@ -30,6 +30,13 @@
 		</dependency>
 	</dependencies>
 
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+
 	<build>
 		<pluginManagement>
 			<plugins>
@@ -181,9 +188,17 @@
 								<additionalparam>-Xdoclint:none</additionalparam>
 								<quiet>true</quiet>
 								<tags>
-									<tag><name>ant.defaultValue</name><placement>a</placement><head>Default value:</head></tag>
-									<tag><name>ant.valueExplanation</name><placement>X</placement></tag>
-									<tag><name>main.commandLineOptions</name><placement>X</placement></tag>
+									<tag><name>ant.defaultValue</name>    <placement>a</placement><head>Default value:</head>              </tag>
+									<tag><name>ant.mandatory</name>       <placement>a</placement><head>This attribute is mandatory.</head></tag>
+									<tag><name>ant.subelementOrder</name> <placement>X</placement>                                         </tag>
+									<tag><name>ant.typeGroupHeading</name><placement>X</placement>                                         </tag>
+									<tag><name>ant.typeGroupName</name>   <placement>a</placement><head>Type group:</head>                 </tag>
+									<tag><name>ant.typeGroupSubdir</name> <placement>X</placement>                                         </tag>
+									<tag><name>ant.typeHeadingMf</name>   <placement>X</placement>                                         </tag>
+									<tag><name>ant.typeTitleMf</name>     <placement>X</placement>                                         </tag>
+									<tag><name>ant.valueExplanation</name><placement>a</placement><head>Value:</head>                      </tag>
+
+									<tag><name>main.commandLineOptions</name>    <placement>X</placement>                          </tag>
 									<tag><name>main.commandLineOptionGroup</name><placement>a</placement><head>Option group:</head></tag>
 								</tags>
 							</configuration>
@@ -240,7 +255,7 @@
 									<docletArtifact>
 										<groupId>de.unkrig</groupId>
 										<artifactId>doclet-ant</artifactId>
-										<version>1.0.3</version>
+										<version>1.0.5-SNAPSHOT</version>
 									</docletArtifact>
 
 									<!--
@@ -271,6 +286,7 @@
 									</offlineLink>
 								</offlineLinks>
 -->
+								<!-- Notice: Absolute paths don't work here: -->
 								<destDir>../../antdoc</destDir>
 							</configuration>
 						</execution>
