@@ -333,7 +333,7 @@ class Find {
     }
 
     /**
-     * A {@link Test} with one operand expression.
+     * A {@link Find.Test} with one operand expression.
      */
     public abstract static
     class UnaryTest implements Test {
@@ -345,7 +345,7 @@ class Find {
     }
 
     /**
-     * A {@link Test} with two operand expressions.
+     * A {@link Find.Test} with two operand expressions.
      */
     public abstract static
     class BinaryTest implements Test {
@@ -434,11 +434,10 @@ class Find {
         private final String propertyName;
 
         /** @see #evaluate(Mapping) */
-        BooleanTest(String propertyName) { this.propertyName = propertyName; }
+        public BooleanTest(String propertyName) { this.propertyName = propertyName; }
 
         /**
-         * @return The value of the {@link EqualsTest#EqualsTest(String, Object) named} boolean property of the {@code
-         *         subject}
+         * @return The value of the named boolean property of the {@code subject}
          */
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
