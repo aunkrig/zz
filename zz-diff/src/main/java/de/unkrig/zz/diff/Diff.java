@@ -256,6 +256,14 @@ class Diff {
     public void
     setDiffMode(DiffMode value) { this.diffMode = value; }
 
+    /**
+     * The number of (equal) lines before and after each change to report; defaults to 3.
+     * <p>
+     *   Only relevant for diff modes {@link DiffMode#UNIFIED} and {@link DiffMode#CONTEXT}.
+     * </p>
+     *
+     * @see #setDiffMode(DiffMode)
+     */
     public void
     setContextSize(int value) { this.contextSize = value; }
 
@@ -368,8 +376,10 @@ class Diff {
     }
 
     /**
-     * Creates two trees of directories, normal files, compressed files, archive files and archive entries, compares
-     * them and reports all differences.
+     * Compares (potentially compressed) content with (potentially compressed) content, or two trees of archive
+     * entries, and reports all differences.
+     *
+     * @return The number of differences found
      */
     public long
     execute(
