@@ -377,12 +377,32 @@ class Diff {
 
     /**
      * Compares (potentially compressed) content with (potentially compressed) content, or two trees of archive
-     * entries, and reports all differences.
+     * entries, and reports all differences via {@link Printers#info(String)}.
      *
-     * @return The number of differences found
+     * @param opener1 Must produce a non-{@code null} {@link InputStream}
+     * @param opener2 Must produce a non-{@code null} {@link InputStream}
+     * @return        The number of differences found
      */
     public long
     execute(
+        ProducerWhichThrows<? extends InputStream, IOException> opener1,
+        ProducerWhichThrows<? extends InputStream, IOException> opener2
+    ) throws IOException { return this.execute("(first)", "(second)", opener1, opener2); }
+
+    /**
+     * Compares (potentially compressed) content with (potentially compressed) content, or two trees of archive
+     * entries, and reports all differences via {@link Printers#info(String)}.
+     *
+     * @param path1   Used when reporting differences
+     * @param path2   Used when reporting differences
+     * @param opener1 Must produce a non-{@code null} {@link InputStream}
+     * @param opener2 Must produce a non-{@code null} {@link InputStream}
+     * @return        The number of differences found
+     */
+    public long
+    execute(
+        String                                                  path1,
+        String                                                  path2,
         ProducerWhichThrows<? extends InputStream, IOException> opener1,
         ProducerWhichThrows<? extends InputStream, IOException> opener2
     ) throws IOException {
@@ -395,7 +415,7 @@ class Diff {
 
         Printers.verbose("Computing differences...");
 
-        long differenceCount = this.diff("(first)", "(second)", node1, node2);
+        long differenceCount = this.diff(path1, path2, node1, node2);
 
         Printers.verbose("{0,choice,0#No differences|1#1 difference|1<{0} differences} found.", differenceCount);
 
