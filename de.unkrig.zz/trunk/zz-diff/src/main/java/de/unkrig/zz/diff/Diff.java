@@ -392,6 +392,19 @@ class Diff {
     /**
      * Compares (potentially compressed) content with (potentially compressed) content, or two trees of archive
      * entries, and reports all differences via {@link Printers#info(String)}.
+     * <p>
+     *   Example output (for "traditional" diff mode):
+     * </p>
+     * <pre>{@code
+     * 2a3
+     * > ADDED LINE
+     * 5d5
+     * < DELETED LINE
+     * 8c8
+     * < CHANGD LINE
+     * ---
+     * > CHANGED LINE
+     * }</pre>
      *
      * @param path1   Used when reporting differences
      * @param path2   Used when reporting differences
@@ -787,7 +800,7 @@ class Diff {
     private long
     diff(String path1, String path2, @Nullable Line[] lines1, @Nullable Line[] lines2) {
         Printers.verbose(
-            "''{0}'' ({1} lines) vs. ''{2}'' ({3} lines)",
+            "''{0}'' ({1} {1,choice,0#lines|1#line|1<lines}) vs. ''{2}'' ({3} {3,choice,0#lines|1#line|1<lines})",
             path1,
             lines1 == null ? "no" : lines1.length,
             path2,
@@ -799,7 +812,7 @@ class Diff {
             lines1 == null ? new Line[0] : lines1,
             lines2 == null ? new Line[0] : lines2
         );
-        Printers.verbose("{0} raw {0,choice,0#differences|1#difference|differences} found", diffs.size());
+        Printers.verbose("{0} raw {0,choice,0#differences|1#difference|1<differences} found", diffs.size());
 
         if (diffs.isEmpty()) {
             Diff.this.reportFileUnchanged(path1, path2);
