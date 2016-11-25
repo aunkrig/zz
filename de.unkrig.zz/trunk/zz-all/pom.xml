@@ -11,7 +11,7 @@
 	<parent>
 		<groupId>de.unkrig.zz</groupId>
 		<artifactId>zz-parent</artifactId>
-		<version>1.3.2-SNAPSHOT</version>
+		<version>1.3.2</version>
 		<relativePath>../zz-parent</relativePath>
 	</parent>
 
