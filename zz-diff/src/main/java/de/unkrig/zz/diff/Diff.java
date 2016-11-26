@@ -603,10 +603,12 @@ class Diff {
                 case COMPARE_WITH_EMPTY:
                     for (DocumentNode document : this.getDocuments(node)) {
                         String path = document.getPath();
-                        differenceCount[0] += Diff.this.diff("(missing)", path, null, Diff.this.readAllLines(
-                            document.open(),
-                            path2 + path
-                        ));
+                        differenceCount[0] += Diff.this.diff(
+                            "(missing)",    // path1
+                            path,           // path2
+                            null,           // inputStream1
+                            document.open() // inputStream2
+                        );
                     }
                     break;
 
@@ -631,10 +633,12 @@ class Diff {
                 case COMPARE_WITH_EMPTY:
                     for (DocumentNode document : this.getDocuments(node)) {
                         String path = document.getPath();
-                        differenceCount[0] += Diff.this.diff(path, "(missing)", Diff.this.readAllLines(
-                            document.open(),
-                            path1 + path
-                        ), null);
+                        differenceCount[0] += Diff.this.diff(
+                            path,            // path1
+                            "(missing)",     // path2
+                            document.open(), // inputStream1
+                            null             // inputStream2
+                        );
                     }
                     break;
 
@@ -689,16 +693,15 @@ class Diff {
                     return;
                 }
 
+                // At this point, the two files have PHYSICALLY different contents, but they may still be LOGICALLY
+                // equal.
+
                 if (Diff.this.diffMode == DiffMode.EXIST) {
                     Diff.this.reportFileUnchanged(path1, path2);
                 } else {
 
-                    // Read the contents of the two pathes.
-                    Line[] lines1 = Diff.this.readAllLines(document1.open(), path1);
-                    Line[] lines2 = Diff.this.readAllLines(document2.open(), path2);
-
-                    // The two files have PHYSICALLY different contents, but they may still be LOGICALLY equal.
-                    differenceCount[0] += Diff.this.diff(path1, path2, lines1, lines2);
+                    // DIFF the two documents.
+                    differenceCount[0] += Diff.this.diff(path1, path2, document1.open(), document2.open());
                 }
             }
         };
@@ -791,30 +794,39 @@ class Diff {
     }
 
     /**
-     * Analyzes the lines of the two documents and reports that the contents is "equal" or has "changed", and,
-     * in the latter case, prints the actual differences and increments the {@link #differenceCount}.
+     * Analyzes the contents of the two documents and reports that the contents is "equal" or has "changed", and,
+     * in the latter case, prints the actual differences.
+     * <p>
+     *   The two input streams are closed in any case, even on abrupt completion.
+     * </p>
      *
-     * @param lines1 {@code null} means {@code path1} designates a 'deleted' file
-     * @param lines2 {@code null} means {@code path2} designates an 'added' file
+     * @param stream1 {@code null} means {@code path1} designates a 'deleted' file
+     * @param stream2 {@code null} means {@code path2} designates an 'added' file
+     * @return        The number of detected differences
      */
-    private long
-    diff(String path1, String path2, @Nullable Line[] lines1, @Nullable Line[] lines2) {
+    public long
+    diff(String path1, String path2, @Nullable InputStream stream1, @Nullable InputStream stream2) throws IOException {
+
+        // Read the contents of the two pathes.
+        Line[] lines1 = stream1 == null ? new Line[0] : this.readAllLines(stream1, path1);
+        Line[] lines2 = stream2 == null ? new Line[0] : this.readAllLines(stream2, path2);
+
         Printers.verbose(
             "''{0}'' ({1} {1,choice,0#lines|1#line|1<lines}) vs. ''{2}'' ({3} {3,choice,0#lines|1#line|1<lines})",
             path1,
-            lines1 == null ? "no" : lines1.length,
+            lines1.length,
             path2,
-            lines2 == null ? "no" : lines2.length
+            lines2.length
         );
 
         // Compute the contents differences.
-        List<Difference> diffs = this.logicalDiff(
-            lines1 == null ? new Line[0] : lines1,
-            lines2 == null ? new Line[0] : lines2
-        );
+        List<Difference> diffs = this.logicalDiff(lines1, lines2);
+
         Printers.verbose("{0} raw {0,choice,0#differences|1#difference|1<differences} found", diffs.size());
 
         if (diffs.isEmpty()) {
+
+            // At this point, the two documents are definitely logically equal.
             Diff.this.reportFileUnchanged(path1, path2);
             return 0;
         }
@@ -832,12 +844,12 @@ class Diff {
             for (Iterator<Difference> it = diffs.iterator(); it.hasNext();) {
                 Difference d = it.next();
 
-                if (lines1 != null && d.getDeletedStart() != Difference.NONE) {
+                if (d.getDeletedStart() != Difference.NONE) {
                     for (int i = d.getDeletedStart(); i <= d.getDeletedEnd(); i++) {
                         if (!Diff.contains(lines1[i].text, fileIgnores)) continue IGNORABLE;
                     }
                 }
-                if (lines2 != null && d.getAddedStart() != Difference.NONE) {
+                if (d.getAddedStart() != Difference.NONE) {
                     for (int i = d.getAddedStart(); i <= d.getAddedEnd(); i++) {
                         if (!Diff.contains(lines2[i].text, fileIgnores)) continue IGNORABLE;
                     }
@@ -847,10 +859,10 @@ class Diff {
             Printers.verbose("Reduced to {0} non-ignorable differences", diffs.size());
         }
 
-        if (lines1 == null) {
+        if (stream1 == null) {
             Diff.this.reportFileAdded(path2);
         } else
-        if (lines2 == null) {
+        if (stream2 == null) {
             Diff.this.reportFileDeleted(path1);
         } else
         if (diffs.isEmpty()) {
@@ -872,31 +884,19 @@ class Diff {
             break;
 
         case NORMAL:
-            Diff.normalDiff(
-                lines1 == null ? new Line[0] : lines1,
-                lines2 == null ? new Line[0] : lines2,
-                diffs
-            );
+            Diff.normalDiff(lines1, lines2, diffs);
             break;
 
         case CONTEXT:
             Printers.info("*** " + path1);
             Printers.info("--- " + path2);
-            Diff.this.contextDiff(
-                lines1 == null ? new Line[0] : lines1,
-                lines2 == null ? new Line[0] : lines2,
-                diffs
-            );
+            Diff.this.contextDiff(lines1, lines2, diffs);
             break;
 
         case UNIFIED:
             Printers.info("--- " + path1);
             Printers.info("+++ " + path2);
-            Diff.this.unifiedDiff(
-                lines1 == null ? new Line[0] : lines1,
-                lines2 == null ? new Line[0] : lines2,
-                diffs
-            );
+            Diff.this.unifiedDiff(lines1, lines2, diffs);
             break;
 
         default:
@@ -1281,6 +1281,9 @@ class Diff {
     /**
      * Reads the contents of the entry with the given {@code path} and transforms it to an array of {@link Line}s.
      * Honors {@link #disassembleClassFiles}, {@link #equivalentLines} and {@link #ignoreWhitespace}.
+     * <p>
+     *   Eventually closes the <var>inputStream</var>, even on abrupt completion.
+     * </p>
      *
      * @param path E.g. ".class" files are filtered through a bytecode disassembler
      */

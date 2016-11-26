@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
+import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -80,6 +81,41 @@ class ApiTest {
             "I: ---",
             "I: > CHANGED LINE",
             "V: 3 differences found.",
+        }), AssertPrinters.recordMessages(runnable));
+    }
+
+    /**
+     * Tests the {@link Diff#diff(String, String, InputStream, InputStream)} API.
+     */
+    @Test public void
+    test2() throws IOException {
+
+        RunnableWhichThrows<IOException> runnable = new RunnableWhichThrows<IOException>() {
+
+            @Override public void
+            run() throws IOException {
+                new Diff().diff(
+                    "/path1",
+                    "/path2",
+                    new StringInputStream("---\n---\n---\n---\nDELETED LINE\n---\n---\nCHANGD LINE\n---\n---\n"),
+                    new StringInputStream("---\n---\nADDED LINE\n---\n---\n---\n---\nCHANGED LINE\n---\n---\n")
+                );
+            }
+        };
+
+        Assert.assertEquals(Arrays.asList(new String[] {
+            "V: '/path1' (10 lines) vs. '/path2' (10 lines)",
+            "V: 3 raw differences found",
+            "V: '/path1' and '/path2' changed",
+            "I: File changed path2",
+            "I: 2a3",
+            "I: > ADDED LINE",
+            "I: 5d5",
+            "I: < DELETED LINE",
+            "I: 8c8",
+            "I: < CHANGD LINE",
+            "I: ---",
+            "I: > CHANGED LINE",
         }), AssertPrinters.recordMessages(runnable));
     }
 
