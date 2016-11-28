@@ -11,7 +11,7 @@
 	<parent>
 		<groupId>de.unkrig.zz</groupId>
 		<artifactId>zz-parent</artifactId>
-		<version>1.3.3</version>
+		<version>1.3.4-SNAPSHOT</version>
 		<relativePath>../zz-parent</relativePath>
 	</parent>
 
@@ -41,22 +41,53 @@
 				<artifactId>maven-source-plugin</artifactId>
 			</plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-javadoc-plugin</artifactId>
-			</plugin>
 
+			<!--
+				Generate documentation for the ANT tasks, types, etc. (ANTDOC).
+			-->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
 				<executions>
-
-					<!-- Generate documentation for the ANT tasks, types, etc. (ANTDOC). -->
 					<execution>
 						<id>make-antdoc</id>
+						<phase>package</phase>
+						<goals><goal>javadoc</goal></goals>
 
 						<configuration>
-							<sourcepath>../../../../zz-diff/src/main/resources;../../../../zz-find/src/main/resources;../../../../zz-grep/src/main/resources;../../../../zz-pack/src/main/resources;../../../../zz-patch/src/main/resources</sourcepath>
+
+							<quiet>true</quiet>
+							<author>false</author>
+							<use>false</use>
+							<version>false</version>
+							<includeDependencySources>true</includeDependencySources>
+
+							<doclet>de.unkrig.doclet.ant.AntDoclet</doclet>
+							<docletArtifacts>
+								<docletArtifact>
+									<groupId>de.unkrig</groupId>
+									<artifactId>doclet-ant</artifactId>
+									<version>1.0.5</version>
+								</docletArtifact>
+
+								<!--
+									The ANT doclet reads the "org/apache/tools/ant/taskdefs/defaults.properties"
+									resource from "ant.jar", and thus requires it on its runtime path.
+								-->
+								<docletArtifact>
+									<groupId>org.apache.ant</groupId>
+									<artifactId>ant</artifactId>
+									<version>1.8.4</version>
+								</docletArtifact>
+							</docletArtifacts>
+
+							<additionalparam>
+								-antlib-file ${basedir}/target/classes/de/unkrig/zz/${project.name}.xml
+								-theme       JAVA7
+							</additionalparam>
+
+							<!-- Notice: Absolute paths don't work here: -->
+							<destDir>../../antdoc</destDir>
 						</configuration>
 					</execution>
 				</executions>
