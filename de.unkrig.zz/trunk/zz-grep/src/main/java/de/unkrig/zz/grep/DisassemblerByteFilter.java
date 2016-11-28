@@ -39,10 +39,10 @@ import de.unkrig.jdisasm.Disassembler;
  * format"</a> and disassembles it to a human-readable form.
  *
  * Requires the "de.unkrig.jdisasm" utility, available on
- * {@code https://svn.codehaus.org/janino/trunk}.
+ * {@code https://github.com/aunkrig/jdisasm}.
  *
  * Requires the "de.unkrig.commons.util" and "de.unkrig.commons.io" libraries, available on
- * {@code https://loggifier.svn.sourceforge.net/svnroot/loggifier/trunk}.
+ * {@code http://commons.unkrig.de}.
  */
 public
 class DisassemblerByteFilter implements ByteFilter<Void> {
@@ -64,13 +64,13 @@ class DisassemblerByteFilter implements ByteFilter<Void> {
     }
 
     /**
-     * @param value Whether source line numbers are suppressed in the disassembly
+     * @param value Whether source line numbers are suppressed in the disassembly (defaults to {@code false})
      */
     public void
     setHideLines(boolean value) { this.hideLines = value; }
 
     /**
-     * @param value Whether local variable names are suppressed in the disassembly
+     * @param value Whether local variable names are suppressed in the disassembly (defaults to {@code false})
      */
     public void
     setHideVars(boolean value) { this.hideVars = value; }
