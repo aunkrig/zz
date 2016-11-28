@@ -57,7 +57,7 @@ import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 
 /**
- * The 'de.unkrig.zz.pack' ANT task.
+ * Creates an (optionally compressed) archive file from a set of files and archives.
  * <p>
  *   To use this task, add this to your ANT build script:
  * </p>
