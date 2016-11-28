@@ -54,7 +54,7 @@
 			</mappedresources>
 
 			<!-- ANTDOC => antdoc/index.html -->
-			<fileset dir="target" includes="antdoc/**" />
+			<fileset dir="../zz-all/target" includes="antdoc/**" />
 		</copy>
 		<ftp2
 			server       ="${ftp.server}"
