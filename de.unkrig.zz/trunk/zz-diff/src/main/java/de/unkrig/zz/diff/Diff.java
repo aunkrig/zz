@@ -26,29 +26,17 @@
 
 package de.unkrig.zz.diff;
 
-import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.CXX_COMMENT;
-import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.C_COMMENT;
-import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.MULTI_LINE_C_COMMENT_BEGINNING;
-import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.MULTI_LINE_C_COMMENT_END;
-import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.MULTI_LINE_C_COMMENT_MIDDLE;
-
-import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
@@ -57,9 +45,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
-import java.util.zip.Checksum;
-
-import org.incava.util.diff.Difference;
 
 import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessings;
@@ -69,24 +54,22 @@ import de.unkrig.commons.file.fileprocessing.FileProcessings;
 import de.unkrig.commons.file.fileprocessing.FileProcessings.DirectoryCombiner;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.fileprocessing.SelectiveFileProcessor;
-import de.unkrig.commons.io.ByteFilterInputStream;
+import de.unkrig.commons.io.IoUtil;
 import de.unkrig.commons.lang.AssertionUtil;
-import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.ThreadUtil;
+import de.unkrig.commons.lang.protocol.Consumer;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
+import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
+import de.unkrig.commons.text.AbstractPrinter;
+import de.unkrig.commons.text.AbstractPrinter.Level;
 import de.unkrig.commons.text.Printer;
 import de.unkrig.commons.text.Printers;
-import de.unkrig.commons.text.scanner.AbstractScanner.Token;
-import de.unkrig.commons.text.scanner.JavaScanner;
-import de.unkrig.commons.text.scanner.JavaScanner.TokenType;
-import de.unkrig.commons.text.scanner.ScanException;
-import de.unkrig.commons.text.scanner.ScannerUtil;
-import de.unkrig.commons.text.scanner.StringScanner;
 import de.unkrig.commons.util.TreeComparator;
 import de.unkrig.commons.util.TreeComparator.Node;
+import de.unkrig.commons.util.collections.CollectionUtil;
 import de.unkrig.commons.util.concurrent.ConcurrentUtil;
 import de.unkrig.commons.util.concurrent.SquadExecutor;
 
@@ -95,16 +78,13 @@ import de.unkrig.commons.util.concurrent.SquadExecutor;
  *
  * <p>
  *   It prints its output via the {@link Printers context printer}; if you want to modify the printing, then you'll
- *   have to set up your own {@link Printer} and use {@link Printers#withPrinter(Printer, Runnable)} to execute the
- *   DIFF.
+ *   have to set up your own {@link Printer} and use {@link AbstractPrinter#run(Runnable)} to run the DIFF.
  * </p>
  */
 public
-class Diff {
+class Diff extends DocumentDiff {
 
     static { AssertionUtil.enableAssertionsForThisClass(); }
-
-    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
     private static final ExecutorService PARALLEL_EXECUTOR_SERVICE = new ScheduledThreadPoolExecutor(
         Runtime.getRuntime().availableProcessors() * 3,
@@ -170,7 +150,7 @@ class Diff {
         /**
          * Output 'unified diff' format.
          */
-        UNIFIED
+        UNIFIED,
     }
 
     /**
@@ -198,36 +178,24 @@ class Diff {
 
     // Configuration parameters.
 
-    /** The possible modes for tokenizing the documents to compare. */
-    public enum Tokenization { LINE, JAVA }
-
     private Predicate<? super String>         pathPredicate   = PredicateUtil.always();
     private final List<Pattern>               equivalentPaths = new ArrayList<Pattern>();
     private final Collection<LineEquivalence> equivalentLines = new ArrayList<LineEquivalence>();
     private final Collection<LineEquivalence> ignores         = new ArrayList<LineEquivalence>();
-    private boolean                           ignoreWhitespace;
     private AbsentFileMode                    addedFileMode   = AbsentFileMode.REPORT;
     private AbsentFileMode                    deletedFileMode = AbsentFileMode.REPORT;
     private boolean                           reportUnchangedFiles;
     private Predicate<? super String>         lookIntoFormat  = PredicateUtil.always();
-    private boolean                           disassembleClassFiles;
-    private boolean                           disassembleClassFilesButHideLines;
-    private boolean                           disassembleClassFilesButHideVars;
-    private Charset                           charset          = Charset.defaultCharset();
-    private DiffMode                          diffMode         = DiffMode.NORMAL;
-    private int                               contextSize      = 3;
+    private DiffMode                      diffMode     = DiffMode.NORMAL;
     private ExceptionHandler<IOException>     exceptionHandler = ExceptionHandler.<IOException>defaultHandler();
     private boolean                           sequential;
-    private Tokenization                      tokenization     = Tokenization.LINE;
-    private boolean                           ignoreCStyleComments;
-    private boolean                           ignoreCPlusPlusStyleComments;
-    private boolean                           ignoreDocComments;
+    private boolean                           recurseSubdirectories = true;
 
     // SETTERS FOR THE VARIOUS CONFIGURATION PARAMETERS
 
     // CHECKSTYLE JavadocMethod:OFF
     public void
-    setIgnoreWhitespace(boolean value) { this.ignoreWhitespace = value; }
+    setRecurseSubdirectories(boolean value) { this.recurseSubdirectories = value; }
 
     public void
     setAddedFileMode(AbsentFileMode value) { this.addedFileMode = value; }
@@ -242,79 +210,21 @@ class Diff {
     setLookInto(Predicate<? super String> value) { this.lookIntoFormat = value; }
 
     public void
-    setDisassembleClassFiles(boolean value) { this.disassembleClassFiles = value; }
+    setDiffMode(DiffMode value) {
 
-    public void
-    setDisassembleClassFilesButHideLines(boolean value) { this.disassembleClassFilesButHideLines = value; }
-
-    public void
-    setDisassembleClassFilesButHideVars(boolean value) { this.disassembleClassFilesButHideVars = value; }
-
-    public void
-    setCharset(Charset value) { this.charset = value; }
-
-    public void
-    setDiffMode(DiffMode value) { this.diffMode = value; }
-
-    /**
-     * The number of (equal) lines before and after each change to report; defaults to 3.
-     * <p>
-     *   Only relevant for diff modes {@link DiffMode#UNIFIED} and {@link DiffMode#CONTEXT}.
-     * </p>
-     *
-     * @see #setDiffMode(DiffMode)
-     */
-    public void
-    setContextSize(int value) { this.contextSize = value; }
+        switch ((this.diffMode = value)) {
+        case NORMAL:  this.setDocumentDiffMode(DocumentDiffMode.NORMAL);
+        case CONTEXT: this.setDocumentDiffMode(DocumentDiffMode.CONTEXT);
+        case UNIFIED: this.setDocumentDiffMode(DocumentDiffMode.UNIFIED);
+        default:      ;
+        }
+    }
 
     public void
     setExceptionHandler(ExceptionHandler<IOException> value) { this.exceptionHandler = value; }
 
     public void
     setSequential(boolean value) { this.sequential = value; }
-
-    public void
-    setTokenization(Tokenization value) { this.tokenization = value; }
-
-    /**
-     * Whether C-style comments ("<code>/*; ... &#42;/</code>") are relevant for comparison.
-     * Relevant iff {@link #setTokenization(Tokenization) tokenization} is {@link Tokenization#JAVA JAVA}.
-     * <p>
-     *   Doc comments ("<code>/** ... &#42;/</code>") are handled differently, and are not regarded as C-style
-     *   comments.
-     * </p>
-     * <p>
-     *   The default is {@code false}.
-     * </p>
-     *
-     * @see #setIgnoreDocComments(boolean)
-     */
-    public void
-    setIgnoreCStyleComments(boolean value) { this.ignoreCStyleComments = value; }
-
-    /**
-     * Whether C++-style comments ("<code>// ...</code>") are relevant for comparison.
-     * Relevant iff {@link #setTokenization(Tokenization) tokenization} is {@link Tokenization#JAVA JAVA}.
-     * <p>
-     *   The default is {@code false}.
-     * </p>
-     */
-    public void
-    setIgnoreCPlusPlusStyleComments(boolean value) { this.ignoreCPlusPlusStyleComments = value; }
-
-    /**
-     * Whether doc comments ("<code>/** ... &#42;/</code>") are relevant for comparison.
-     * Relevant iff {@link #setTokenization(Tokenization) tokenization} is {@link Tokenization#JAVA JAVA}.
-     * <p>
-     *   The default is {@code false}.
-     * </p>
-     * <p>
-     *   Strictly speaking, a doc comment is only a doc comment if it appears <i>immediately before a declaration</i>;
-     *   however, this implementation regards <i>any</i> comment starting with "{@code /**}" as a doc comment.
-     * </p>
-     */
-    public void
-    setIgnoreDocComments(boolean value) { this.ignoreDocComments = value; }
 
     public void
     setPathPredicate(Predicate<? super String> pathPredicate) { this.pathPredicate = pathPredicate; }
@@ -471,37 +381,82 @@ class Diff {
         };
 
         FileProcessor<NodeWithPath>
-        regularFileProcessor = FileProcessings.recursiveCompressedAndArchiveFileProcessor(
+        regularFileProcessor1 = FileProcessings.recursiveCompressedAndArchiveFileProcessor(
             this.lookIntoFormat,      // lookIntoFormat
             archiveEntryCombiner,     // archiveEntryCombiner
             this.contentsProcessor(), // contentsProcessor
             this.exceptionHandler     // exceptionHandler
         );
-        regularFileProcessor = new SelectiveFileProcessor<NodeWithPath>(
+        final FileProcessor<NodeWithPath> regularFileProcessor = new SelectiveFileProcessor<NodeWithPath>(
             this.pathPredicate,
-            regularFileProcessor,
+            regularFileProcessor1,
             FileProcessings.<NodeWithPath>nop()
         );
 
-        return FileProcessings.directoryTreeProcessor(
-            this.pathPredicate,                     // pathPredicate
-            regularFileProcessor,                   // regularFileProcessor
-            Collator.getInstance(),                 // directoryMemberNameComparator
-            new DirectoryCombiner<NodeWithPath>() { // directoryMemberCombiner
+        DirectoryCombiner<NodeWithPath> dmc = new DirectoryCombiner<NodeWithPath>() { // directoryMemberCombiner
 
-                @Override public NodeWithPath
-                combine(String directoryPath, File directory, List<NodeWithPath> memberCombinables) {
+            @Override public NodeWithPath
+            combine(String directoryPath, File directory, List<NodeWithPath> memberCombinables) {
 
-                    // Filter out "null" values, which can
-                    TreeSet<NodeWithPath> memberNodes = new TreeSet<NodeWithPath>(Diff.this.normalizedPathComparator);
-                    for (NodeWithPath memberNode : memberCombinables) {
-                        if (memberNode != null) memberNodes.add(memberNode);
-                    }
-                    return new DirectoryNode(directoryPath, memberNodes);
+                // Filter out "null" values, which can
+                TreeSet<NodeWithPath> memberNodes = new TreeSet<NodeWithPath>(Diff.this.normalizedPathComparator);
+                for (NodeWithPath memberNode : memberCombinables) {
+                    if (memberNode != null) memberNodes.add(memberNode);
                 }
-            },
-            squadExecutor,                          // squadExecutor
-            this.exceptionHandler                   // exceptionHandler
+                return new DirectoryNode(directoryPath, memberNodes);
+            }
+        };
+
+        if (this.recurseSubdirectories) {
+            return FileProcessings.directoryTreeProcessor(
+                this.pathPredicate,     // pathPredicate
+                regularFileProcessor,   // regularFileProcessor
+                Collator.getInstance(), // directoryMemberNameComparator
+                dmc,                    // directoryMemberCombiner
+                squadExecutor,          // squadExecutor
+                this.exceptionHandler   // exceptionHandler
+            );
+        } else {
+            return FileProcessings.directoryProcessor(
+                this.pathPredicate,                 // pathPredicate
+                regularFileProcessor,               // regularFileProcessor
+                Collator.getInstance(),             // directoryMemberNameComparator
+                new FileProcessor<NodeWithPath>() { // directoryMemberProcessor
+
+                    @Override @Nullable public NodeWithPath
+                    process(String path, File file) throws FileNotFoundException, IOException, InterruptedException {
+
+                        if (file.isDirectory()) {
+                            return new DirectoryNode(path, CollectionUtil.<NodeWithPath>emptySortedSet());
+                        }
+
+                        return regularFileProcessor.process(path, file);
+                    }
+                },
+                dmc,                                // directoryMemberCombiner
+                squadExecutor,                      // squadExecutor
+                this.exceptionHandler               // exceptionHandler
+            );
+        }
+    }
+    public static <T> FileProcessor<T>
+    xx(
+        Predicate<? super String>      pathPredicate,
+        FileProcessor<T>               regularFileProcessor,
+        @Nullable Comparator<Object>   directoryMemberNameComparator,
+        DirectoryCombiner<T>           directoryCombiner,
+        SquadExecutor<T>               squadExecutor,
+        ExceptionHandler<IOException>  exceptionHandler
+    ) {
+
+        return FileProcessings.directoryProcessor(
+            pathPredicate,
+            regularFileProcessor,
+            directoryMemberNameComparator,
+            regularFileProcessor, // directoryMemberProcessor
+            directoryCombiner,
+            squadExecutor,
+            exceptionHandler
         );
     }
 
@@ -603,11 +558,12 @@ class Diff {
                 case COMPARE_WITH_EMPTY:
                     for (DocumentNode document : this.getDocuments(node)) {
                         String path = document.getPath();
+                        Diff.this.reportFileAdded(path);
                         differenceCount[0] += Diff.this.diff(
-                            "(missing)",    // path1
-                            path,           // path2
-                            null,           // inputStream1
-                            document.open() // inputStream2
+                            "(missing)",               // path1
+                            path,                      // path2
+                            IoUtil.EMPTY_INPUT_STREAM, // inputStream1
+                            document.open()            // inputStream2
                         );
                     }
                     break;
@@ -633,11 +589,12 @@ class Diff {
                 case COMPARE_WITH_EMPTY:
                     for (DocumentNode document : this.getDocuments(node)) {
                         String path = document.getPath();
+                        Diff.this.reportFileDeleted(path1);
                         differenceCount[0] += Diff.this.diff(
-                            path,            // path1
-                            "(missing)",     // path2
-                            document.open(), // inputStream1
-                            null             // inputStream2
+                            path,                     // path1
+                            "(missing)",              // path2
+                            document.open(),          // inputStream1
+                            IoUtil.EMPTY_INPUT_STREAM // inputStream2
                         );
                     }
                     break;
@@ -654,7 +611,7 @@ class Diff {
             private List<DocumentNode>
             getDocuments(NodeWithPath node) {
 
-                SortedSet<NodeWithPath> children = node.children();
+                Set<NodeWithPath> children = node.children();
                 if (children == null) return Collections.singletonList((DocumentNode) node);
 
                 final List<DocumentNode> result = new ArrayList<DocumentNode>();
@@ -676,11 +633,11 @@ class Diff {
 
             @Override protected void
             leafNodeRemains(NodeWithPath node1, NodeWithPath node2) throws IOException {
-                DocumentNode document1 = (DocumentNode) node1;
-                DocumentNode document2 = (DocumentNode) node2;
+                final DocumentNode document1 = (DocumentNode) node1;
+                final DocumentNode document2 = (DocumentNode) node2;
 
-                String path1 = document1.getPath();
-                String path2 = document2.getPath();
+                final String path1 = document1.getPath();
+                final String path2 = document2.getPath();
 
                 // Are the files' contents bytewise identical?
                 // Notice: For some DocumentNodes the computation of the CRC32 is quite expensive, so check size
@@ -700,8 +657,36 @@ class Diff {
                     Diff.this.reportFileUnchanged(path1, path2);
                 } else {
 
-                    // DIFF the two documents.
-                    differenceCount[0] += Diff.this.diff(path1, path2, document1.open(), document2.open());
+                    // We are about to DIFF the two documents. The problem is that "reportFileChange()" must be called
+                    // BEFORE the first line of DIFF is printed. Thus, we set up a printer that delays the invocation
+                    // of "reportFileChanged()" until the first INFO message is printed.
+                    final AbstractPrinter cp = AbstractPrinter.getContextPrinter();
+                    cp.redirect(Level.INFO, new Consumer<String>() {
+
+                        boolean first = true;
+
+                        @Override public void
+                        consume(String message) {
+                            if (this.first) {
+                                Diff.this.reportFileChanged(path1, path2);
+                                this.first = false;
+                            }
+                            cp.info(message);
+                        }
+                    }).run(new RunnableWhichThrows<IOException>() {
+
+                        @Override public void
+                        run() throws IOException {
+
+                            // DIFF the two documents.
+                            long dc = Diff.this.diff(path1, path2, document1.open(), document2.open());
+                            if (dc == 0) {
+                                Diff.this.reportFileUnchanged(path1, path2);
+                            } else {
+                                differenceCount[0] += dc;
+                            }
+                        }
+                    });
                 }
             }
         };
@@ -792,642 +777,6 @@ class Diff {
             }
         }
     }
-
-    /**
-     * Analyzes the contents of the two documents and reports that the contents is "equal" or has "changed", and,
-     * in the latter case, prints the actual differences.
-     * <p>
-     *   The two input streams are closed in any case, even on abrupt completion.
-     * </p>
-     *
-     * @param stream1 {@code null} means {@code path1} designates a 'deleted' file
-     * @param stream2 {@code null} means {@code path2} designates an 'added' file
-     * @return        The number of detected differences
-     */
-    public long
-    diff(String path1, String path2, @Nullable InputStream stream1, @Nullable InputStream stream2) throws IOException {
-
-        // Read the contents of the two pathes.
-        Line[] lines1 = stream1 == null ? new Line[0] : this.readAllLines(stream1, path1);
-        Line[] lines2 = stream2 == null ? new Line[0] : this.readAllLines(stream2, path2);
-
-        Printers.verbose(
-            "''{0}'' ({1} {1,choice,0#lines|1#line|1<lines}) vs. ''{2}'' ({3} {3,choice,0#lines|1#line|1<lines})",
-            path1,
-            lines1.length,
-            path2,
-            lines2.length
-        );
-
-        // Compute the contents differences.
-        List<Difference> diffs = this.logicalDiff(lines1, lines2);
-
-        Printers.verbose("{0} raw {0,choice,0#differences|1#difference|1<differences} found", diffs.size());
-
-        if (diffs.isEmpty()) {
-
-            // At this point, the two documents are definitely logically equal.
-            Diff.this.reportFileUnchanged(path1, path2);
-            return 0;
-        }
-
-        // A difference is ignored iff all added and deleted lines match any of the 'ignore' patterns.
-        final List<Pattern> fileIgnores = new ArrayList<Pattern>();
-        for (LineEquivalence ignore : Diff.this.ignores) {
-            if (ignore.pathPattern.evaluate(path1)) {
-                fileIgnores.add(ignore.lineRegex);
-            }
-        }
-        if (!fileIgnores.isEmpty()) {
-
-            IGNORABLE:
-            for (Iterator<Difference> it = diffs.iterator(); it.hasNext();) {
-                Difference d = it.next();
-
-                if (d.getDeletedStart() != Difference.NONE) {
-                    for (int i = d.getDeletedStart(); i <= d.getDeletedEnd(); i++) {
-                        if (!Diff.contains(lines1[i].text, fileIgnores)) continue IGNORABLE;
-                    }
-                }
-                if (d.getAddedStart() != Difference.NONE) {
-                    for (int i = d.getAddedStart(); i <= d.getAddedEnd(); i++) {
-                        if (!Diff.contains(lines2[i].text, fileIgnores)) continue IGNORABLE;
-                    }
-                }
-                it.remove();
-            }
-            Printers.verbose("Reduced to {0} non-ignorable differences", diffs.size());
-        }
-
-        if (stream1 == null) {
-            Diff.this.reportFileAdded(path2);
-        } else
-        if (stream2 == null) {
-            Diff.this.reportFileDeleted(path1);
-        } else
-        if (diffs.isEmpty()) {
-            Diff.this.reportFileUnchanged(path1, path2);
-            return 0;
-        } else
-        {
-            Diff.this.reportFileChanged(path1, path2);
-        }
-
-        // Report the actual differences.
-        switch (Diff.this.diffMode) {
-
-        case EXIST:
-            // We should not come here because EXIST mode is checked way before.
-            throw new AssertionError();
-
-        case BRIEF:
-            break;
-
-        case NORMAL:
-            Diff.normalDiff(lines1, lines2, diffs);
-            break;
-
-        case CONTEXT:
-            Printers.info("*** " + path1);
-            Printers.info("--- " + path2);
-            Diff.this.contextDiff(lines1, lines2, diffs);
-            break;
-
-        case UNIFIED:
-            Printers.info("--- " + path1);
-            Printers.info("+++ " + path2);
-            Diff.this.unifiedDiff(lines1, lines2, diffs);
-            break;
-
-        default:
-            throw new AssertionError();
-        }
-
-        return diffs.size();
-    }
-
-    private List<Difference>
-    logicalDiff(Line[] lines1, Line[] lines2) {
-
-        switch (this.tokenization) {
-
-        case LINE:
-            return new org.incava.util.diff.Diff<Line>(lines1, lines2).diff();
-
-        case JAVA:
-            Map<Integer, Integer> tokenIndexToLineIndex1 = new HashMap<Integer, Integer>(lines1.length);
-            Map<Integer, Integer> tokenIndexToLineIndex2 = new HashMap<Integer, Integer>(lines2.length);
-
-            List<String> tokens1 = this.tokenize(lines1, tokenIndexToLineIndex1);
-            List<String> tokens2 = this.tokenize(lines2, tokenIndexToLineIndex2);
-
-            // Transform the list of "token differences" into a list of "line differences". Since there can be more
-            // than one "token diff" per line, the resulting list could be shorter than the original list.
-            List<Difference> diffs = new org.incava.util.diff.Diff<Object>(tokens1.toArray(), tokens2.toArray()).diff();
-            List<Difference> tmp   = new ArrayList<Difference>();
-            if (!diffs.isEmpty()) {
-
-                Difference d = diffs.get(0);
-
-                int ds1 = d.getDeletedStart();
-                if (ds1 != -1) ds1 = tokenIndexToLineIndex1.get(ds1);
-                int de1 = d.getDeletedEnd();
-                if (de1 != -1) de1 = tokenIndexToLineIndex1.get(de1);
-                int as1 = d.getAddedStart();
-                if (as1 != -1) as1 = tokenIndexToLineIndex2.get(as1);
-                int ae1 = d.getAddedEnd();
-                if (ae1 != -1) ae1 = tokenIndexToLineIndex2.get(ae1);
-
-                for (int i = 1; i < diffs.size(); i++) {
-
-                    d = diffs.get(i);
-
-                    int ds2 = d.getDeletedStart();
-                    if (ds2 != -1) ds2 = tokenIndexToLineIndex1.get(ds2);
-                    int de2 = d.getDeletedEnd();
-                    if (de2 != -1) de2 = tokenIndexToLineIndex1.get(de2);
-                    int as2 = d.getAddedStart();
-                    if (as2 != -1) as2 = tokenIndexToLineIndex2.get(as2);
-                    int ae2 = d.getAddedEnd();
-                    if (ae2 != -1) ae2 = tokenIndexToLineIndex2.get(ae2);
-
-                    if (
-                        (de1 == -1 ? ds2 <= ds1 + 1 : ds2 == de1)
-                        || (ae1 == -1 ? as2 <= as1 + 1 : as2 == ae1)
-                    ) {
-
-                        // Change 2 is in the same line as change 1; merge the two.
-                        de1 = de2 != -1 ? de2 : ds2;
-                        ae1 = ae2 != -1 ? ae2 : as2;
-                    } else {
-
-                        // Change 2 is not in the same line as change 1.
-                        tmp.add(new Difference(ds1, de1, as1, ae1));
-                        ds1 = ds2;
-                        de1 = de2;
-                        as1 = as2;
-                        ae1 = ae2;
-                    }
-                }
-
-                // Last difference.
-                tmp.add(new Difference(ds1, de1, as1, ae1));
-            }
-
-            return tmp;
-
-        default:
-            throw new AssertionError(this.tokenization);
-        }
-    }
-
-    /**
-     * Scans the given <var>lines</var> into Java tokens and returns them. While doing that, the mapping from token
-     * index (0, 1, 2, ...) to line index (0, 1, 2, ...) is stored in <var>tokenIndexToLineIndex</var>.
-     * <p>
-     *   The whitespace between Java tokens is always ignored;
-     *   C-style comments ("<code>/&#42; ... &#42;/</code>") are ignored depending on the {@link
-     *   #setIgnoreCStyleComments(boolean)} configuration parameter;
-     *   C++-style comments ("<code>// ...</code>") are ignored depending on the {@link
-     *   #setIgnoreCPlusPlusStyleComments(boolean)} configuration parameter.
-     * </p>
-     */
-    private List<String>
-    tokenize(Line[] lines, Map<Integer, Integer> tokenIndexToLineIndex) {
-
-        List<String> tokens = new ArrayList<String>(lines.length);
-
-        // Set up a Java scanner that swallows the tokens that should be ignored (space, C-style comments, C++-style
-        // comments), depending on the configuration.
-        StringScanner<TokenType>
-        ss = ScannerUtil.filter(JavaScanner.rawStringScanner(), new Predicate<Token<TokenType>>() {
-
-            boolean ignoreThisComment;
-
-            @Override public boolean
-            evaluate(@Nullable Token<TokenType> token) {
-
-                // "null" means "end of input", and that must not be ignored.
-                if (token == null) return true;
-
-                // Identify a C-style or a doc comment.
-                if (
-                    token.type == C_COMMENT
-                    || token.type == MULTI_LINE_C_COMMENT_BEGINNING
-                ) {
-                    this.ignoreThisComment = (
-                        token.text.startsWith("/**")
-                        ? Diff.this.ignoreDocComments
-                        : Diff.this.ignoreCStyleComments
-                    );
-                }
-                if (
-                    token.type == C_COMMENT
-                    || token.type == MULTI_LINE_C_COMMENT_BEGINNING
-                    || token.type == MULTI_LINE_C_COMMENT_MIDDLE
-                    || token.type == MULTI_LINE_C_COMMENT_END
-                ) {
-                    return !this.ignoreThisComment;
-                }
-
-                // Identify a C++-style comment.
-                if (token.type == CXX_COMMENT) return !Diff.this.ignoreCPlusPlusStyleComments;
-
-                // Only SPACE and "real" tokens should be left at this point.
-                return token.type != TokenType.SPACE;
-            }
-        });
-
-        for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-            String line = lines[lineIndex].toString();
-            ss.setInput(line);
-            try {
-                for (Token<TokenType> t = ss.produce(); t != null; t = ss.produce()) {
-                    tokenIndexToLineIndex.put(tokens.size(), lineIndex);
-                    tokens.add(t.text);
-                }
-            } catch (ScanException se) {
-
-                // Ignore any scanning problems.
-                ;
-            }
-        }
-
-        return tokens;
-    }
-
-    /** @return Whether the {@code text} contains any of the {@code patterns} */
-    private static boolean
-    contains(String text, Iterable<Pattern> patterns) {
-        for (Pattern pattern : patterns) {
-            if (pattern.matcher(text).find()) return true;
-        }
-        return false;
-    }
-
-    /**
-     * Format a list of {@link Difference}s in "normal diff style".
-     */
-    private static void
-    normalDiff(Line[] lines1, Line[] lines2, List<Difference> diffs) {
-        for (Difference diff : diffs) {
-            int delStart = diff.getDeletedStart();
-            int delEnd   = diff.getDeletedEnd();
-            int addStart = diff.getAddedStart();
-            int addEnd   = diff.getAddedEnd();
-
-            Printers.info(
-                Diff.toString(delStart, delEnd)
-                + (delEnd == Difference.NONE ? "a" : addEnd == Difference.NONE ? "d" : "c")
-                + Diff.toString(addStart, addEnd)
-            );
-
-            if (delEnd != Difference.NONE) {
-                Diff.printLines(delStart, delEnd, "< ", lines1);
-                if (addEnd != Difference.NONE) Printers.info("---");
-            }
-            if (addEnd != Difference.NONE) {
-                Diff.printLines(addStart, addEnd, "> ", lines2);
-            }
-        }
-    }
-
-    /**
-     * Format a list of {@link Difference}s in "context diff" style.
-     */
-    private void
-    contextDiff(final Line[] lines1, final Line[] lines2, List<Difference> diffs) {
-        this.chunkedDiff(diffs, new ChunkPrinter() {
-
-            @Override public void
-            print(List<Difference> chunk) {
-                Printers.info("***************");
-
-                Difference firstDifference = chunk.get(0);
-                Difference lastDifference  = chunk.get(chunk.size() - 1);
-
-                // Print file one aggregated differences.
-                {
-                    int boc1 = Math.max(0, firstDifference.getDeletedStart() - Diff.this.contextSize);
-                    int eoc1 = Math.min((
-                        lastDifference.getDeletedEnd() == Difference.NONE
-                        ? lastDifference.getDeletedStart() + Diff.this.contextSize - 1
-                        : lastDifference.getDeletedEnd() + Diff.this.contextSize
-                    ), lines1.length - 1);
-                    Printers.info("*** " + Diff.toString(boc1, eoc1) + " ****");
-                    for (Difference d : chunk) {
-                        Diff.printLines(boc1, d.getDeletedStart() - 1, "  ", lines1);
-                        if (d.getDeletedEnd() == Difference.NONE) {
-                            boc1 = d.getDeletedStart();
-                        } else {
-                            Diff.printLines(
-                                d.getDeletedStart(),
-                                d.getDeletedEnd(),
-                                d.getAddedEnd() == Difference.NONE ? "- " : "! ",
-                                lines1
-                            );
-                            boc1 = d.getDeletedEnd() + 1;
-                        }
-                    }
-                    Diff.printLines(boc1, eoc1, "  ", lines1);
-                }
-
-                // Print file two aggregated differences.
-                {
-                    int boc2 = Math.max(0, firstDifference.getAddedStart() - Diff.this.contextSize);
-                    int eoc2 = Math.min((
-                        lastDifference.getAddedEnd() == Difference.NONE
-                        ? lastDifference.getAddedStart() + Diff.this.contextSize - 1
-                        : lastDifference.getAddedEnd() + Diff.this.contextSize
-                    ), lines2.length - 1);
-                    Printers.info("--- " + Diff.toString(boc2, eoc2) + " ----");
-                    for (Difference d : chunk) {
-                        Diff.printLines(boc2, d.getAddedStart() - 1, "  ", lines2);
-                        if (d.getAddedEnd() == Difference.NONE) {
-                            boc2 = d.getAddedStart();
-                        } else {
-                            Diff.printLines(
-                                d.getAddedStart(),
-                                d.getAddedEnd(),
-                                d.getDeletedEnd() == Difference.NONE ? "+ " : "! ",
-                                lines2
-                            );
-                            boc2 = d.getAddedEnd() + 1;
-                        }
-                    }
-                    Diff.printLines(boc2, eoc2, "  ", lines2);
-                }
-            }
-        });
-    }
-
-    /**
-     * Format a list of {@link Difference}s in "context diff" style.
-     */
-    private void
-    unifiedDiff(final Line[] lines1, final Line[] lines2, List<Difference> diffs) {
-        this.chunkedDiff(diffs, new ChunkPrinter() {
-
-            @Override public void
-            print(List<Difference> chunk) {
-
-                Difference firstDifference = chunk.get(0);
-                Difference lastDifference  = chunk.get(chunk.size() - 1);
-
-                int boc1 = Math.max(0, firstDifference.getDeletedStart() - Diff.this.contextSize);
-                int eoc1 = Math.min((
-                    lastDifference.getDeletedEnd() == Difference.NONE
-                    ? lastDifference.getDeletedStart() + Diff.this.contextSize - 1
-                    : lastDifference.getDeletedEnd() + Diff.this.contextSize
-                ), lines1.length - 1);
-                int boc2 = Math.max(0, firstDifference.getAddedStart() - Diff.this.contextSize);
-                int eoc2 = Math.min((
-                    lastDifference.getAddedEnd() == Difference.NONE
-                    ? lastDifference.getAddedStart() + Diff.this.contextSize - 1
-                    : lastDifference.getAddedEnd() + Diff.this.contextSize
-                ), lines2.length - 1);
-                Printers.info(
-                    "@@ -"
-                    + (boc1 + 1)
-                    +  ","
-                    +  (eoc1 - boc1 + 1)
-                    +  " +"
-                    +  (boc2 + 1)
-                    +  ","
-                    +  (eoc2 - boc2 + 1)
-                    +  " @@"
-                );
-
-                for (Difference d : chunk) {
-                    Diff.printLines(boc1, d.getDeletedStart() - 1, " ", lines1);
-                    if (d.getDeletedEnd() == Difference.NONE) {
-                        boc1 = d.getDeletedStart();
-                    } else {
-                        Diff.printLines(d.getDeletedStart(), d.getDeletedEnd(), "-", lines1);
-                        boc1 = d.getDeletedEnd() + 1;
-                    }
-                    if (d.getAddedEnd() == Difference.NONE) {
-                        boc2 = d.getAddedStart();
-                    } else {
-                        Diff.printLines(d.getAddedStart(), d.getAddedEnd(), "+", lines2);
-                        boc2 = d.getAddedEnd() + 1;
-                    }
-                }
-                Diff.printLines(boc1, eoc1, " ", lines1);
-            }
-        });
-    }
-
-    private void
-    chunkedDiff(List<Difference> diffs, ChunkPrinter chunkPrinter) {
-        Iterator<Difference> it        = diffs.iterator();
-        Difference           lookahead = it.hasNext() ? it.next() : null;
-        while (lookahead != null) {
-
-            // Aggregate differences with 2*CONTEXT_SIZE or less lines in between.
-            List<Difference> agg = new ArrayList<Difference>();
-            agg.add(lookahead);
-            for (;;) {
-                final int afterDeletion = (
-                    lookahead.getDeletedEnd() == Difference.NONE
-                    ? lookahead.getDeletedStart()
-                    : lookahead.getDeletedEnd() + 1
-                );
-                lookahead = it.hasNext() ? it.next() : null;
-                if (lookahead == null) break;
-                if (lookahead.getDeletedStart() - afterDeletion <= 2 * Diff.this.contextSize) {
-                    agg.add(lookahead);
-                } else {
-                    break;
-                }
-            }
-
-            // Now print one aggregation.
-            chunkPrinter.print(agg);
-        }
-    }
-
-    /**
-     * @see #print(List)
-     */
-    private
-    interface ChunkPrinter {
-
-        /**
-         * Formats a list of {@link Difference}s and prints them to {@link Diff#out}.
-         */
-        void print(List<Difference> chunk);
-    }
-
-    private static String
-    toString(int start, int end) {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(end == Difference.NONE ? start : start + 1);
-
-        if (end != Difference.NONE && start != end) {
-            sb.append(",").append(end + 1);
-        }
-        return sb.toString();
-    }
-
-    private static void
-    printLines(int start, int end, String indicator, Line[] lines) {
-        for (int lnum = start; lnum <= end; ++lnum) {
-            Printers.info(indicator + lines[lnum]);
-        }
-    }
-
-    /**
-     * Reads the contents of the entry with the given {@code path} and transforms it to an array of {@link Line}s.
-     * Honors {@link #disassembleClassFiles}, {@link #equivalentLines} and {@link #ignoreWhitespace}.
-     * <p>
-     *   Eventually closes the <var>inputStream</var>, even on abrupt completion.
-     * </p>
-     *
-     * @param path E.g. ".class" files are filtered through a bytecode disassembler
-     */
-    private Line[]
-    readAllLines(InputStream inputStream, String path) throws IOException {
-        try {
-            return this.readAllLines2(inputStream, path);
-        } finally {
-            try { inputStream.close(); } catch (IOException ioe) {}
-        }
-    }
-
-    /**
-     * Reads the contents of the given {@link InputStream} and transforms it to an array of {@link Line}s. The
-     * {@link InputStream} is not closed. Honors {@link #disassembleClassFiles}, {@link #equivalentLines} and {@link
-     * #ignoreWhitespace}.
-     *
-     * @param path E.g. ".class" files are filtered through a bytecode disassembler
-     */
-    private Line[]
-    readAllLines2(InputStream is, String path) throws IOException {
-
-        // Deploy the .class file disassembler as appropriate.
-        if (this.disassembleClassFiles && path.endsWith(".class")) {
-            DisassemblerByteFilter disassemblerByteFilter = new DisassemblerByteFilter();
-            disassemblerByteFilter.setHideLines(this.disassembleClassFilesButHideLines);
-            disassemblerByteFilter.setHideVars(this.disassembleClassFilesButHideVars);
-            is = new ByteFilterInputStream(is, disassemblerByteFilter);
-        }
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(is, this.charset));
-
-        Collection<Pattern> equivalences = new ArrayList<Pattern>();
-        for (LineEquivalence le : this.equivalentLines) {
-            if (le.pathPattern.evaluate(path)) {
-                equivalences.add(le.lineRegex);
-            }
-        }
-
-        List<Line> contents = new ArrayList<Line>();
-        try {
-            for (;;) {
-                Line line = this.readLine(br, equivalences);
-                if (line == null) break;
-                contents.add(line);
-            }
-        } catch (IOException ioe) {
-            throw ExceptionUtil.wrap("Reading '" + path + "'", ioe);
-        } catch (RuntimeException re) {
-            throw ExceptionUtil.wrap("Reading '" + path + "'", re);
-        }
-
-        return contents.toArray(new Line[contents.size()]);
-    }
-
-    /**
-     * @return {@code null} on end-of-input
-     */
-    @Nullable private Line
-    readLine(BufferedReader br, Collection<Pattern> equivalences) throws IOException {
-        final String line = br.readLine();
-        if (line == null) return null;
-
-        return new Line(line, equivalences);
-    }
-
-    private
-    interface Checksummable {
-
-        /**
-         * Updates the given {@link Checksum} from this object.
-         */
-        void update(Checksum checksum);
-    }
-
-    /**
-     * Representation of a line read from a stream. Honors {@link Diff#ignoreRegexes} and {@link
-     * Diff#ignoreWhitespace}.
-     */
-    private
-    class Line implements Checksummable {
-
-        private final String  text;
-        private byte[]        value;
-
-        Line(String text, Collection<Pattern> equivalences) {
-            try {
-                this.text = text;
-
-                if (Diff.this.ignoreWhitespace) {
-                    text = Diff.WHITESPACE_PATTERN.matcher(text).replaceAll(" ");
-                }
-
-                for (Pattern p : equivalences) {
-                    Matcher matcher = p.matcher(text);
-                    if (matcher.find()) {
-                        if (matcher.groupCount() == 0) {
-                            this.value = Diff.IGNORED_LINE;
-                            return;
-                        }
-
-                        StringBuffer sb = new StringBuffer();
-                        do {
-                            String replacement = "";
-                            for (int i = 1; i <= matcher.groupCount(); i++) {
-                                replacement += "$" + i;
-                            }
-                            matcher.appendReplacement(sb, replacement);
-                        } while (matcher.find());
-                        matcher.appendTail(sb);
-                        text = sb.toString();
-                    }
-                }
-                this.value = text.getBytes("UTF-8");
-            } catch (UnsupportedEncodingException uee) {
-                throw new RuntimeException(uee);
-            }
-        }
-
-        @Override public boolean
-        equals(@Nullable Object o) {
-            if (!(o instanceof Line)) return false;
-            Line that = (Line) o;
-            return this == that || Arrays.equals(this.value, that.value);
-        }
-
-        @Override public int
-        hashCode() { return Arrays.hashCode(this.value); }
-
-        /**
-         * Returns the line's text.
-         */
-        @Override public String
-        toString() { return this.text; }
-
-        /**
-         * Updates the given {@link Checksum} from this object's value.
-         */
-        @Override public void
-        update(Checksum checksum) {
-            checksum.update(this.value, 0, this.value.length);
-        }
-    }
-    private static final byte[] IGNORED_LINE = { 0x7f, 0x2f, 0x19 };
 
     private final Comparator<? super NodeWithPath> normalizedPathComparator = new Comparator<NodeWithPath>() {
 
