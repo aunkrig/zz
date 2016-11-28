@@ -37,6 +37,12 @@ import de.unkrig.jdisasm.Disassembler;
 /**
  * Reads bytes in Java <a href="http://java.sun.com/docs/books/jvms/second_edition/html/ClassFile.doc.html">"class file
  * format"</a> and disassembles it to a human-readable form.
+ *
+ * Requires the "de.unkrig.jdisasm" utility, available on
+ * {@code https://github.com/aunkrig/jdisasm}.
+ *
+ * Requires the "de.unkrig.commons.util" and "de.unkrig.commons.io" libraries, available on
+ * {@code http://commons.unkrig.de}.
  */
 public
 class DisassemblerByteFilter implements ByteFilter<Void> {
@@ -58,13 +64,13 @@ class DisassemblerByteFilter implements ByteFilter<Void> {
     }
 
     /**
-     * Whether source line numbers should be reported in the disasembly.
+     * @param value Whether source line numbers are suppressed in the disassembly (defaults to {@code false})
      */
     public void
     setHideLines(boolean value) { this.hideLines = value; }
 
     /**
-     * Whether local variable names should be reported in the disasembly.
+     * @param value Whether local variable names are suppressed in the disassembly (defaults to {@code false})
      */
     public void
     setHideVars(boolean value) { this.hideVars = value; }
