@@ -262,8 +262,8 @@ class Main {
      * @main.commandLineOptionGroup File-Selection
      */
     @CommandLineOption public void
-    setPath(@RegexFlags(Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES) Glob pathPredicate) {
-        this.diff.setPathPredicate(pathPredicate);
+    setPath(@RegexFlags(Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES) Glob glob) {
+        this.diff.setPathPredicate(glob);
     }
 
     /**
