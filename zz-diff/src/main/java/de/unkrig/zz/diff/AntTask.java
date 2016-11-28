@@ -28,7 +28,6 @@ package de.unkrig.zz.diff;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
@@ -41,15 +40,14 @@ import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.AbstractPrinter;
-import de.unkrig.commons.text.Printer;
+import de.unkrig.commons.text.AbstractPrinter.Level;
 import de.unkrig.commons.text.Printers;
-import de.unkrig.commons.text.ProxyPrinter;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.zz.diff.Diff.AbsentFileMode;
 import de.unkrig.zz.diff.Diff.DiffMode;
 import de.unkrig.zz.diff.Diff.LineEquivalence;
-import de.unkrig.zz.diff.Diff.Tokenization;
+import de.unkrig.zz.diff.DocumentDiff.Tokenization;
 
 /**
  * Computes the differences between files, directory trees, archive file entries and compressed files, and prints them
@@ -107,6 +105,14 @@ class AntTask extends Task {
         public void
         setRegex(String regex) { this.regex = Pattern.compile(regex); }
     }
+
+    /**
+     * Whether to recurse through subdirectories, rather than just compare the <em>existence</em> of subdirectories.
+     *
+     * @ant.defaultValue true
+     */
+    public void
+    setRecurseSubdirectories(boolean value) { this.diff.setRecurseSubdirectories(value); }
 
     /**
      * Whether to ignore whitespace differences.
@@ -548,7 +554,7 @@ class AntTask extends Task {
     execute4(RunnableWhichThrows<Exception> runnable, @Nullable File outputFile, final ProjectComponent component)
     throws Exception {
 
-        Printer printer = new AbstractPrinter() {
+        AbstractPrinter printer = new AbstractPrinter() {
             @Override public void warn(@Nullable String message)    { component.log(message, Project.MSG_WARN);    }
             @Override public void verbose(@Nullable String message) { component.log(message, Project.MSG_VERBOSE); }
             @Override public void info(@Nullable String message)    { component.log(message, Project.MSG_INFO);    }
@@ -557,18 +563,14 @@ class AntTask extends Task {
         };
 
         if (outputFile == null) {
-            Printers.withPrinter(printer, runnable);
+            printer.run(runnable);
         } else {
-            final PrintStream out = new PrintStream(outputFile);
-            try {
-                printer = new ProxyPrinter(printer) {
-                    @Override public void info(@Nullable String message) { out.println(message); }
-                };
-                Printers.withPrinter(printer, runnable);
-                out.close();
-            } finally {
-                try { out.close(); } catch (Exception e) {}
-            }
+            Printers.redirectToFile(
+                Level.INFO, // level
+                outputFile, // outputFile
+                null,       // charset
+                runnable    // runnable
+            );
         }
     }
 }
