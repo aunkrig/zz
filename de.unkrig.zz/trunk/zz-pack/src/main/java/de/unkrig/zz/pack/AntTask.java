@@ -125,12 +125,18 @@ class AntTask extends Task {
     }
 
     /**
+     * @deprecated Use {@link #setPath(String)} instead
+     */
+    @Deprecated public void
+    setName(String glob) { this.setPath(glob); }
+
+    /**
      * If configured, then only the input files, archive entries and nested archive entries are processed which match
      * the given <var>glob</var>.
      */
     public void
-    setName(String glob) {
-        this.pack.setNamePredicate(Glob.compile(glob, Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES));
+    setPath(String glob) {
+        this.pack.setPathPredicate(Glob.compile(glob, Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES));
     }
 
     /**
