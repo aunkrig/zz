@@ -106,8 +106,6 @@ class ApiTest {
         Assert.assertEquals(Arrays.asList(new String[] {
             "V: '/path1' (10 lines) vs. '/path2' (10 lines)",
             "V: 3 raw differences found",
-            "V: '/path1' and '/path2' changed",
-            "I: File changed path2",
             "I: 2a3",
             "I: > ADDED LINE",
             "I: 5d5",
