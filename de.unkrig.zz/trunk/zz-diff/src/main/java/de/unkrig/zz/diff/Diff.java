@@ -255,14 +255,14 @@ class Diff extends DocumentDiff {
         Printers.verbose("Scanning ''{0}''...", file1);
         final NodeWithPath node1 = dfp.process("", file1);
         if (node1 == null) {
-            Printers.error("\"" + file1 + "\" does not exist or is excluded");
+            Printers.error("\"" + file1 + "\" does not exist or all subnodes are excluded");
             return 0;
         }
 
         Printers.verbose("Scanning ''{0}''...", file2);
         final NodeWithPath node2 = dfp.process("", file2);
         if (node2 == null) {
-            Printers.error("\"" + file2 + "\" does not exist or is excluded");
+            Printers.error("\"" + file2 + "\" does not exist or all subnodes are excluded");
             return 0;
         }
 
@@ -375,7 +375,9 @@ class Diff extends DocumentDiff {
             @Override @Nullable public NodeWithPath
             combine(String archivePath, List<NodeWithPath> archiveCombinables) {
                 TreeSet<NodeWithPath> archiveNodes = new TreeSet<NodeWithPath>(Diff.this.normalizedPathComparator);
-                archiveNodes.addAll(archiveCombinables);
+                for (NodeWithPath ac : archiveCombinables) {
+                    if (ac != null) archiveNodes.add(ac);
+                }
                 return new ArchiveNode(archivePath, archiveNodes);
             }
         };
@@ -383,6 +385,7 @@ class Diff extends DocumentDiff {
         FileProcessor<NodeWithPath>
         regularFileProcessor1 = FileProcessings.recursiveCompressedAndArchiveFileProcessor(
             this.lookIntoFormat,      // lookIntoFormat
+            this.pathPredicate,       // pathPredicate
             archiveEntryCombiner,     // archiveEntryCombiner
             this.contentsProcessor(), // contentsProcessor
             this.exceptionHandler     // exceptionHandler
@@ -439,26 +442,6 @@ class Diff extends DocumentDiff {
             );
         }
     }
-    public static <T> FileProcessor<T>
-    xx(
-        Predicate<? super String>      pathPredicate,
-        FileProcessor<T>               regularFileProcessor,
-        @Nullable Comparator<Object>   directoryMemberNameComparator,
-        DirectoryCombiner<T>           directoryCombiner,
-        SquadExecutor<T>               squadExecutor,
-        ExceptionHandler<IOException>  exceptionHandler
-    ) {
-
-        return FileProcessings.directoryProcessor(
-            pathPredicate,
-            regularFileProcessor,
-            directoryMemberNameComparator,
-            regularFileProcessor, // directoryMemberProcessor
-            directoryCombiner,
-            squadExecutor,
-            exceptionHandler
-        );
-    }
 
     /**
      * @return The root of the hierarchy read from the <var>inputStream</var>; is never {@code null}
@@ -502,6 +485,7 @@ class Diff extends DocumentDiff {
         };
         return ContentsProcessings.recursiveCompressedAndArchiveContentsProcessor(
             this.lookIntoFormat,
+            this.pathPredicate,
             new ArchiveCombiner<NodeWithPath>() {
 
                 @Override @Nullable public NodeWithPath
@@ -657,36 +641,42 @@ class Diff extends DocumentDiff {
                     Diff.this.reportFileUnchanged(path1, path2);
                 } else {
 
-                    // We are about to DIFF the two documents. The problem is that "reportFileChange()" must be called
-                    // BEFORE the first line of DIFF is printed. Thus, we set up a printer that delays the invocation
-                    // of "reportFileChanged()" until the first INFO message is printed.
-                    final AbstractPrinter cp = AbstractPrinter.getContextPrinter();
-                    cp.redirect(Level.INFO, new Consumer<String>() {
+                    try {
 
-                        boolean first = true;
+                        // We are about to DIFF the two documents. The problem is that "reportFileChange()" must be called
+                        // BEFORE the first line of DIFF is printed. Thus, we set up a printer that delays the invocation
+                        // of "reportFileChanged()" until the first INFO message is printed.
+                        final AbstractPrinter cp = AbstractPrinter.getContextPrinter();
+                        cp.redirect(Level.INFO, new Consumer<String>() {
 
-                        @Override public void
-                        consume(String message) {
-                            if (this.first) {
-                                Diff.this.reportFileChanged(path1, path2);
-                                this.first = false;
+                            boolean first = true;
+
+                            @Override public void
+                            consume(String message) {
+                                if (this.first) {
+                                    this.first = false;
+                                    Diff.this.reportFileChanged(path1, path2);
+                                    if (Diff.this.diffMode == DiffMode.BRIEF) throw Diff.TERMINATE;
+                                }
+                                cp.info(message);
                             }
-                            cp.info(message);
-                        }
-                    }).run(new RunnableWhichThrows<IOException>() {
+                        }).run(new RunnableWhichThrows<IOException>() {
 
-                        @Override public void
-                        run() throws IOException {
+                            @Override public void
+                            run() throws IOException {
 
-                            // DIFF the two documents.
-                            long dc = Diff.this.diff(path1, path2, document1.open(), document2.open());
-                            if (dc == 0) {
-                                Diff.this.reportFileUnchanged(path1, path2);
-                            } else {
-                                differenceCount[0] += dc;
+                                // DIFF the two documents.
+                                long dc = Diff.this.diff(path1, path2, document1.open(), document2.open());
+                                if (dc == 0) {
+                                    Diff.this.reportFileUnchanged(path1, path2);
+                                } else {
+                                    differenceCount[0] += dc;
+                                }
                             }
-                        }
-                    });
+                        });
+                    } catch (RuntimeException re) {
+                        if (re != Diff.TERMINATE) throw re;
+                    }
                 }
             }
         };
@@ -695,6 +685,10 @@ class Diff extends DocumentDiff {
 
         return differenceCount[0];
     }
+    private static final RuntimeException TERMINATE = new RuntimeException() {
+        private static final long               serialVersionUID = 1L;
+        @Override public synchronized Throwable initCause(@Nullable Throwable cause) { return this; }
+    };
 
     /** Report that a document was added. */
     protected void
