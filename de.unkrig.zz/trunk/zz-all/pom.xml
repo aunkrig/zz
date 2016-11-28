@@ -45,6 +45,22 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
 			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<executions>
+
+					<!-- Generate documentation for the ANT tasks, types, etc. (ANTDOC). -->
+					<execution>
+						<id>make-antdoc</id>
+
+						<configuration>
+							<sourcepath>../../../../zz-diff/src/main/resources;../../../../zz-find/src/main/resources;../../../../zz-grep/src/main/resources;../../../../zz-pack/src/main/resources;../../../../zz-patch/src/main/resources</sourcepath>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>
