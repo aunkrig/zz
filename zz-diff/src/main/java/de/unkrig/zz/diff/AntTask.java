@@ -374,17 +374,17 @@ class AntTask extends Task {
      *   of doc comments is controlled by a separate attribute ({@link #setIgnoreDocComments(boolean)}).
      * </p>
      *
-     * @see #setTokenization(Tokenization)
+     * @see #setTokenization(DocumentDiff.Tokenization)
      */
     public void
     setIgnoreCStyleComments(boolean value) { this.diff.setIgnoreCStyleComments(value); }
 
     /**
      * Whether to ignore C++-style comments ("{@code // ...}") when comparing. "{@code false}" means that
-     * C++-style comments are treated as Java&trade; tokens. Relevant iff {@link #setTokenization(Tokenization)}
-     * is {@link Tokenization#JAVA JAVA}.
+     * C++-style comments are treated as Java&trade; tokens. Relevant iff {@link
+     * #setTokenization(DocumentDiff.Tokenization)} is {@link Tokenization#JAVA JAVA}.
      *
-     * @see #setTokenization(Tokenization)
+     * @see #setTokenization(DocumentDiff.Tokenization)
      */
     public void
     setIgnoreCPlusPlusStyleComments(boolean value) { this.diff.setIgnoreCPlusPlusStyleComments(value); }
@@ -393,7 +393,7 @@ class AntTask extends Task {
      * Whether to ignore doc comments ("<code>/** ... &#42;/</code>") when comparing. "{@code false}" means that doc
      * comments are treated as Java&trade; tokens.
      *
-     * @see #setTokenization(Tokenization)
+     * @see #setTokenization(DocumentDiff.Tokenization)
      */
     public void
     setIgnoreDocComments(boolean value) { this.diff.setIgnoreDocComments(value); }
@@ -474,8 +474,8 @@ class AntTask extends Task {
     /**
      * Lines that contain matches of a regular expression, and all capturing groups are equal, are regarded as equal.
      * <p>
-     *   Iff the {@link #setTokenization(Tokenization)} is different from {@link Tokenization#LINE}, then the
-     *   equivalence check described before is executed on the scanned tokens instead.
+     *   Iff the {@link #setTokenization(DocumentDiff.Tokenization)} is different from {@link Tokenization#LINE}, then
+     *   the equivalence check described before is executed on the scanned tokens instead.
      * </p>
      */
     public void
