@@ -289,6 +289,7 @@ class Grep {
 
         FileProcessor<Void> fp = FileProcessings.recursiveCompressedAndArchiveFileProcessor(
             this.lookIntoFormat,                            // lookIntoFormat
+            PredicateUtil.always(),                         // pathPredicate
             ContentsProcessings.<Void>nopArchiveCombiner(), // archiveEntryCombiner
             new SelectiveContentsProcessor<Void>(           // contentsProcessor
                 pathPredicate,
