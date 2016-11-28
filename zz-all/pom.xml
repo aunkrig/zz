@@ -41,7 +41,6 @@
 				<artifactId>maven-source-plugin</artifactId>
 			</plugin>
 
-
 			<!--
 				Generate documentation for the ANT tasks, types, etc. (ANTDOC).
 			-->
@@ -55,12 +54,15 @@
 						<goals><goal>javadoc</goal></goals>
 
 						<configuration>
-
+							<header>${project.name} ${project.version}</header>
+							<footer>${project.name} ${project.version}</footer>
+							<doctitle>ZZ Tools Ant Library Documentation</doctitle>
 							<quiet>true</quiet>
 							<author>false</author>
 							<use>false</use>
 							<version>false</version>
 							<includeDependencySources>true</includeDependencySources>
+							<overview>src/main/antdoc/overview.html</overview>
 
 							<doclet>de.unkrig.doclet.ant.AntDoclet</doclet>
 							<docletArtifacts>
