@@ -182,7 +182,7 @@ class DocumentDiff {
      *   Only relevant for diff modes {@link DocumentDiffMode#UNIFIED} and {@link DocumentDiffMode#CONTEXT}.
      * </p>
      *
-     * @see #setDiffMode(DocumentDiffMode)
+     * @see #setDocumentDiffMode(DocumentDiffMode)
      */
     public void
     setContextSize(int value) { this.contextSize = value; }
