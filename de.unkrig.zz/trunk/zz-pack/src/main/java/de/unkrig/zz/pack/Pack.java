@@ -76,7 +76,7 @@ class Pack {
     /**
      * Only files/entries which match are packed.
      */
-    private Predicate<? super String> namePredicate = PredicateUtil.always();
+    private Predicate<? super String> pathPredicate = PredicateUtil.always();
 
     // END CONFIGURATION VARIABLES
 
@@ -128,7 +128,7 @@ class Pack {
      * Only files/entries who's name matches {@code value} are packed.
      */
     public void
-    setNamePredicate(Predicate<? super String> value) { this.namePredicate = value; }
+    setPathPredicate(Predicate<? super String> value) { this.pathPredicate = value; }
 
     /**
      * Sets the exception handler.
@@ -166,7 +166,7 @@ class Pack {
                 ProducerWhichThrows<? extends InputStream, ? extends IOException> opener
             ) throws IOException {
 
-                if (!Pack.this.namePredicate.evaluate(name)) return null;
+                if (!Pack.this.pathPredicate.evaluate(name)) return null;
 
                 AssertionUtil.notNull(Pack.this.archiveFormat).writeEntry(
                     AssertionUtil.notNull(Pack.this.archiveOutputStream),
@@ -186,6 +186,7 @@ class Pack {
 
         FileProcessor<Void> fp = FileProcessings.recursiveCompressedAndArchiveFileProcessor(
             this.lookIntoFormat,                            // lookIntoFormat
+            this.pathPredicate,                             // pathPredicate
             ContentsProcessings.<Void>nopArchiveCombiner(), // archiveEntryCombiner
             this.contentsProcessor(),                       // contentsProcessor
             this.exceptionHandler                           // exceptionHandler
@@ -194,7 +195,7 @@ class Pack {
         // Honor the 'lookIntoDirectories' flag.
         if (lookIntoDirectories) {
             fp = FileProcessings.directoryTreeProcessor(
-                this.namePredicate,                                                  // pathPredicate
+                this.pathPredicate,                                                  // pathPredicate
                 fp,                                                                  // regularFileProcessor
                 this.directoryMemberNameComparator,                                  // directoryMemberNameComparator
                 FileProcessings.<Void>nopDirectoryCombiner(),                        // directoryCombiner
