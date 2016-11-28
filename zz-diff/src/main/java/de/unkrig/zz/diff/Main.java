@@ -37,6 +37,8 @@ import de.unkrig.commons.file.org.apache.commons.compress.compressors.Compressio
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
+import de.unkrig.commons.text.AbstractPrinter;
+import de.unkrig.commons.text.AbstractPrinter.Level;
 import de.unkrig.commons.text.LevelFilteredPrinter;
 import de.unkrig.commons.text.Printers;
 import de.unkrig.commons.text.pattern.Glob;
@@ -48,7 +50,7 @@ import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.zz.diff.Diff.AbsentFileMode;
 import de.unkrig.zz.diff.Diff.DiffMode;
 import de.unkrig.zz.diff.Diff.LineEquivalence;
-import de.unkrig.zz.diff.Diff.Tokenization;
+import de.unkrig.zz.diff.DocumentDiff.Tokenization;
 
 /**
  * A DIFF utility that can recurse into directories, archive files and compressed files.
@@ -171,14 +173,14 @@ class Main {
     main(final String[] args) {
 
         final Main main = new Main();
-        Printers.withPrinter(main.levelFilteredPrinter, new Runnable() {
+        main.levelFilteredPrinter.run(new Runnable() {
 
             @Override public void run() { main.main2(args); }
         });
     }
 
     private final Diff                 diff                 = new Diff();
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(Printers.get());
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(AbstractPrinter.getContextPrinter());
     @Nullable private File             outputFile;
 
     public Main() {}
@@ -219,9 +221,11 @@ class Main {
     private void
     main4(final File file1, final File file2) throws Exception {
 
-        Printers.redirectInfoToFile(
-            this.outputFile,
-            new RunnableWhichThrows<Exception>() {
+        Printers.redirectToFile(
+            Level.INFO,                            // level
+            this.outputFile,                       // outputFile
+            null,                                  // charset
+            new RunnableWhichThrows<Exception>() { // runnable
                 @Override public void run() throws Exception { Main.this.main5(file1, file2); }
             }
         );
@@ -294,10 +298,18 @@ class Main {
 
     /**
      * @main.commandLineOptionGroup File-Selection
-     * @deprecated                Equivalent with "{@code --path-equivalence} <var>path-regex</var>".
+     * @deprecated                  Equivalent with "{@code --path-equivalence} <var>path-regex</var>".
      */
     @Deprecated @CommandLineOption(name = "ne", cardinality = CommandLineOption.Cardinality.ANY) public void
     addNameEquivalence(Pattern pathRegex) { this.addPathEquivalence(pathRegex); }
+
+    /**
+     * Don't recurse through subdirectories; just compare the <b>existence</b> of subdirectories.
+     *
+     * @main.commandLineOptionGroup File-Selection
+     */
+    @CommandLineOption public void
+    setNoRecurseSubdirctories() { this.diff.setRecurseSubdirectories(false); }
 
     // CONTENTS PROCESSING OPTIONS
 
