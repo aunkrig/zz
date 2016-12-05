@@ -54,7 +54,7 @@ import de.unkrig.commons.file.fileprocessing.FileProcessings;
 import de.unkrig.commons.file.fileprocessing.FileProcessings.DirectoryCombiner;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.fileprocessing.SelectiveFileProcessor;
-import de.unkrig.commons.io.IoUtil;
+import de.unkrig.commons.io.InputStreams;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.ThreadUtil;
 import de.unkrig.commons.lang.protocol.Consumer;
@@ -544,10 +544,10 @@ class Diff extends DocumentDiff {
                         String path = document.getPath();
                         Diff.this.reportFileAdded(path);
                         differenceCount[0] += Diff.this.diff(
-                            "(missing)",               // path1
-                            path,                      // path2
-                            IoUtil.EMPTY_INPUT_STREAM, // inputStream1
-                            document.open()            // inputStream2
+                            "(missing)",        // path1
+                            path,               // path2
+                            InputStreams.EMPTY, // inputStream1
+                            document.open()     // inputStream2
                         );
                     }
                     break;
@@ -575,10 +575,10 @@ class Diff extends DocumentDiff {
                         String path = document.getPath();
                         Diff.this.reportFileDeleted(path1);
                         differenceCount[0] += Diff.this.diff(
-                            path,                     // path1
-                            "(missing)",              // path2
-                            document.open(),          // inputStream1
-                            IoUtil.EMPTY_INPUT_STREAM // inputStream2
+                            path,              // path1
+                            "(missing)",       // path2
+                            document.open(),   // inputStream1
+                            InputStreams.EMPTY // inputStream2
                         );
                     }
                     break;

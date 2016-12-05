@@ -55,6 +55,7 @@ import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveForma
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
+import de.unkrig.commons.io.InputStreams;
 import de.unkrig.commons.io.IoUtil;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.ExceptionUtil;
@@ -1599,7 +1600,7 @@ class Find {
                                     // Compute the value of the "size" property only IF it is needed, and WHEN it is
                                     // needed, because it consumes the contents.
                                     try {
-                                        return IoUtil.skipAll(inputStream);
+                                        return InputStreams.skipAll(inputStream);
                                     } catch (IOException ioe) {
                                         throw ExceptionUtil.wrap(
                                             "Measuring size of \"" + path + "\"",

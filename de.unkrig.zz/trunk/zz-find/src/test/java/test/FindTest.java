@@ -39,7 +39,7 @@ import de.unkrig.commons.junit4.AssertRegex;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
 import de.unkrig.commons.lang.protocol.ProducerUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
-import de.unkrig.commons.text.Printers;
+import de.unkrig.commons.text.AbstractPrinter;
 import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
@@ -449,7 +449,9 @@ class FindTest extends TestCase {
         find.setExpression(parser.parse());
 
         List<String> lines = new ArrayList<String>();
-        Printers.redirectInfo(ConsumerUtil.addToCollection(lines), new RunnableWhichThrows<IOException>() {
+        AbstractPrinter.getContextPrinter().redirectInfo(
+            ConsumerUtil.addToCollection(lines)
+        ).run(new RunnableWhichThrows<IOException>() {
             @Override public void run() throws IOException { find.findInFile(FindTest.FILES); }
         });
 

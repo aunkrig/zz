@@ -81,7 +81,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
     }
 
     /**
-     * @param initialBufferCapacity See {@link PatternUtil#replaceAll(java.io.Reader, Pattern, Function, Writer, int)}
+     * @param initialBufferCapacity See {@link PatternUtil#replaceSome(java.io.Reader, Pattern, Function, Writer, int)}
      */
     public void
     setInitialBufferCapacity(int initialBufferCapacity) { this.initialBufferCapacity = initialBufferCapacity; }
@@ -130,7 +130,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
             new Object[] { this.pattern, this.replacementString, path, SubstitutionContentsTransformer.this.condition }
         );
 
-        final Function<Matcher, String> prev = PatternUtil.replacementStringReplacer(this.replacementString);
+        final Function<Matcher, String> prev = PatternUtil.replacementStringMatchReplacer(this.replacementString);
 
         Function<Matcher, String> replacer = new Function<Matcher, String>() {
 
@@ -154,7 +154,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
 
         Writer out = new OutputStreamWriter(os, this.outputCharset);
 
-        int count = PatternUtil.replaceAll(
+        int count = PatternUtil.replaceSome(
             new InputStreamReader(is, this.inputCharset), // reader
             this.pattern,                                 // pattern
             replacer,                                     // replacer

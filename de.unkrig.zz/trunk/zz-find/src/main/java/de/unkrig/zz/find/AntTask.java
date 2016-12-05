@@ -27,9 +27,10 @@
 package de.unkrig.zz.find;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -54,9 +55,6 @@ import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.AbstractPrinter;
-import de.unkrig.commons.text.Printer;
-import de.unkrig.commons.text.Printers;
-import de.unkrig.commons.text.ProxyPrinter;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.zz.find.Find.Action;
@@ -983,7 +981,7 @@ class AntTask extends AbstractElementWithOperands {
     execute4(RunnableWhichThrows<IOException> runnable, @Nullable File outputFile, final ProjectComponent component)
     throws IOException {
 
-        Printer printer = new AbstractPrinter() {
+        AbstractPrinter printer = new AbstractPrinter() {
             @Override public void warn(@Nullable String message)    { component.log(message, Project.MSG_WARN);    }
             @Override public void verbose(@Nullable String message) { component.log(message, Project.MSG_VERBOSE); }
             @Override public void info(@Nullable String message)    { component.log(message, Project.MSG_INFO);    }
@@ -992,14 +990,12 @@ class AntTask extends AbstractElementWithOperands {
         };
 
         if (outputFile == null) {
-            Printers.withPrinter(printer, runnable);
+            printer.run(runnable);
         } else {
-            final PrintStream out = new PrintStream(outputFile);
+            final Writer out = new FileWriter(outputFile);
             try {
-                printer = new ProxyPrinter(printer) {
-                    @Override public void info(@Nullable String message) { out.println(message); }
-                };
-                Printers.withPrinter(printer, runnable);
+
+                printer.redirectInfo(out).run(runnable);
                 out.close();
             } finally {
                 try { out.close(); } catch (Exception e) {}
@@ -1026,13 +1022,9 @@ class AntTask extends AbstractElementWithOperands {
             evaluate(final Mapping<String, Object> properties) {
 
                 final boolean[] result = new boolean[1];
-                Printers.redirectInfo(
-                    new Consumer<String>() {
-
-                        @Override public void
-                        consume(String subject) { project.setProperty(propertyName, subject); }
-                    },
-                    new RunnableWhichThrows<RuntimeException>() {
+                AbstractPrinter.getContextPrinter().redirectInfo(new Consumer<String>() {
+                        @Override public void consume(String subject) { project.setProperty(propertyName, subject); }
+                    }).run(new Runnable() {
                         @Override public void run() { result[0] = action.evaluate(properties); }
                     }
                 );
