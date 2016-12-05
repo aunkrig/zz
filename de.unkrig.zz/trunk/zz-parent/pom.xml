@@ -188,7 +188,7 @@
 								<additionalparam>-Xdoclint:none</additionalparam>
 								<quiet>true</quiet>
 								<tags>
-									<tag><name>ant.defaultValue</name><placement>a</placement><head>Default value:</head></tag>
+									<tag><name>ant.defaultValue</name>    <placement>a</placement><head>Default value:</head>              </tag>
 									<tag><name>ant.mandatory</name>       <placement>a</placement><head>This attribute is mandatory.</head></tag>
 									<tag><name>ant.subelementOrder</name> <placement>X</placement>                                         </tag>
 									<tag><name>ant.typeGroupHeading</name><placement>X</placement>                                         </tag>
