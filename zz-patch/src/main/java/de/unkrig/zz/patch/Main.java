@@ -261,9 +261,7 @@ class Main {
             return;
         }
 
-        Printers.withPrinter(main.levelFilteredPrinter, new Runnable() {
-            @Override public void run() { main.main2(args2); }
-        });
+        main.levelFilteredPrinter.run(new Runnable() { @Override public void run() { main.main2(args2); } });
     }
 
     private void
@@ -280,7 +278,7 @@ class Main {
 
     // ================ CONFIGURATION FIELDS ================
 
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(Printers.get());
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
     private FileTransformer.Mode       mode                 = FileTransformer.Mode.TRANSFORM;
     private final Patch                patch                = new Patch();
     private Charset                    inputCharset         = Charset.defaultCharset();

@@ -37,7 +37,6 @@ import de.unkrig.commons.file.org.apache.commons.compress.compressors.Compressio
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
-import de.unkrig.commons.text.AbstractPrinter;
 import de.unkrig.commons.text.AbstractPrinter.Level;
 import de.unkrig.commons.text.LevelFilteredPrinter;
 import de.unkrig.commons.text.Printers;
@@ -180,7 +179,7 @@ class Main {
     }
 
     private final Diff                 diff                 = new Diff();
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(AbstractPrinter.getContextPrinter());
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
     @Nullable private File             outputFile;
 
     public Main() {}

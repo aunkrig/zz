@@ -62,7 +62,7 @@ class Main {
 
     private final Find find    = new Find();
 
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(Printers.get());
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
 
     /**
      * A command line utility to find files, directories and archive entries by various criteria, and optionally
@@ -426,12 +426,7 @@ class Main {
      */
     public static void
     main(final String[] args) {
-
-        final Main main = new Main();
-        Printers.withPrinter(main.levelFilteredPrinter, new Runnable() {
-
-            @Override public void run() { main.main2(args); }
-        });
+        new Main().levelFilteredPrinter.run(new Runnable() { @Override public void run() { new Main().main2(args); } });
     }
 
     private void

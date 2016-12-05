@@ -53,7 +53,6 @@ import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.AbstractPrinter;
-import de.unkrig.commons.text.Printer;
 import de.unkrig.commons.text.Printers;
 import de.unkrig.commons.text.StringStream.UnexpectedElementException;
 import de.unkrig.commons.text.expression.EvaluationException;
@@ -610,7 +609,7 @@ class AntTask extends Task {
     private void
     execute2() throws Exception {
 
-        Printer printer = new AbstractPrinter() {
+        AbstractPrinter printer = new AbstractPrinter() {
             @Override public void warn(@Nullable String message)    { AntTask.this.log(message, Project.MSG_WARN);    }
             @Override public void verbose(@Nullable String message) { AntTask.this.log(message, Project.MSG_VERBOSE); }
             @Override public void info(@Nullable String message)    { AntTask.this.log(message, Project.MSG_INFO);    }
@@ -618,7 +617,7 @@ class AntTask extends Task {
             @Override public void debug(@Nullable String message)   { AntTask.this.log(message, Project.MSG_DEBUG);   }
         };
 
-        Printers.withPrinter(printer, new RunnableWhichThrows<Exception>() {
+        printer.run(new RunnableWhichThrows<Exception>() {
             @Override public void run() throws Exception { AntTask.this.execute3(); }
         });
     }

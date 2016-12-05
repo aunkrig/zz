@@ -69,7 +69,7 @@ class Main {
             @Override public void handle(String path, RuntimeException re) { Printers.error(path, re); }
         });
     }
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(Printers.get());
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
 
     /**
      * <h2>Usage:</h2>
@@ -139,9 +139,8 @@ class Main {
     public static void
     main(final String[] args) {
 
-        final Main main = new Main();
-        Printers.withPrinter(main.levelFilteredPrinter, new Runnable() {
-            @Override public void run() { main.main2(args); }
+        new Main().levelFilteredPrinter.run(new Runnable() {
+            @Override public void run() { new Main().main2(args); }
         });
     }
 
