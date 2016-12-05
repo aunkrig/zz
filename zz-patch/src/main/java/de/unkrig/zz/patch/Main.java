@@ -413,11 +413,11 @@ class Main {
         final Expression condition = substituteConditions.result;
 
         ContentsTransformer contentsTransformer = new SubstitutionContentsTransformer(
-            this.inputCharset,
-            this.outputCharset,
-            pattern,
-            replacement,
-            (
+            this.inputCharset,  // inputCharset
+            this.outputCharset, // outputCharset
+            pattern,            // pattern
+            replacement,        // replacement
+            (                   // condition
                 condition == Expression.TRUE ? SubstitutionContentsTransformer.Condition.ALWAYS :
                 condition == Expression.FALSE ? SubstitutionContentsTransformer.Condition.NEVER :
                 new SubstitutionContentsTransformer.Condition() {
