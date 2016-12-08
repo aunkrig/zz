@@ -8,4 +8,7 @@
     <file-match-pattern match-pattern="\.java$" include-pattern="true"/>
     <file-match-pattern match-pattern="^src/org/incava/" include-pattern="false"/>
   </fileset>
+  <filter name="FilesFromPackage" enabled="true">
+    <filter-data value="src/main/java/org/incava/util/diff"/>
+  </filter>
 </fileset-config>
