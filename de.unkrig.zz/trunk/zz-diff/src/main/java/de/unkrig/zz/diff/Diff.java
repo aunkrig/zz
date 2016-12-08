@@ -178,15 +178,15 @@ class Diff extends DocumentDiff {
 
     // Configuration parameters.
 
-    private Predicate<? super String>         pathPredicate   = PredicateUtil.always();
-    private final List<Pattern>               equivalentPaths = new ArrayList<Pattern>();
-    private final Collection<LineEquivalence> equivalentLines = new ArrayList<LineEquivalence>();
-    private final Collection<LineEquivalence> ignores         = new ArrayList<LineEquivalence>();
-    private AbsentFileMode                    addedFileMode   = AbsentFileMode.REPORT;
-    private AbsentFileMode                    deletedFileMode = AbsentFileMode.REPORT;
+    private Predicate<? super String>         pathPredicate    = PredicateUtil.always();
+    private final List<Pattern>               equivalentPaths  = new ArrayList<Pattern>();
+    private final Collection<LineEquivalence> equivalentLines  = new ArrayList<LineEquivalence>();
+    private final Collection<LineEquivalence> ignores          = new ArrayList<LineEquivalence>();
+    private AbsentFileMode                    addedFileMode    = AbsentFileMode.REPORT;
+    private AbsentFileMode                    deletedFileMode  = AbsentFileMode.REPORT;
     private boolean                           reportUnchangedFiles;
-    private Predicate<? super String>         lookIntoFormat  = PredicateUtil.always();
-    private DiffMode                      diffMode     = DiffMode.NORMAL;
+    private Predicate<? super String>         lookIntoFormat   = PredicateUtil.always();
+    private DiffMode                          diffMode         = DiffMode.NORMAL;
     private ExceptionHandler<IOException>     exceptionHandler = ExceptionHandler.<IOException>defaultHandler();
     private boolean                           sequential;
     private boolean                           recurseSubdirectories = true;
@@ -213,10 +213,10 @@ class Diff extends DocumentDiff {
     setDiffMode(DiffMode value) {
 
         switch ((this.diffMode = value)) {
-        case NORMAL:  this.setDocumentDiffMode(DocumentDiffMode.NORMAL);
-        case CONTEXT: this.setDocumentDiffMode(DocumentDiffMode.CONTEXT);
-        case UNIFIED: this.setDocumentDiffMode(DocumentDiffMode.UNIFIED);
-        default:      ;
+        case NORMAL:  this.setDocumentDiffMode(DocumentDiffMode.NORMAL);  break;
+        case CONTEXT: this.setDocumentDiffMode(DocumentDiffMode.CONTEXT); break;
+        case UNIFIED: this.setDocumentDiffMode(DocumentDiffMode.UNIFIED); break;
+        default:      break;
         }
     }
 
@@ -643,9 +643,9 @@ class Diff extends DocumentDiff {
 
                     try {
 
-                        // We are about to DIFF the two documents. The problem is that "reportFileChange()" must be called
-                        // BEFORE the first line of DIFF is printed. Thus, we set up a printer that delays the invocation
-                        // of "reportFileChanged()" until the first INFO message is printed.
+                        // We are about to DIFF the two documents. The problem is that "reportFileChange()" must be
+                        // called BEFORE the first line of DIFF is printed. Thus, we set up a printer that delays the
+                        // invocation of "reportFileChanged()" until the first INFO message is printed.
                         final AbstractPrinter cp = AbstractPrinter.getContextPrinter();
                         cp.redirect(Level.INFO, new Consumer<String>() {
 
