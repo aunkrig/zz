@@ -107,7 +107,7 @@ class AntFilter extends ProjectComponent implements ChainableReader {
 
                     return ExpressionEvaluator.toBoolean(
                         expression.evaluate(Mappings.<String, Object>mapping(
-                            "hunks",      hunks,
+                            "hunks",      hunks,     // SUPPRESS CHECKSTYLE Wrap:3
                             "hunkIndex",  hunkIndex,
                             "lineNumber", lineNumber
                         ))

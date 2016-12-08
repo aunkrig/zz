@@ -454,7 +454,7 @@ class Find {
      * Evaluates a predicate for a property's value and returns the result, or {@code null} iff the property is not
      * set.
      */
-    public static abstract
+    public abstract static
     class PredicateTest<T> implements Test {
 
         private final Predicate<? super T> predicate;
@@ -1149,6 +1149,8 @@ class Find {
         if (this.maxDepth < 0) return;
 
         this.findInStream("-", System.in, Mappings.<String, Object>mapping(
+
+            // SUPPRESS CHECKSTYLE Wrap:7
             "isDirectory",      false,
             "isExecutable",     false,
             "isReadable",       true,
@@ -1202,7 +1204,7 @@ class Find {
                     // Evaluate the FIND expression for the directory.
                     Find.this.evaluateExpression(Mappings.augment(
                         Find.fileProperties(directoryPath, directory),
-                        "type",  "directory",
+                        "type",  "directory", // SUPPRESS CHECKSTYLE Wrap:2
                         "depth", depth
                     ));
                 }
@@ -1298,7 +1300,7 @@ class Find {
                                 // Evaluate the FIND expression for the archive file.
                                 Find.this.evaluateExpression(Mappings.augment(
                                     Find.fileProperties(path, file),
-                                    "type",          "archive-file",
+                                    "type",          "archive-file", // SUPPRESS CHECKSTYLE Wrap:3
                                     "archiveFormat", archiveFormat,
                                     "depth",         depth
                                 ));
@@ -1329,7 +1331,7 @@ class Find {
                                                     Mappings.propertiesOf(ae),
                                                     Find.fileProperties(path, file)
                                                 ),
-                                                "path",          entryPath,
+                                                "path",          entryPath, // SUPPRESS CHECKSTYLE Wrap:5
                                                 "name",          ArchiveFormatFactory.normalizeEntryName(ae.getName()),
                                                 "archiveFormat", archiveFormat,
                                                 "type",          "directory-entry",
@@ -1345,7 +1347,7 @@ class Find {
                                                             Mappings.propertiesOf(ae),
                                                             Find.fileProperties(path, file)
                                                         ),
-                                                        "archiveFormat", archiveFormat
+                                                        "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
                                                     ),
                                                     depth + 1
                                                 );
@@ -1382,7 +1384,7 @@ class Find {
                                 // process the CONTENTS of the compressed file.
                                 Find.this.evaluateExpression(Mappings.augment(
                                     Find.fileProperties(path, file),
-                                    "type",              "compressed-file",
+                                    "type",              "compressed-file", // SUPPRESS CHECKSTYLE Wrap:3
                                     "compressionFormat", compressionFormat,
                                     "depth",             depth
                                 ));
@@ -1397,7 +1399,7 @@ class Find {
                                 if (depth < Find.this.maxDepth) {
                                     Find.this.findInStream(path + '%', compressorInputStream, Mappings.override(
                                         Find.fileProperties(path, file),
-                                        "compressionFormat", compressionFormat,
+                                        "compressionFormat", compressionFormat, // SUPPRESS CHECKSTYLE Wrap:3
                                         "name",              file.getName() + '%',
                                         "size",              -1L
                                     ), depth + 1);
@@ -1417,7 +1419,7 @@ class Find {
                     // Evaluate the FIND expression for the normal file.
                     Find.this.evaluateExpression(Mappings.augment(
                         Find.fileProperties(path, file),
-                        "type",        "file",
+                        "type",        "file",      // SUPPRESS CHECKSTYLE Wrap:3
                         "inputStream", inputStream,
                         "depth",       depth
                     ));
@@ -1457,7 +1459,7 @@ class Find {
                                     // Evaluate the FIND expression for the nested archive.
                                     Find.this.evaluateExpression(Mappings.override(
                                         streamProperties,
-                                        "path",          path,
+                                        "path",          path,          // SUPPRESS CHECKSTYLE Wrap:4
                                         "type",          "archive",
                                         "archiveFormat", archiveFormat,
                                         "depth",         depth
@@ -1486,7 +1488,7 @@ class Find {
                                                 // Evaluate the FIND expression for the "directory entry".
                                                 Find.this.evaluateExpression(Mappings.override(
                                                     Mappings.union(Mappings.propertiesOf(ae), streamProperties),
-                                                    "archiveFormat", archiveFormat,
+                                                    "archiveFormat", archiveFormat,     // SUPPRESS CHECKSTYLE Wrap:5
                                                     "path",          entryPath,
                                                     "name",          entryName,
                                                     "type",          "directory-entry",
@@ -1501,7 +1503,7 @@ class Find {
                                                         archiveInputStream,
                                                         Mappings.override(
                                                             Mappings.union(Mappings.propertiesOf(ae), streamProperties),
-                                                            "archiveFormat", archiveFormat
+                                                            "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
                                                         ),
                                                         depth + 1
                                                     );
@@ -1538,7 +1540,7 @@ class Find {
                                     // couldn't process the CONTENTS of the compressed entry.
                                     Find.this.evaluateExpression(Mappings.override(
                                         streamProperties,
-                                        "type",              "compressed-contents",
+                                        "type",              "compressed-contents", // SUPPRESS CHECKSTYLE Wrap:4
                                         "path",              path,
                                         "compressionFormat", compressionFormat,
                                         "depth",             depth
@@ -1559,7 +1561,7 @@ class Find {
                                             compressorInputStream,
                                             Mappings.override(
                                                 streamProperties,
-                                                "compressionFormat", compressionFormat,
+                                                "compressionFormat", compressionFormat, // SUPPRESS CHECKSTYLE Wrap:3
                                                 "name",              name + '%',
                                                 "size",              -1L
                                             ),
@@ -1581,7 +1583,7 @@ class Find {
                         // Evaluate the FIND expression for the nested normal contents.
                         Find.this.evaluateExpression(Mappings.override(
                             streamProperties,
-                            "path",        path,
+                            "path",        path,              // SUPPRESS CHECKSTYLE Wrap:5
                             "type",        "normal-contents",
                             "inputStream", inputStream,
                             "depth",       depth,

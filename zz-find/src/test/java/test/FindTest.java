@@ -392,7 +392,7 @@ class FindTest extends TestCase {
     @Test public void
     testDigest() throws Exception {
 
-        // SUPPRESS CHECKSTYLE LineLength:6
+        // SUPPRESS CHECKSTYLE LineLength|Wrap:6
         FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" },
@@ -405,6 +405,7 @@ class FindTest extends TestCase {
     @Test public void
     testChecksum() throws Exception {
 
+        // SUPPRESS CHECKSTYLE Wrap:6
         FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-name", "***file3.Z%", "-print", "-checksum", "CRC32" },

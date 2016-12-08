@@ -1023,11 +1023,10 @@ class AntTask extends AbstractElementWithOperands {
 
                 final boolean[] result = new boolean[1];
                 AbstractPrinter.getContextPrinter().redirectInfo(new Consumer<String>() {
-                        @Override public void consume(String subject) { project.setProperty(propertyName, subject); }
-                    }).run(new Runnable() {
-                        @Override public void run() { result[0] = action.evaluate(properties); }
-                    }
-                );
+                    @Override public void consume(String subject) { project.setProperty(propertyName, subject); }
+                }).run(new Runnable() {
+                    @Override public void run() { result[0] = action.evaluate(properties); }
+                });
                 return result[0];
             }
         };

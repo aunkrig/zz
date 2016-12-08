@@ -426,7 +426,9 @@ class Main {
      */
     public static void
     main(final String[] args) {
-        new Main().levelFilteredPrinter.run(new Runnable() { @Override public void run() { new Main().main2(args); } });
+        new Main().levelFilteredPrinter.run(new Runnable() {
+            @Override public void run() { new Main().main2(args); }
+        });
     }
 
     private void

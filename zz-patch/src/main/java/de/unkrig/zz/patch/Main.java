@@ -489,7 +489,7 @@ class Main {
                     try {
                         return ExpressionEvaluator.toBoolean(
                             patchConditions.result.evaluate(Mappings.<String, Object>mapping(
-                                "path",       path,
+                                "path",       path,      // SUPPRESS CHECKSTYLE Wrap:4
                                 "hunks",      hunks,
                                 "hunkIndex",  hunkIndex,
                                 "lineNumber", lineNumber
