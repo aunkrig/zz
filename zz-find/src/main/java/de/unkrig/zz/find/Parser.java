@@ -217,26 +217,26 @@ class Parser {
             "-exec",   "-pipe",     "-cat",      "-copy",       "-disassemble",
             "-digest", "-checksum", "-true",     "-false"
         )) {
-        case 0: // '('
+        case 0:  // '('
             final Expression result = this.parseComma();
             this.parser.read(")");
             return result;
-        case 1: // '!'
-        case 2: // '-not'
+        case 1:  // '!'
+        case 2:  // '-not'
             return new NotExpression(this.parsePrimary());
-        case 3: // '-name' <name-pattern>
+        case 3:  // '-name' <name-pattern>
             return new NameTest(this.parser.read().text);
-        case 4: // '-path' <path-pattern>
+        case 4:  // '-path' <path-pattern>
             return new PathTest(this.parser.read().text);
-        case 5: // '-type' glob
+        case 5:  // '-type' glob
             return new TypeTest(this.parser.read().text);
-        case 6: // '-readable'
+        case 6:  // '-readable'
             return new ReadabilityTest();
-        case 7: // '-writable'
+        case 7:  // '-writable'
             return new WritabilityTest();
-        case 8: // '-executable'
+        case 8:  // '-executable'
             return new ExecutabilityTest();
-        case 9: // '-size'
+        case 9:  // '-size'
             return new SizeTest(Parser.parseNumericArgument(this.parser.read().text));
         case 10: // '-mtime'
             return new ModificationTimeTest(
