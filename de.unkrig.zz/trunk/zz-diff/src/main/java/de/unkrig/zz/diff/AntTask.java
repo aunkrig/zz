@@ -150,8 +150,8 @@ class AntTask extends Task {
 
     /**
      * @ant.defaultValue REPORT_AS_ADDED_OR_DELETED
-     * @deprecated       Use {@link #setAddedFileMode(Diff.AbsentFileMode)} and {@link #setDeletedFileMode(Diff.AbsentFileMode)}
-     *                   instead.
+     * @deprecated       Use {@link #setAddedFileMode(Diff.AbsentFileMode)} and {@link
+     *                   #setDeletedFileMode(Diff.AbsentFileMode)} instead.
      */
     @Deprecated public void
     setAbsentFileMode(OldAbsentFileMode value) {

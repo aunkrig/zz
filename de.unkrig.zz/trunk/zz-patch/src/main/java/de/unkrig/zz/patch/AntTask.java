@@ -382,7 +382,7 @@ class AntTask extends Task {
                         try {
                             return ExpressionEvaluator.toBoolean(
                                 element.condition.evaluate(Mappings.<String, Object>mapping(
-                                    "path",       path,
+                                    "path",       path,      // SUPPRESS CHECKSTYLE Wrap:4
                                     "hunks",      hunks,
                                     "hunkIndex",  hunkIndex,
                                     "lineNumber", lineNumber

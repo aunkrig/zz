@@ -209,6 +209,8 @@ class Parser {
     private Expression
     parsePrimary() throws ParseException {
         switch (this.parser.read(
+
+            // SUPPRESS CHECKSTYLE Wrap:5
             "(",       "!",         "-not",      "-name",       "-path",
             "-type",   "-readable", "-writable", "-executable", "-size",
             "-mtime",  "-mmin",     "-print",    "-echo",       "-ls",

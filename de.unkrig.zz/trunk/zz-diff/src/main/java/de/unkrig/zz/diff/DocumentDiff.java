@@ -148,7 +148,7 @@ class DocumentDiff {
     private boolean                           disassembleClassFilesButHideLines;
     private boolean                           disassembleClassFilesButHideVars;
     private Charset                           charset          = Charset.defaultCharset();
-    private DocumentDiffMode                  documentDiffMode         = DocumentDiffMode.NORMAL;
+    private DocumentDiffMode                  documentDiffMode = DocumentDiffMode.NORMAL;
     private int                               contextSize      = 3;
     private Tokenization                      tokenization     = Tokenization.LINE;
     private boolean                           ignoreCStyleComments;
