@@ -453,6 +453,8 @@ class Find {
     /**
      * Evaluates a predicate for a property's value and returns the result, or {@code null} iff the property is not
      * set.
+     *
+     * @param <T> The type of the property and the predicate
      */
     public abstract static
     class PredicateTest<T> implements Test {
