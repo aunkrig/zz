@@ -1218,7 +1218,19 @@ class Find {
 
                     // Process the directory's members.
                     if (depth < Find.this.maxDepth) {
-                        for (String memberName : directory.list()) {
+
+                        String[] memberNames = directory.list();
+                        if (memberNames == null) {
+
+                            // MS WINDOWS 7: Read-protected directory produces:
+                            // isDirectory() => true
+                            // canRead()     => true
+                            // list()        => null
+                            // listFiles()   => null
+                            throw new IOException(directory + ": Permission denied");
+                        }
+
+                        for (String memberName : memberNames) {
 
                             try {
 
