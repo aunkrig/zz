@@ -198,10 +198,9 @@ class Main {
 
         this.grep.addSearch(this.includeExclude, args[0], this.caseSensitive);
 
-
         // Process files command line arguments.
         final List<File> files = new ArrayList<File>();
-        for (int i = 1; i < args.length; i++) files.add(new File(args[i++]));
+        for (int i = 1; i < args.length; i++) files.add(new File(args[i]));
 
         if (files.isEmpty()) {
             this.grep.contentsProcessor().process(
