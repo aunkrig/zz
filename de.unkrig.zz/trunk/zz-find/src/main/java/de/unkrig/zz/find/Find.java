@@ -45,6 +45,7 @@ import java.util.zip.Checksum;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveInputStream;
+import org.apache.commons.compress.archivers.zip.UnsupportedZipFeatureException;
 import org.apache.commons.compress.compressors.CompressorInputStream;
 
 import de.unkrig.commons.file.CompressUtil;
@@ -1295,7 +1296,7 @@ class Find {
         Find.LOGGER.log(Level.FINER, "Processing file \"{0}\" (path is \"{1}\")", new Object[] { file, path });
 
         CompressUtil.processFile(
-            path,                               // file
+            path,                               // path
             file,                               // file
             this.lookIntoFormat,                // lookIntoFormat
             new ArchiveHandler<Void>() {        // archiveHandler
@@ -1325,9 +1326,12 @@ class Find {
                             @Override public void
                             run() throws IOException {
 
+                                if (depth >= Find.this.maxDepth) return;
+
                                 // Process the archive's entries.
-                                if (depth < Find.this.maxDepth) {
-                                    for (;;) {
+                                for (;;) {
+                                    try {
+
                                         final ArchiveEntry ae = archiveInputStream.getNextEntry();
                                         if (ae == null) break;
 
@@ -1352,23 +1356,33 @@ class Find {
                                                 "depth",         depth + 1
                                             ));
                                         } else {
-                                            try {
-                                                Find.this.findInStream(
-                                                    entryPath,
-                                                    archiveInputStream,
-                                                    Mappings.override(
-                                                        Mappings.union(
-                                                            Mappings.propertiesOf(ae),
-                                                            Find.fileProperties(path, file)
-                                                        ),
-                                                        "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
+                                            Find.this.findInStream(
+                                                entryPath,
+                                                archiveInputStream,
+                                                Mappings.override(
+                                                    Mappings.union(
+                                                        Mappings.propertiesOf(ae),
+                                                        Find.fileProperties(path, file)
                                                     ),
-                                                    depth + 1
-                                                );
-                                            } catch (IOException ioe) {
-                                                Find.this.exceptionHandler.consume(ioe);
-                                            }
+                                                    "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
+                                                ),
+                                                depth + 1
+                                            );
                                         }
+                                    } catch (UnsupportedZipFeatureException uzfe) {
+
+                                        // Cannot use "ExceptionUtil.wrap(prefix, cause)" here, because this exception
+                                        // has none of the "usual" constructors.
+                                        Find.this.exceptionHandler.consume(new IOException((
+                                            path
+                                            + "!"
+                                            + uzfe.getEntry().getName()
+                                            + ": Unsupported ZIP feature \""
+                                            + uzfe.getFeature()
+                                            + "\""
+                                        ), uzfe));
+                                    } catch (IOException ioe) {
+                                        Find.this.exceptionHandler.consume(ExceptionUtil.wrap(path, ioe));
                                     }
                                 }
                             }
