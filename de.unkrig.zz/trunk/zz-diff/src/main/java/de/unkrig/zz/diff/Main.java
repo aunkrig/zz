@@ -321,6 +321,24 @@ class Main {
     setDisassemble() { this.diff.setDisassembleClassFiles(true); }
 
     /**
+     * When disassembling .class files, include a constant pool dump, constant pool indexes, and hex dumps of all
+     * attributes in the disassembly output.
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setDaVerbose() { this.diff.setDisassembleClassFilesVerbose(true); }
+
+    /**
+     * When disassembling .class files, look for source files in this directory. Source file loading is disabled by
+     * default.
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setDaSourceDirectory(File directory) { this.diff.setDisassembleClassFilesSourceDirectory(directory); }
+
+    /**
      * When disassembling .class files, don't display lines debug info.
      *
      * @main.commandLineOptionGroup Contents-Processing
@@ -335,6 +353,14 @@ class Main {
      */
     @CommandLineOption public void
     setDaNoVars() { this.diff.setDisassembleClassFilesButHideVars(true); }
+
+    /**
+     * When disassembling .class files, use symbolic labels /'L12') instead of numeric labels ('#123').
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setDaSymbolicLabels() { this.diff.setDisassembleClassFilesSymbolicLabels(true); }
 
     /**
      * Lines in files <var>path-pattern</var> that contain <var>line-regex</var> and all capturing groups are equal are

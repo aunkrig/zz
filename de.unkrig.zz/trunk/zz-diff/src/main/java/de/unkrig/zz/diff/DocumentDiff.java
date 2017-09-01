@@ -33,6 +33,7 @@ import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.MULTI_LINE_C_
 import static de.unkrig.commons.text.scanner.JavaScanner.TokenType.MULTI_LINE_C_COMMENT_MIDDLE;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -145,8 +146,11 @@ class DocumentDiff {
     private final Collection<LineEquivalence> ignores         = new ArrayList<LineEquivalence>();
     private boolean                           ignoreWhitespace;
     private boolean                           disassembleClassFiles;
+    private boolean                           disassembleClassFilesVerbose;
+    @Nullable private File                    disassembleClassFilesSourceDirectory;
     private boolean                           disassembleClassFilesButHideLines;
     private boolean                           disassembleClassFilesButHideVars;
+    private boolean                           disassembleClassFilesSymbolicLabels;
     private Charset                           charset          = Charset.defaultCharset();
     private DocumentDiffMode                  documentDiffMode = DocumentDiffMode.NORMAL;
     private int                               contextSize      = 3;
@@ -157,18 +161,43 @@ class DocumentDiff {
 
     // SETTERS FOR THE VARIOUS CONFIGURATION PARAMETERS
 
-    // CHECKSTYLE JavadocMethod:OFF
     public void
     setIgnoreWhitespace(boolean value) { this.ignoreWhitespace = value; }
 
     public void
     setDisassembleClassFiles(boolean value) { this.disassembleClassFiles = value; }
 
+    /**
+     * @param value Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes
+     *              in the disassembly output
+     */
+    public void
+    setDisassembleClassFilesVerbose(boolean value) { this.disassembleClassFilesVerbose = value; }
+
+    /**
+     * @param value Where to look for source files; {@code null} disables source file loading; source file loading is
+     *              disabled by default
+     */
+    public void
+    setDisassembleClassFilesSourceDirectory(@Nullable File value) { this.disassembleClassFilesSourceDirectory = value; }
+
+    /**
+     * @param value Whether source line numbers are suppressed in the disassembly (defaults to {@code false})
+     */
     public void
     setDisassembleClassFilesButHideLines(boolean value) { this.disassembleClassFilesButHideLines = value; }
 
+    /**
+     * @param value Whether local variable names are suppressed in the disassembly (defaults to {@code false})
+     */
     public void
     setDisassembleClassFilesButHideVars(boolean value) { this.disassembleClassFilesButHideVars = value; }
+
+    /**
+     * @param value Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly
+     */
+    public void
+    setDisassembleClassFilesSymbolicLabels(boolean value) { this.disassembleClassFilesSymbolicLabels = value; }
 
     public void
     setCharset(Charset value) { this.charset = value; }
@@ -738,8 +767,11 @@ class DocumentDiff {
         // Deploy the .class file disassembler as appropriate.
         if (this.disassembleClassFiles && path.endsWith(".class")) {
             DisassemblerByteFilter disassemblerByteFilter = new DisassemblerByteFilter();
+            disassemblerByteFilter.setVerbose(this.disassembleClassFilesVerbose);
+            disassemblerByteFilter.setSourceDirectory(this.disassembleClassFilesSourceDirectory);
             disassemblerByteFilter.setHideLines(this.disassembleClassFilesButHideLines);
             disassemblerByteFilter.setHideVars(this.disassembleClassFilesButHideVars);
+            disassemblerByteFilter.setSymbolicLabels(this.disassembleClassFilesSymbolicLabels);
             is = new ByteFilterInputStream(is, disassemblerByteFilter);
         }
 
