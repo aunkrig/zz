@@ -250,9 +250,28 @@ class AntTask extends AbstractElementWithOperands {
     public static
     class DisassembleElement implements ExpressionElement {
 
+        private boolean        verbose;
+        @Nullable private File sourceDirectory;
         private boolean        hideLines;
         private boolean        hideVars;
+        private boolean        useSymbolicLabels;
         @Nullable private File toFile;
+
+        /**
+         * Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes in the
+         * disassembly output.
+         */
+        public void
+        setVerbose(boolean value) { this.verbose = value;  }
+
+        /**
+         * Where to look for source files when disassembling .class files; {@code null} disables source file loading. Source
+         * file loading is disabled by default.
+         */
+        public void
+        setSourceDirectory(@Nullable File value) {
+            this.sourceDirectory = value;
+        }
 
         /**
          * Whether to suppress line numbers in the disassembly output.
@@ -267,6 +286,12 @@ class AntTask extends AbstractElementWithOperands {
         setHidesVars(boolean hideLines) { this.hideLines = hideLines; }
 
         /**
+         * Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly.
+         */
+        public void
+        setUseSymbolicLabels(boolean value) { this.useSymbolicLabels = value; }
+
+        /**
          * The file to redirect the disassembly output to.
          *
          * @ant.defaultValue Standard output
@@ -275,7 +300,16 @@ class AntTask extends AbstractElementWithOperands {
         setToFile(File toFile) { this.toFile = toFile; }
 
         @Override public Expression
-        toExpression() { return new DisassembleAction(this.hideLines, this.hideVars, this.toFile); }
+        toExpression() {
+            return new DisassembleAction(
+                this.verbose,
+                this.sourceDirectory,
+                this.hideLines,
+                this.hideVars,
+                this.useSymbolicLabels,
+                this.toFile
+            );
+        }
     }
 
     /**

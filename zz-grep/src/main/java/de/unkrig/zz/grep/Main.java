@@ -303,14 +303,30 @@ class Main {
     setDisassemble() { this.grep.setDisassembleClassFiles(true); }
 
     /**
+     * When disassembling .class files, include a constant pool dump, constant pool indexes, and hex dumps of all
+     * attributes in the disassembly output.
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setDaVerbose() { this.grep.setDisassembleClassFilesVerbose(true); }
+
+    /**
+     * When disassembling .class files, look for source files in this directory. Source file loading is disabled by
+     * default.
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setDaSourceDirectory(File directory) { this.grep.setDisassembleClassFilesSourceDirectory(directory); }
+
+    /**
      * Don't print line numbers in the disassembly.
      *
      * @main.commandLineOptionGroup Contents-Processing
      */
     @CommandLineOption(name = { "da-no-lines", "disassemble-class-files-but-hide-lines" }) public void
-    setDisassembleClassFilesButHideLines() {
-        this.grep.setDisassembleClassFilesButHideLines(true);
-    }
+    setDisassembleClassFilesButHideLines() { this.grep.setDisassembleClassFilesButHideLines(true); }
 
     /**
      * Don't print variable names in the disassembly.
@@ -318,9 +334,15 @@ class Main {
      * @main.commandLineOptionGroup Contents-Processing
      */
     @CommandLineOption(name = { "da-no-vars", "disassemble-class-files-but-hide-vars" }) public void
-    setDisassembleClassFilesButHideVars() {
-        this.grep.setDisassembleClassFilesButHideVars(true);
-    }
+    setDisassembleClassFilesButHideVars() { this.grep.setDisassembleClassFilesButHideVars(true); }
+
+    /**
+     * When disassembling .class files, use symbolic labels /'L12') instead of numeric labels ('#123').
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setDaSymbolicLabels() { this.grep.setDisassembleClassFilesSymbolicLabels(true); }
 
     /**
      * Excludes files and archive entries from the search iff the file's / archive entry's path matches the
