@@ -884,22 +884,38 @@ class Find {
     public static
     class DisassembleAction implements Action {
 
+        private final boolean              verbose;
+        @Nullable private final File       sourceDirectory;
         private final boolean        hideLines;
         private final boolean        hideVars;
+        private final boolean              symbolicLabels;
         @Nullable private final File toFile;
 
-        DisassembleAction(boolean hideLines, boolean hideVars, @Nullable File toFile) {
-            this.hideLines = hideLines;
-            this.hideVars  = hideVars;
-            this.toFile    = toFile;
+        DisassembleAction(
+            boolean        verbose,
+            @Nullable File sourceDirectory,
+            boolean        hideLines,
+            boolean        hideVars,
+            boolean        symbolicLabels,
+            @Nullable File toFile
+        ) {
+            this.verbose         = verbose;
+            this.sourceDirectory = sourceDirectory;
+            this.hideLines       = hideLines;
+            this.hideVars        = hideVars;
+            this.symbolicLabels  = symbolicLabels;
+            this.toFile          = toFile;
         }
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
 
             final Disassembler disassembler = new Disassembler();
 
+            disassembler.setVerbose(this.verbose);
+            disassembler.setSourceDirectory(this.sourceDirectory);
             disassembler.setHideLines(this.hideLines);
             disassembler.setHideVars(this.hideVars);
+            disassembler.setSymbolicLabels(this.symbolicLabels);
 
             final InputStream in = Mappings.getNonNull(properties, "inputStream", InputStream.class);
 
