@@ -61,6 +61,7 @@ class Main {
 
     /**
      * <h2>Usage:</h2>
+     *
      * <dl>
      *   <dt>{@code zzdiff} [ <var>option</var> ] ... <var>file1</var> <var>file2</var></dt>
      *   <dd>
@@ -75,6 +76,13 @@ class Main {
      *     or "subdir/file.zip!dir/file.txt" or "archive.tgz%!dir/file.txt" or "dir/file.Z%".
      *   </dd>
      * </dl>
+     *
+     * <h2>Description:</h2>
+     *
+     * <p>
+     *   Compares files line by line; detects directories, compressed and archive files, and even <em>nested</em>
+     *   archives, and compares their entries instead of their raw contents.
+     * </p>
      * <p>
      *   The default output format is the "<a href="http://en.wikipedia.org/wiki/Diff_utility#Usage">normal
      *   format</a>", also known as the "traditional format". Other output formats can be chosen through command
