@@ -280,9 +280,16 @@ class Parser {
         case 19: // "-disassemble"
             this.hadAction = true;
             return new DisassembleAction(
-                this.parser.peekRead("-hideLines"), // hideLines
-                this.parser.peekRead("-hideVars"),  // hideVars
-                null                                // file
+                this.parser.peekRead("-verbose"),        // verbose
+                (                                        // sourceDirectory
+                    this.parser.peekRead("-sourceDirectory")
+                    ? new File(this.parser.read().text)
+                    : null
+                ),
+                this.parser.peekRead("-hideLines"),      // hideLines
+                this.parser.peekRead("-hideVars"),       // hideVars
+                this.parser.peekRead("-symbolicLabels"), // symbolicLabels
+                null                                     // file
             );
         case 20: // "-digest"
             this.hadAction = true;

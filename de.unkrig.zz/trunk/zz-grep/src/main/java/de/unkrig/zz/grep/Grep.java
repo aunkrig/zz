@@ -88,8 +88,11 @@ class Grep {
     private Operation                     operation      = Operation.NORMAL;
     private boolean                       inverted;
     private boolean                       disassembleClassFiles;
+    private boolean                       disassembleClassFilesVerbose;
+    @Nullable private File                disassembleClassFilesSourceDirectory;
     private boolean                       disassembleClassFilesButHideLines;
     private boolean                       disassembleClassFilesButHideVars;
+    private boolean                       disassembleClassFilesSymbolicLabels;
     @Nullable private Comparator<Object>  directoryMemberNameComparator = Collator.getInstance();
     private ExceptionHandler<IOException> exceptionHandler              = ExceptionHandler.defaultHandler();
 
@@ -144,6 +147,19 @@ class Grep {
      */
     public void
     setDisassembleClassFiles(boolean value) { this.disassembleClassFiles = value; }
+    /**
+     * @param value Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes
+     *              in the disassembly output
+     */
+    public void
+    setDisassembleClassFilesVerbose(boolean value) { this.disassembleClassFilesVerbose = value; }
+
+    /**
+     * @param value Where to look for source files; {@code null} disables source file loading; source file loading is
+     *              disabled by default
+     */
+    public void
+    setDisassembleClassFilesSourceDirectory(@Nullable File value) { this.disassembleClassFilesSourceDirectory = value; }
 
     /**
      * @param value Whether to hide source line numbers in the Java&trade; class file disassembly
@@ -156,6 +172,12 @@ class Grep {
      */
     public void
     setDisassembleClassFilesButHideVars(boolean value) { this.disassembleClassFilesButHideVars = value; }
+
+    /**
+     * @param value Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly
+     */
+    public void
+    setDisassembleClassFilesSymbolicLabels(boolean value) { this.disassembleClassFilesSymbolicLabels = value; }
 
     /**
      * @param path  Which pathes the search applies to
@@ -236,8 +258,12 @@ class Grep {
 
                     // Wrap the input stream in a Java disassembler.
                     DisassemblerByteFilter disassemblerByteFilter = new DisassemblerByteFilter();
+
+                    disassemblerByteFilter.setVerbose(Grep.this.disassembleClassFilesVerbose);
+                    disassemblerByteFilter.setSourceDirectory(Grep.this.disassembleClassFilesSourceDirectory);
                     disassemblerByteFilter.setHideLines(Grep.this.disassembleClassFilesButHideLines);
                     disassemblerByteFilter.setHideVars(Grep.this.disassembleClassFilesButHideVars);
+                    disassemblerByteFilter.setSymbolicLabels(Grep.this.disassembleClassFilesSymbolicLabels);
                     is = new ByteFilterInputStream(is, disassemblerByteFilter);
                 }
 

@@ -203,7 +203,7 @@ class Main {
      *     the value of the property. For the list of supported properties, see section "Properties of files and
      *     archive entries", below.
      *   </dd>
-     *   <dt>{@code -disassemble} [ {@code -hideLines} ] [ {@code -hideVars} ]</dt>
+     *   <dt>{@code -disassemble} [ {@code -verbose} ] [ {@code -sourceDirectory} <var>dir</var> ] [ {@code -hideLines} ] [ {@code -hideVars} ] [ {@code -symbolicLabels} ]</dt>
      *   <dd>
      *     Disassembles a Java class file.
      *   </dd>

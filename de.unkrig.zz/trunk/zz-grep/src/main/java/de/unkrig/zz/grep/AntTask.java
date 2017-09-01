@@ -140,6 +140,22 @@ class AntTask extends Task {
     setDisassembleClassFiles(boolean value) { this.grep.setDisassembleClassFiles(value); }
 
     /**
+     * Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes in the
+     * disassembly output.
+     */
+    public void
+    setDisassembleClassFilesVerbose(boolean value) { this.grep.setDisassembleClassFilesVerbose(value); }
+
+    /**
+     * Where to look for source files when disassembling .class files; {@code null} disables source file loading. Source
+     * file loading is disabled by default.
+     */
+    public void
+    setDisassembleClassFilesSourceDirectory(@Nullable File value) {
+        this.grep.setDisassembleClassFilesSourceDirectory(value);
+    }
+
+    /**
      * Whether to hide source line numbers in the Java class file disassembly.
      */
     public void
@@ -150,6 +166,14 @@ class AntTask extends Task {
      */
     public void
     setDisassembleClassFilesButHideVars(boolean value) { this.grep.setDisassembleClassFilesButHideVars(value); }
+
+    /**
+     * Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly.
+     */
+    public void
+    setDisassembleClassFilesSymbolicLabels(boolean value) {
+        this.grep.setDisassembleClassFilesSymbolicLabels(value);
+    }
 
     /**
      * @deprecated Use {@link #setPath(String)} instead
