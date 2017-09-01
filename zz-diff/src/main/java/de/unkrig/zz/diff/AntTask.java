@@ -259,6 +259,22 @@ class AntTask extends Task {
     setDisassembleClassFiles(boolean value) { this.diff.setDisassembleClassFiles(value); }
 
     /**
+     * Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes in the
+     * disassembly output.
+     */
+    public void
+    setDisassembleClassFilesVerbose(boolean value) { this.diff.setDisassembleClassFilesVerbose(value); }
+
+    /**
+     * Where to look for source files when disassembling .class files; {@code null} disables source file loading. Source
+     * file loading is disabled by default.
+     */
+    public void
+    setDisassembleClassFilesSourceDirectory(@Nullable File value) {
+        this.diff.setDisassembleClassFilesSourceDirectory(value);
+    }
+
+    /**
      * Whether to suppress output of line numbers when disassembling {@code .class} files.
      */
     public void
@@ -269,6 +285,14 @@ class AntTask extends Task {
      */
     public void
     setDisassembleClassFilesButHideVars(boolean value) { this.diff.setDisassembleClassFilesButHideVars(value); }
+
+    /**
+     * Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly.
+     */
+    public void
+    setDisassembleClassFilesSymbolicLabels(boolean value) {
+        this.diff.setDisassembleClassFilesSymbolicLabels(value);
+    }
 
     /**
      * Encoding of the files being compared (defaults to default platform encoding).

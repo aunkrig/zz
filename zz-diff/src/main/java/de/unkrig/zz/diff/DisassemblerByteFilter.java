@@ -26,6 +26,7 @@
 
 package de.unkrig.zz.diff;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,21 +48,42 @@ import de.unkrig.jdisasm.Disassembler;
 public
 class DisassemblerByteFilter implements ByteFilter<Void> {
 
-    private boolean hideLines;
-    private boolean hideVars;
+    private boolean        verbose;
+    @Nullable private File sourceDirectory;
+    private boolean        hideLines;
+    private boolean        hideVars;
+    private boolean        symbolicLabels;
 
     @Override @Nullable public Void
     run(InputStream in, OutputStream out) throws IOException {
         Disassembler disassembler = new Disassembler();
 
+        disassembler.setOut(out);
+
+        disassembler.setVerbose(this.verbose);
+        disassembler.setSourceDirectory(this.sourceDirectory);
         disassembler.setHideLines(this.hideLines);
         disassembler.setHideVars(this.hideVars);
-        disassembler.setOut(out);
+        disassembler.setSymbolicLabels(this.symbolicLabels);
 
         disassembler.disasm(in);
 
         return null;
     }
+
+    /**
+     * @param value Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes
+     *              in the disassembly output
+     */
+    public void
+    setVerbose(boolean value) { this.verbose = value; }
+
+    /**
+     * @param value Where to look for source files when disassembling .class files; {@code null} disables source file
+     *              loading; source file loading is disabled by default
+     */
+    public void
+    setSourceDirectory(@Nullable File value) { this.sourceDirectory = value; }
 
     /**
      * @param value Whether source line numbers are suppressed in the disassembly (defaults to {@code false})
@@ -74,4 +96,10 @@ class DisassemblerByteFilter implements ByteFilter<Void> {
      */
     public void
     setHideVars(boolean value) { this.hideVars = value; }
+
+    /**
+     * @param value Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly
+     */
+    public void
+    setSymbolicLabels(boolean value) { this.symbolicLabels = value; }
 }
