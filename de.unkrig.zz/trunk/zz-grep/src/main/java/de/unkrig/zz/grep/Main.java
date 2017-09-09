@@ -295,18 +295,15 @@ class Main {
     inverted() { this.grep.setInverted(true); }
 
     /**
-     * Disassemble .class files on-the-fly.
-     *
      * @main.commandLineOptionGroup Contents-Processing
+     * @see Grep#setDisassembleClassFiles(boolean)
      */
     @CommandLineOption(name = { "da", "disassemble-class-files" }) public void
     setDisassemble() { this.grep.setDisassembleClassFiles(true); }
 
     /**
-     * When disassembling .class files, include a constant pool dump, constant pool indexes, and hex dumps of all
-     * attributes in the disassembly output.
-     *
      * @main.commandLineOptionGroup Contents-Processing
+     * @see Grep#setDisassembleClassFilesVerbose(boolean)
      */
     @CommandLineOption public void
     setDaVerbose() { this.grep.setDisassembleClassFilesVerbose(true); }
@@ -321,25 +318,22 @@ class Main {
     setDaSourceDirectory(File directory) { this.grep.setDisassembleClassFilesSourceDirectory(directory); }
 
     /**
-     * Don't print line numbers in the disassembly.
-     *
      * @main.commandLineOptionGroup Contents-Processing
+     * @see Grep#setDisassembleClassFilesButHideLines(boolean)
      */
     @CommandLineOption(name = { "da-no-lines", "disassemble-class-files-but-hide-lines" }) public void
     setDisassembleClassFilesButHideLines() { this.grep.setDisassembleClassFilesButHideLines(true); }
 
     /**
-     * Don't print variable names in the disassembly.
-     *
      * @main.commandLineOptionGroup Contents-Processing
+     * @see Grep#setDisassembleClassFilesButHideVars(boolean)
      */
     @CommandLineOption(name = { "da-no-vars", "disassemble-class-files-but-hide-vars" }) public void
     setDisassembleClassFilesButHideVars() { this.grep.setDisassembleClassFilesButHideVars(true); }
 
     /**
-     * When disassembling .class files, use symbolic labels /'L12') instead of numeric labels ('#123').
-     *
      * @main.commandLineOptionGroup Contents-Processing
+     * @see Grep#setDisassembleClassFilesSymbolicLabels(boolean)
      */
     @CommandLineOption public void
     setDaSymbolicLabels() { this.grep.setDisassembleClassFilesSymbolicLabels(true); }
