@@ -221,7 +221,7 @@
 								<docletArtifact>
 									<groupId>de.unkrig</groupId>
 									<artifactId>doclet-main</artifactId>
-									<version>1.0.2</version>
+									<version>1.0.4-SNAPSHOT</version>
 								</docletArtifact>
 
 								<additionalparam>
