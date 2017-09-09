@@ -544,8 +544,7 @@ class Main {
     setDepth() { this.find.setDepth(true); }
 
     /**
-     * Do not apply any tests or actions at levels less than <var>levels</var>. E.g. "1" means "process all files
-     * except the top level files and directories".
+     * @see Find#setMinDepth(int)
      */
     @CommandLineOption public void
     setMinDepth(int levels) { this.find.setMinDepth(levels); }
