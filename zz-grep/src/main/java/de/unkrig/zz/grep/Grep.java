@@ -147,9 +147,12 @@ class Grep {
      */
     public void
     setDisassembleClassFiles(boolean value) { this.disassembleClassFiles = value; }
+
     /**
-     * @param value Whether to include a constant pool dump, constant pool indexes, and hex dumps of all attributes
-     *              in the disassembly output
+     * When disassembling .class files, include a constant pool dump, constant pool indexes, and hex dumps of all
+     * attributes in the disassembly output.
+     *
+     * @param value Whether to enable or to disable the feature
      */
     public void
     setDisassembleClassFilesVerbose(boolean value) { this.disassembleClassFilesVerbose = value; }
@@ -162,19 +165,25 @@ class Grep {
     setDisassembleClassFilesSourceDirectory(@Nullable File value) { this.disassembleClassFilesSourceDirectory = value; }
 
     /**
-     * @param value Whether to hide source line numbers in the Java&trade; class file disassembly
+     * Don't print line numbers in the disassembly.
+     *
+     * @param value Whether to enable or to disable the feature
      */
     public void
     setDisassembleClassFilesButHideLines(boolean value) { this.disassembleClassFilesButHideLines = value; }
 
     /**
-     * @param value Whether to local variable names in the Java&trade; class file disassembly
+     * Don't print variable names in the disassembly.
+     *
+     * @param value Whether to enable or to disable the feature
      */
     public void
     setDisassembleClassFilesButHideVars(boolean value) { this.disassembleClassFilesButHideVars = value; }
 
     /**
-     * @param value Whether to use numeric labels ('#123') or symbolic labels /'L12') in the bytecode disassembly
+     * When disassembling .class files, use symbolic labels (e.g. "L12") instead of numeric labels (like "#123").
+     *
+     * @param value Whether to enable or to disable the feature
      */
     public void
     setDisassembleClassFilesSymbolicLabels(boolean value) { this.disassembleClassFilesSymbolicLabels = value; }
