@@ -92,7 +92,7 @@ class Pack {
      * Sets the compression format to use; optional.
      */
     public void
-    setCompressionFormat(CompressionFormat value) { this.compressionFormat = value; }
+    setCompressionFormat(@Nullable CompressionFormat value) { this.compressionFormat = value; }
 
     /**
      * Sets the output stream to write to; mandatory.
