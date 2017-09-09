@@ -77,7 +77,7 @@ class AssertPrinters {
      *
      * @return The printed messages, in chronological order
      */
-    public static <EX extends Exception> List<String>
+    public static <EX extends Throwable> List<String>
     recordMessages(RunnableWhichThrows<EX> runnable) throws EX {
 
         final List<String> result   = new ArrayList<String>();
