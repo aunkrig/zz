@@ -265,8 +265,8 @@ class AntTask extends AbstractElementWithOperands {
         setVerbose(boolean value) { this.verbose = value;  }
 
         /**
-         * Where to look for source files when disassembling .class files; {@code null} disables source file loading. Source
-         * file loading is disabled by default.
+         * Where to look for source files when disassembling .class files; {@code null} disables source file loading.
+         * Source file loading is disabled by default.
          */
         public void
         setSourceDirectory(@Nullable File value) {

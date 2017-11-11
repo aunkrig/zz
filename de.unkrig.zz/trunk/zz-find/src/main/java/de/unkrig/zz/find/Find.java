@@ -884,11 +884,11 @@ class Find {
     public static
     class DisassembleAction implements Action {
 
-        private final boolean              verbose;
-        @Nullable private final File       sourceDirectory;
+        private final boolean        verbose;
+        @Nullable private final File sourceDirectory;
         private final boolean        hideLines;
         private final boolean        hideVars;
-        private final boolean              symbolicLabels;
+        private final boolean        symbolicLabels;
         @Nullable private final File toFile;
 
         DisassembleAction(
