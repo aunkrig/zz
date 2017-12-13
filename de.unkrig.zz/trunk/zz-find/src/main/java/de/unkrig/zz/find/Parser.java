@@ -47,6 +47,7 @@ import de.unkrig.zz.find.Find.ChecksumAction;
 import de.unkrig.zz.find.Find.ChecksumAction.ChecksumType;
 import de.unkrig.zz.find.Find.CommaTest;
 import de.unkrig.zz.find.Find.CopyAction;
+import de.unkrig.zz.find.Find.DeleteAction;
 import de.unkrig.zz.find.Find.DigestAction;
 import de.unkrig.zz.find.Find.DisassembleAction;
 import de.unkrig.zz.find.Find.EchoAction;
@@ -61,6 +62,7 @@ import de.unkrig.zz.find.Find.OrTest;
 import de.unkrig.zz.find.Find.PathTest;
 import de.unkrig.zz.find.Find.PipeAction;
 import de.unkrig.zz.find.Find.PrintAction;
+import de.unkrig.zz.find.Find.PruneAction;
 import de.unkrig.zz.find.Find.ReadabilityTest;
 import de.unkrig.zz.find.Find.SizeTest;
 import de.unkrig.zz.find.Find.Test;
@@ -150,13 +152,13 @@ class Parser {
 
     /**
      * <pre>
-     * or-expression := and-expression [ ( '-o' | '-or' ) or-expression ]
+     * or-expression := and-expression [ ( '-o' | '-or' | '||' ) or-expression ]
      * </pre>
      */
     private Expression
     parseOr() throws ParseException {
         Expression lhs = this.parseAnd();
-        if (this.parser.peekRead("-o", "-or") == -1) return lhs;
+        if (this.parser.peekRead("-o", "-or", "||") == -1) return lhs;
 
         Expression rhs = this.parseOr();
         return new OrTest(lhs, rhs);
@@ -164,7 +166,7 @@ class Parser {
 
     /**
      * <pre>
-     * and-expression := primary-expression [ [ '-a' | '-and' ] and-expression ]
+     * and-expression := primary-expression [ [ '-a' | '-and' | '&&' ] and-expression ]
      * </pre>
      */
     private Expression
@@ -173,8 +175,8 @@ class Parser {
         Expression lhs = this.parsePrimary();
 
         return (
-            this.parser.peekRead("-a", "-and") != -1
-            || this.parser.peek("-o", "-or", ")", ",", null) == -1
+            this.parser.peekRead("-a", "-and", "&&") != -1
+            || this.parser.peek("-o", "-or", "||", ")", ",", null) == -1
         ) ? new AndTest(lhs, this.parseAnd()) : lhs;
     }
 
@@ -204,6 +206,8 @@ class Parser {
      *   | '-checksum' string
      *   | '-true'
      *   | '-false'
+     *   | '-prune'
+     *   | '-delete'
      * </pre>
      */
     private Expression
@@ -215,7 +219,8 @@ class Parser {
             "-type",   "-readable", "-writable", "-executable", "-size",
             "-mtime",  "-mmin",     "-print",    "-echo",       "-ls",
             "-exec",   "-pipe",     "-cat",      "-copy",       "-disassemble",
-            "-digest", "-checksum", "-true",     "-false"
+            "-digest", "-checksum", "-true",     "-false",      "-prune",
+            "-delete"
         )) {
         case 0:  // '('
             final Expression result = this.parseComma();
@@ -312,6 +317,10 @@ class Parser {
             return Test.TRUE;
         case 23: // "-false"
             return Test.FALSE;
+        case 24: // "-prune"
+            return new PruneAction();
+        case 25: // "-delete"
+            return new DeleteAction();
         default:
             throw new IllegalStateException();
         }

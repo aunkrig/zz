@@ -87,7 +87,10 @@ class Main {
      *
      * <h2>Expressions</h2>
      *
-     * <var>Expression</var>s are either tests or actions. Both evaluate to a boolean value.
+     * <p>
+     *   <var>Expression</var>s are either tests or actions (a test with side effects). Both evaluate to a boolean
+     *   value.
+     * </p>
      *
      * <h3>Tests</h3>
      * <dl>
@@ -139,12 +142,16 @@ class Main {
      *     (N=0: 0...59sec, N=1: 60...119sec, ...).
      *   </dd>
      *   <dt><var>exp1</var> {@code -a} <var>exp2</var></dt>
+     *   <dt><var>exp1</var> {@code -and} <var>exp2</var></dt>
+     *   <dt><var>exp1</var> {@code '&&'} <var>exp2</var></dt>
      *   <dt><var>exp1</var> <var>exp2</var></dt>
      *   <dd>
      *     Whether both <var>exp1</var> and <var>exp2</var> are true. <var>exp2</var> is not evaluated if
      *     <var>exp1</var> is false.
      *   </dd>
      *   <dt><var>exp1</var> {@code -o} <var>exp2</var></dt>
+     *   <dt><var>exp1</var> {@code -or} <var>exp2</var></dt>
+     *   <dt><var>exp1</var> {@code '||'} <var>exp2</var></dt>
      *   <dd>
      *     Whether <var>exp1</var> or <var>exp2</var> is true. <var>exp2</var> is not evaluated if <var>exp1</var>
      *     is true.
@@ -229,6 +236,16 @@ class Main {
      *   <dd>
      *     Return {@code false}.
      *   </dd>
+     *   <dt>{@code -prune}</dt>
+     *   <dd>
+     *     Return {@code true}. If the file is a directory, do not descend into it.
+     *   </dd>
+     *   <dt>{@code -delete}</dt>
+     *   <dd>
+     *     Delete file; returns {@code true} if removal succeeded. If the removal failed, an error message is issued.
+     *     If you want to delete <em>directories</em>, also configure the {@code --descendants-first} option, for
+     *     otherwise the directory is first deleted, and then traversed, which cannot possibly work.
+     *   </dd>
      * </dl>
      * <p>
      *   If no action is given, then "{@code -print}" is implicitly added.
@@ -242,11 +259,13 @@ class Main {
      * <dl>
      *   <dt>{@code "name"}:</dt>
      *   <dd>
-     *     The last component of the path.
+     *     The last component of a directory or file name, or the name of an archive entry (which may contain
+     *     slashes!).
      *   </dd>
      *   <dt>{@code "path"}:</dt>
      *   <dd>
-     *     The path to the resources as it was found. "!" indicates an archive, "%" a compressed file.
+     *     The path to the resources as it was found, starting with the <var>file-or-dir</var> on the command line.
+     *     "!" indicates an archive, "%" a compressed file.
      *   </dd>
      *   <dt>{@code "depth"}:</dt>
      *   <dd>
@@ -543,8 +562,8 @@ class Main {
      * Process each directory's contents before the directory itself, and each archive's entries before the archive
      * itself, and each compressed contents before the enclosing file or archive entry.
      */
-    @CommandLineOption public void
-    setDepth() { this.find.setDepth(true); }
+    @CommandLineOption(name = { "depth", "descendants-first" }) public void
+    setDescendantsFirst() { this.find.setDescendantsFirst(true); }
 
     /**
      * @see Find#setMinDepth(int)
