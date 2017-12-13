@@ -64,6 +64,7 @@ import de.unkrig.zz.find.Find.ChecksumAction;
 import de.unkrig.zz.find.Find.ChecksumAction.ChecksumType;
 import de.unkrig.zz.find.Find.CommaTest;
 import de.unkrig.zz.find.Find.CopyAction;
+import de.unkrig.zz.find.Find.DeleteAction;
 import de.unkrig.zz.find.Find.DigestAction;
 import de.unkrig.zz.find.Find.DisassembleAction;
 import de.unkrig.zz.find.Find.EchoAction;
@@ -78,6 +79,7 @@ import de.unkrig.zz.find.Find.OrTest;
 import de.unkrig.zz.find.Find.PathTest;
 import de.unkrig.zz.find.Find.PipeAction;
 import de.unkrig.zz.find.Find.PrintAction;
+import de.unkrig.zz.find.Find.PruneAction;
 import de.unkrig.zz.find.Find.ReadabilityTest;
 import de.unkrig.zz.find.Find.SizeTest;
 import de.unkrig.zz.find.Find.Test;
@@ -781,6 +783,24 @@ class AntTask extends AbstractElementWithOperands {
     public static
     class FalseElement implements ExpressionElement {
         @Override public Expression toExpression() { return Test.FALSE; }
+    }
+
+    /**
+     * Evaluates to {@code true}. If the file is a directory, do not descend into it.
+     */
+    public static
+    class PruneElement implements ExpressionElement {
+        @Override public Expression toExpression() { return new PruneAction(); }
+    }
+
+    /**
+     * Delete file; Evaluates to {@code true} if removal succeeded. If the removal failed, an error message is issued.
+     * If you want to delete <em>directories</em>, also configure the {@code --descendants-first} option, for
+     * otherwise the directory is first deleted, and then traversed, which cannot possibly work.
+     */
+    public static
+    class DeleteElement implements ExpressionElement {
+        @Override public Expression toExpression() { return new DeleteAction(); }
     }
 
     // BEGIN CONFIGURATION SETTERS
