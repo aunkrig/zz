@@ -804,7 +804,7 @@ class AntTask extends AbstractElementWithOperands {
      * the archive itself, and each compressed contents before the enclosing file or archive entry.
      */
     public void
-    setDepth(boolean value) { this.find.setDepth(value); }
+    setDescendantsFirst(boolean value) { this.find.setDescendantsFirst(value); }
 
     /**
      * Do not apply any tests or actions at levels less than <var>levels</var>. For example, "1" means "process all

@@ -240,10 +240,10 @@ class FindTest extends TestCase {
     }
 
     @Test public void
-    testDepth() throws Exception {
+    testDescendantsFirst() throws Exception {
 
         Find find = new Find();
-        find.setDepth(true);
+        find.setDescendantsFirst(true);
 
         FindTest.assertFindOutputMatches(
             find,

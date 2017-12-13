@@ -52,6 +52,7 @@ import de.unkrig.commons.file.CompressUtil;
 import de.unkrig.commons.file.CompressUtil.ArchiveHandler;
 import de.unkrig.commons.file.CompressUtil.CompressorHandler;
 import de.unkrig.commons.file.CompressUtil.NormalContentsHandler;
+import de.unkrig.commons.file.FileUtil;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormat;
@@ -82,6 +83,8 @@ import de.unkrig.jdisasm.Disassembler;
 public
 class Find {
 
+    private static final String PRUNE_PROPERTY_NAME = "$PRUNE";
+
     static { AssertionUtil.enableAssertionsForThisClass(); }
 
     private static final Logger LOGGER = Logger.getLogger(Find.class.getName());
@@ -89,7 +92,7 @@ class Find {
     // BEGIN CONFIGURATION VARIABLES
 
     private Predicate<? super String> lookIntoFormat = PredicateUtil.always();
-    private boolean                   depth;
+    private boolean                   descendantsFirst;
     private int                       minDepth;
     private int                       maxDepth = Integer.MAX_VALUE;
 
@@ -123,7 +126,7 @@ class Find {
      * the archive itself, and each compressed contents before the enclosing file or archive entry.
      */
     public void
-    setDepth(boolean value) { this.depth = value; }
+    setDescendantsFirst(boolean value) { this.descendantsFirst = value; }
 
     /**
      * Do not apply any tests or actions at levels less than <var>levels</var>. E.g. "1" means "process all files
@@ -1081,6 +1084,53 @@ class Find {
     }
 
     /**
+     * Sets the "prune flag".
+     */
+    public static
+    class PruneAction implements Action {
+
+        @Override public boolean
+        evaluate(Mapping<String, Object> properties) {
+
+            boolean[] prune = Mappings.get(properties, Find.PRUNE_PROPERTY_NAME, boolean[].class);
+
+            // "-prune"-ing has an effect only in some contexts (namely when directories are recursed).
+            if (prune != null) prune[0] = true;
+
+            return true;
+        }
+
+        @Override public String
+        toString() { return "(prune)"; }
+    }
+
+    /**
+     * Sets the "prune flag".
+     */
+    public static
+    class DeleteAction implements Action {
+
+        @Override public boolean
+        evaluate(Mapping<String, Object> properties) {
+
+            File file = (File) properties.get("file");
+            if (file == null) {
+                throw new RuntimeException("\"-delete\" is only possible on files (and not on archive entries)");
+            }
+
+            if (!FileUtil.attemptToDeleteRecursively(file)) {
+                System.err.printf("Could not remove file \"%s\"", file.toString());
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override public String
+        toString() { return "(delete)"; }
+    }
+
+    /**
      * Replaces all occurrences of "<code>&#64;<i>variableName</i></code>" or
      * "<code>&#64;{<i>variable-name</i>}</code>" in {@code s} with the value to which <var>variables</var> maps the
      * <code><i>variable-name</i></code>, or with "" iff the named variable is not mapped.
@@ -1193,18 +1243,18 @@ class Find {
     }
 
     private void
-    findInDirectoryTree(final String path, File fileOrDirectory, int depth)
+    findInDirectoryTree(final String path, File fileOrDirectory, int currentDepth)
     throws IOException {
 
         if (fileOrDirectory.isDirectory()) {
-            this.findInDirectory(path, fileOrDirectory, depth);
+            this.findInDirectory(path, fileOrDirectory, currentDepth);
         } else {
-            this.findInFile(path, fileOrDirectory, depth);
+            this.findInFile(path, fileOrDirectory, currentDepth);
         }
     }
 
     private void
-    findInDirectory(final String directoryPath, final File directory, final int depth)
+    findInDirectory(final String directoryPath, final File directory, final int currentDepth)
     throws IOException {
 
         Find.LOGGER.log(
@@ -1213,8 +1263,10 @@ class Find {
             new Object[] { directory, directoryPath }
         );
 
+        final boolean[] prune = new boolean[1];
+
         RunnableUtil.swapIf(
-            this.depth,
+            this.descendantsFirst,
             new RunnableWhichThrows<IOException>() {
 
                 @Override public void
@@ -1223,8 +1275,9 @@ class Find {
                     // Evaluate the FIND expression for the directory.
                     Find.this.evaluateExpression(Mappings.augment(
                         Find.fileProperties(directoryPath, directory),
-                        "type",  "directory", // SUPPRESS CHECKSTYLE Wrap:2
-                        "depth", depth
+                        "type",                   "directory", // SUPPRESS CHECKSTYLE Wrap:2
+                        "depth",                  currentDepth,
+                        Find.PRUNE_PROPERTY_NAME, prune
                     ));
                 }
             },
@@ -1234,7 +1287,7 @@ class Find {
                 run() throws IOException {
 
                     // Process the directory's members.
-                    if (depth < Find.this.maxDepth) {
+                    if (!prune[0] && currentDepth < Find.this.maxDepth) {
 
                         String[] memberNames = directory.list();
                         if (memberNames == null) {
@@ -1254,7 +1307,7 @@ class Find {
                                 Find.this.findInDirectoryTree(
                                     directoryPath + File.separatorChar + memberName,
                                     new File(directory, memberName),
-                                    depth + 1
+                                    currentDepth + 1
                                 );
                             } catch (IOException ioe) {
                                 Find.this.exceptionHandler.consume(ioe);
@@ -1290,6 +1343,7 @@ class Find {
 
             public String  getAbsolutePath()                     { return file.getAbsolutePath();        }
             public String  getCanonicalPath() throws IOException { return file.getCanonicalPath();       }
+            public File    getFile()                             { return file;                          }
             public Date    getLastModifiedDate()                 { return new Date(file.lastModified()); }
             public String  getName()                             { return file.getName();                }
             public String  getPath()                             { return path;                          }
@@ -1306,7 +1360,7 @@ class Find {
     }
 
     private void
-    findInFile(final String path, final File file, final int depth)
+    findInFile(final String path, final File file, final int currentDepth)
     throws IOException {
 
         Find.LOGGER.log(Level.FINER, "Processing file \"{0}\" (path is \"{1}\")", new Object[] { file, path });
@@ -1321,8 +1375,10 @@ class Find {
                 handleArchive(final ArchiveInputStream archiveInputStream, final ArchiveFormat archiveFormat)
                 throws IOException {
 
+                    final boolean[] prune = new boolean[1];
+
                     RunnableUtil.swapIf(
-                        Find.this.depth,
+                        Find.this.descendantsFirst,
                         new RunnableWhichThrows<IOException>() {
 
                             @Override public void
@@ -1331,9 +1387,10 @@ class Find {
                                 // Evaluate the FIND expression for the archive file.
                                 Find.this.evaluateExpression(Mappings.augment(
                                     Find.fileProperties(path, file),
-                                    "type",          "archive-file", // SUPPRESS CHECKSTYLE Wrap:3
-                                    "archiveFormat", archiveFormat,
-                                    "depth",         depth
+                                    "type",                   "archive-file", // SUPPRESS CHECKSTYLE Wrap:3
+                                    "archiveFormat",          archiveFormat,
+                                    "depth",                  currentDepth,
+                                    Find.PRUNE_PROPERTY_NAME, prune
                                 ));
                             }
                         },
@@ -1342,7 +1399,7 @@ class Find {
                             @Override public void
                             run() throws IOException {
 
-                                if (depth >= Find.this.maxDepth) return;
+                                if (prune[0] || currentDepth >= Find.this.maxDepth) return;
 
                                 // Process the archive's entries.
                                 for (;;) {
@@ -1369,7 +1426,7 @@ class Find {
                                                 "name",          ArchiveFormatFactory.normalizeEntryName(ae.getName()),
                                                 "archiveFormat", archiveFormat,
                                                 "type",          "directory-entry",
-                                                "depth",         depth + 1
+                                                "depth",         currentDepth + 1
                                             ));
                                         } else {
                                             Find.this.findInStream(
@@ -1382,7 +1439,7 @@ class Find {
                                                     ),
                                                     "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
                                                 ),
-                                                depth + 1
+                                                currentDepth + 1
                                             );
                                         }
                                     } catch (UnsupportedZipFeatureException uzfe) {
@@ -1417,7 +1474,7 @@ class Find {
                 ) throws IOException {
 
                     RunnableUtil.swapIf(
-                        Find.this.depth,
+                        Find.this.descendantsFirst,
                         new RunnableWhichThrows<IOException>() {
 
                             @Override public void
@@ -1430,7 +1487,7 @@ class Find {
                                     Find.fileProperties(path, file),
                                     "type",              "compressed-file", // SUPPRESS CHECKSTYLE Wrap:3
                                     "compressionFormat", compressionFormat,
-                                    "depth",             depth
+                                    "depth",             currentDepth
                                 ));
                             }
                         },
@@ -1440,13 +1497,13 @@ class Find {
                             run() throws IOException {
 
                                 // Process compressed file's contents.
-                                if (depth < Find.this.maxDepth) {
+                                if (currentDepth < Find.this.maxDepth) {
                                     Find.this.findInStream(path + '%', compressorInputStream, Mappings.override(
                                         Find.fileProperties(path, file),
                                         "compressionFormat", compressionFormat, // SUPPRESS CHECKSTYLE Wrap:3
                                         "name",              file.getName() + '%',
                                         "size",              -1L
-                                    ), depth + 1);
+                                    ), currentDepth + 1);
                                 }
                             }
                         }
@@ -1465,7 +1522,7 @@ class Find {
                         Find.fileProperties(path, file),
                         "type",        "file",      // SUPPRESS CHECKSTYLE Wrap:3
                         "inputStream", inputStream,
-                        "depth",       depth
+                        "depth",       currentDepth
                     ));
 
                     return null;
@@ -1494,7 +1551,7 @@ class Find {
                     throws IOException {
 
                         RunnableUtil.swapIf(
-                            Find.this.depth,
+                            Find.this.descendantsFirst,
                             new RunnableWhichThrows<IOException>() {
 
                                 @Override public void
@@ -1573,7 +1630,7 @@ class Find {
                     ) throws IOException {
 
                         RunnableUtil.swapIf(
-                            Find.this.depth,
+                            Find.this.descendantsFirst,
                             new RunnableWhichThrows<IOException>() {
 
                                 @Override public void
@@ -1672,14 +1729,15 @@ class Find {
     private void
     evaluateExpression(Mapping<String, Object> properties) {
 
+        // Do not evaluate the expression if the current depth is less than "this.minDepth".
         if (this.minDepth > 0) {
 
             Object depthValue = properties.get("depth");
             assert depthValue instanceof Integer;
 
-            int depth = (Integer) depthValue;
+            int currentDepth = (Integer) depthValue;
 
-            if (depth < this.minDepth) return;
+            if (currentDepth < this.minDepth) return;
         }
 
         this.expression.evaluate(properties);
