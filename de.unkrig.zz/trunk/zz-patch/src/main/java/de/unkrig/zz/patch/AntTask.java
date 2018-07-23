@@ -228,25 +228,37 @@ class AntTask extends Task {
                 element.outputCharset,
                 Pattern.compile(element.getRegex(), Pattern.MULTILINE),
                 element.getReplacement(),
-                new SubstitutionContentsTransformer.Condition() {
-
-                    @Override public boolean
-                    evaluate(String path, CharSequence match, int occurrence) {
-                        try {
-                            return ExpressionEvaluator.toBoolean(
-                                element.condition.evaluate(Mappings.<String, Object>mapping(
-                                    "path",       path,      // SUPPRESS CHECKSTYLE Wrap:2
-                                    "match",      match,
-                                    "occurrence", occurrence
-                                ))
-                            );
-                        } catch (EvaluationException ee) {
-                            throw new RuntimeException(ee);
-                        }
-                    }
-                }
+                AntTask.expressionToSubstitutionCondition(element.condition)
             )
         );
+    }
+
+    private static SubstitutionContentsTransformer.Condition
+    expressionToSubstitutionCondition(final Expression condition) {
+
+        if (condition == Expression.TRUE)  return SubstitutionContentsTransformer.Condition.ALWAYS;
+        if (condition == Expression.FALSE) return SubstitutionContentsTransformer.Condition.NEVER;
+
+        return new SubstitutionContentsTransformer.Condition() {
+
+            @Override public boolean
+            evaluate(String path, CharSequence match, int occurrence) {
+                try {
+                    return ExpressionEvaluator.toBoolean(
+                        condition.evaluate(Mappings.<String, Object>mapping(
+                            "path",       path,      // SUPPRESS CHECKSTYLE Wrap:2
+                            "match",      match,
+                            "occurrence", occurrence
+                        ))
+                    );
+                } catch (EvaluationException ee) {
+                    throw new RuntimeException(ee);
+                }
+            }
+
+            @Override public String
+            toString() { return condition.toString(); }
+        };
     }
 
     /**
@@ -258,7 +270,7 @@ class AntTask extends Task {
 
         private Charset          inputCharset  = Charset.defaultCharset();
         private Charset          outputCharset = Charset.defaultCharset();
-        private Expression       condition     = ExpressionUtil.constantExpression(Boolean.TRUE);
+        private Expression       condition     = Expression.TRUE;
         @Nullable private String regex, replacement;
 
         /**
@@ -610,15 +622,12 @@ class AntTask extends Task {
     public static
     class TextElement {
 
-        @Nullable private String text;
+        private String text = "";
 
         /** See ANT documentation. */
         public void
         addText(String text) {
             String oldText = this.text;
-            if (oldText == null) {
-                this.text = text;
-            } else
             if (text.trim().isEmpty()) {
                 ;
             } else

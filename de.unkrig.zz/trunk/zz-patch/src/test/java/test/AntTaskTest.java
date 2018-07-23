@@ -190,4 +190,52 @@ class AntTaskTest extends BuildFileTest {
 
         FileUtil.deleteRecursively(AntTaskTest.FILES);
     }
+
+    /***/
+    @Test public void
+    testPatch1() throws Exception {
+
+        if (AntTaskTest.FILES.exists()) FileUtil.deleteRecursively(AntTaskTest.FILES);
+
+        new Files(new Object[] { "file.txt", "xxxAAAxxx" }).save(AntTaskTest.FILES);
+
+        this.executeTarget("testPatch1");
+
+        TestCase.assertNull(
+            new Files(new Object[] { "file.txt", "xxxBBBxxx" }).diff(new Files(AntTaskTest.FILES))
+        );
+
+        FileUtil.deleteRecursively(AntTaskTest.FILES);
+    }
+
+    /***/
+    @Test public void
+    testPatch2() throws Exception {
+
+        if (AntTaskTest.FILES.exists()) FileUtil.deleteRecursively(AntTaskTest.FILES);
+
+        new Files(new Object[] { "file.txt", (
+            ""
+            + "   <filter>\n"
+            + "      <!--\n"
+            + "         bla\n"
+            + "      -->\n"
+            + "      <!--\n"
+            + "         balbla\n"
+            + "      -->\n"
+            + "      <filter-name>CorsFilter</filter-name>\n"
+            + "      <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>\n"
+            + "      <init-param>\n"
+            + "      </init-param>\n"
+            + "   </filter>\n"
+        ) }).save(AntTaskTest.FILES);
+
+        this.executeTarget("testPatch2");
+
+        TestCase.assertNull(
+            new Files(new Object[] { "file.txt", "" }).diff(new Files(AntTaskTest.FILES))
+        );
+
+        FileUtil.deleteRecursively(AntTaskTest.FILES);
+    }
 }
