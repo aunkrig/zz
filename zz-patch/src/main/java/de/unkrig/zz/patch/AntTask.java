@@ -219,7 +219,7 @@ class AntTask extends Task {
      * </p>
      */
     public void
-    addConfiguredSubstitute(SubstituteElement element) {
+    addConfiguredSubstitute(final SubstituteElement element) {
 
         this.addContentsTransformation(
             element.path,
@@ -228,7 +228,23 @@ class AntTask extends Task {
                 element.outputCharset,
                 Pattern.compile(element.getRegex(), Pattern.MULTILINE),
                 element.getReplacement(),
-                SubstitutionContentsTransformer.Condition.ALWAYS
+                new SubstitutionContentsTransformer.Condition() {
+
+                    @Override public boolean
+                    evaluate(String path, CharSequence match, int occurrence) {
+                        try {
+                            return ExpressionEvaluator.toBoolean(
+                                element.condition.evaluate(Mappings.<String, Object>mapping(
+                                    "path",       path,      // SUPPRESS CHECKSTYLE Wrap:2
+                                    "match",      match,
+                                    "occurrence", occurrence
+                                ))
+                            );
+                        } catch (EvaluationException ee) {
+                            throw new RuntimeException(ee);
+                        }
+                    }
+                }
             )
         );
     }
@@ -242,7 +258,7 @@ class AntTask extends Task {
 
         private Charset          inputCharset  = Charset.defaultCharset();
         private Charset          outputCharset = Charset.defaultCharset();
-
+        private Expression       condition     = ExpressionUtil.constantExpression(Boolean.TRUE);
         @Nullable private String regex, replacement;
 
         /**
@@ -337,6 +353,33 @@ class AntTask extends Task {
                 );
             }
             return replacement;
+        }
+
+        /**
+         * Configures a condition that must evaluate to {@code true} before each occurrence is replaced.
+         * <p>
+         *   The following variables are available in the expression:
+         * </p>
+         * <dl>
+         *   <dt>{@code path}</dt>
+         *   <dd>
+         *     The path currently being patched.
+         *   </dd>
+         *   <dt>{@code match}</dt>
+         *   <dd>
+         *     The text of the match.
+         *   </dd>
+         *   <dt>{@code occurrence}</dt>
+         *   <dd>
+         *     The index of the occurrence within the document, starting at zero.
+         *   </dd>
+         * </dl>
+         */
+        public void
+        setCondition(String expression) throws ParseException {
+            this.condition = (
+                new ExpressionEvaluator("path", "match", "occurrence").parse(expression)
+            );
         }
     }
 
@@ -563,7 +606,7 @@ class AntTask extends Task {
         { this.flags |= Glob.REPLACEMENT; }
     }
 
-    /** An element that handles text. */
+    /***/
     public static
     class TextElement {
 
