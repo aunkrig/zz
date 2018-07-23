@@ -176,7 +176,7 @@ class Main {
             this.main3(args);
         } catch (Exception e) {
             Printers.error(null, e);
-            System.exit(1);
+            System.exit(2);
         }
     }
 
@@ -187,13 +187,13 @@ class Main {
             args = CommandLineOptions.parse(args, this);
         } catch (CommandLineOptionException cloe) {
             Printers.error(cloe.getMessage() + ", try \"--help\".");
-            System.exit(1);
+            System.exit(2);
         }
 
         // Process pattern command line argument.
         if (args.length == 0) {
             System.err.println("Pattern missing, try \"--help\".");
-            System.exit(1);
+            System.exit(2);
         }
 
         this.grep.addSearch(this.includeExclude, args[0], this.caseSensitive);
@@ -369,7 +369,10 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption(name = { "q", "quiet" }) public void
-    setQuiet() { this.grep.setOperation(Operation.QUIET); }
+    setQuiet() {
+        this.levelFilteredPrinter.setNoError();
+        this.grep.setOperation(Operation.QUIET);
+    }
 
     /**
      * Suppress all messages except errors.
@@ -414,6 +417,6 @@ class Main {
     @Deprecated @CommandLineOption(name = { "zip", "zz", "nested-zip", "gzip" }) public static void
     noLongerSupported() {
         System.err.println("Command line option is no longer supported - try \"--help\".");
-        System.exit(1);
+        System.exit(2);
     }
 }
