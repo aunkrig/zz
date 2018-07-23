@@ -96,4 +96,5 @@
 			</plugin>
 		</plugins>
 	</build>
+	<description>This project bundles all of &quot;zz-diff&quot;, &quot;zz-find&quot;, &quot;zz-grep&quot;, &quot;zz-pack&quot; and &quot;zz-patch&quot; in one .jar file, and generates the ANTDOC for the tools.</description>
 </project>
