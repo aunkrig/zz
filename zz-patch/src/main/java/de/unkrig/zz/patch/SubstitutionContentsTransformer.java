@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
 
 import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
 import de.unkrig.commons.lang.protocol.Function;
+import de.unkrig.commons.lang.protocol.FunctionWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.pattern.PatternUtil;
 
@@ -81,7 +82,8 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
     }
 
     /**
-     * @param initialBufferCapacity See {@link PatternUtil#replaceSome(java.io.Reader, Pattern, Function, Writer, int)}
+     * @param initialBufferCapacity See {@link PatternUtil#replaceSome(java.io.Reader, Pattern, FunctionWhichThrows,
+     *                              Appendable, int)}
      */
     public void
     setInitialBufferCapacity(int initialBufferCapacity) { this.initialBufferCapacity = initialBufferCapacity; }
@@ -90,34 +92,35 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
     toString() { return "(" + this.pattern + " => " + this.replacementString + " iff " + this.condition + ")"; }
 
     /**
-     * @see #evaluate(String, CharSequence)
+     * @see #evaluate(String, CharSequence, int)
      */
     public
     interface Condition {
 
         /**
-         * @param path  The 'path' of the file or ZIP entry that contains the match
-         * @param match The matching text
-         * @return      Whether the matching text should be replaced, see {@link
-         *              SubstitutionContentsTransformer#SubstitutionContentsTransformer(Charset, Charset, Pattern,
-         *              String, Condition)}
+         * @param path       The 'path' of the file or ZIP entry that contains the match
+         * @param match      The matching text
+         * @param occurrence The index of the occurrence within the document, starting at zero
+         * @return           Whether the matching text should be replaced, see {@link
+         *                   SubstitutionContentsTransformer#SubstitutionContentsTransformer(Charset, Charset, Pattern,
+         *                   String, Condition)}
          */
-        boolean evaluate(String path, CharSequence match);
+        boolean evaluate(String path, CharSequence match, int occurrence);
 
         /**
          * A {@link Condition} that is always {@code true}.
          */
         Condition ALWAYS = new Condition() {
-            @Override public boolean evaluate(String name, CharSequence match) { return true; }
-            @Override public String  toString()                                { return "ALWAYS"; }
+            @Override public boolean evaluate(String name, CharSequence match, int occurrence) { return true; }
+            @Override public String  toString()                                                { return "ALWAYS"; }
         };
 
         /**
          * A {@link Condition} that is always {@code false}.
          */
         Condition NEVER = new Condition() {
-            @Override public boolean evaluate(String name, CharSequence match) { return false; }
-            @Override public String  toString()                                { return "NEVER"; }
+            @Override public boolean evaluate(String name, CharSequence match, int occurrence) { return false; }
+            @Override public String  toString()                                                { return "NEVER"; }
         };
     }
 
@@ -130,27 +133,35 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
             new Object[] { this.pattern, this.replacementString, path, SubstitutionContentsTransformer.this.condition }
         );
 
-        final Function<Matcher, String> prev = PatternUtil.replacementStringMatchReplacer(this.replacementString);
+        // Set up a "replacement string replacer".
+        FunctionWhichThrows<Matcher, String, ? extends RuntimeException>
+        replacer = PatternUtil.<RuntimeException>replacementStringMatchReplacer(this.replacementString);
 
-        Function<Matcher, String> replacer = new Function<Matcher, String>() {
+        // Honor the "replacement condition".
+        if (SubstitutionContentsTransformer.this.condition != SubstitutionContentsTransformer.Condition.ALWAYS) {
 
-            @Override @Nullable public String
-            call(@Nullable Matcher matcher) {
-                assert matcher != null;
+            final FunctionWhichThrows<Matcher, String, ? extends RuntimeException> replacer2 = replacer;
+            replacer = new Function<Matcher, String>() {
 
-                String replacement = prev.call(matcher);
+                private int occurrence;
 
-                // Because "prev" is a "replacementStringReplacer()", the replacement will never be null.
-                assert replacement != null;
+                @Override @Nullable public String
+                call(@Nullable Matcher matcher) {
+                    assert matcher != null;
 
-                if (SubstitutionContentsTransformer.this.condition.evaluate(path, matcher.group())) {
-                    return replacement;
-                } else {
-                    return null;
+                    String replacement = replacer2.call(matcher);
+
+                    // Because "prev" is a "replacementStringReplacer()", the replacement will never be null.
+                    assert replacement != null;
+
+                    return SubstitutionContentsTransformer.this.condition.evaluate(
+                        path,             // path
+                        matcher.group(),  // match
+                        this.occurrence++ // occurrence
+                    ) ? replacement : null;
                 }
-            }
-
-        };
+            };
+        }
 
         Writer out = new OutputStreamWriter(os, this.outputCharset);
 
