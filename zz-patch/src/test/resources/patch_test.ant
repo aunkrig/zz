@@ -1,7 +1,7 @@
-<project>
+<project basedir="../..">
 
-	<taskdef file="target/classes/de/unkrig/zz/zz-patch.xml" />
-
+	<taskdef file="target/classes/de/unkrig/zz/zz-patch.xml" onerror="fail" />
+	
 	<target name="testRemoveFile1">
 		<zzpatch>
 			<fileset dir="files" />
@@ -36,5 +36,24 @@
 				<patch patchFile="files/patch.txt" />
 			</filterchain>
 		</copy>
+	</target>
+
+	<target name="testPatch1">
+		<zzpatch>
+			<fileset dir="files" />
+			<substitute path="***" regex="AAA" replacement="BBB" />
+		</zzpatch>
+	</target>
+
+	<target name="testPatch2">
+		<zzpatch>
+			<fileset dir="files" />
+			<substitute path="***" replacement="">
+<!--
+				<regex><![CDATA[(?s)\s*(?:(?><!- -.*?- ->)\s*)*<filter>\s*(?:(?><!- -.*?- ->)\s*)*<filter-name>CorsFilter</filter-name>.*?</filter>\n]]></regex>
+-->
+				<regex><![CDATA[(?s)\s*(?:(?><!--.*?-->)\s*)*<filter>\s*(?:(?><!--.*?-->)\s*)*<filter-name>CorsFilter</filter-name>.*?</filter>\n]]></regex>
+			</substitute>
+		</zzpatch>
 	</target>
 </project>
