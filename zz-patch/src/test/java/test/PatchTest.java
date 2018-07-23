@@ -34,6 +34,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 import org.junit.Assert;
@@ -202,7 +203,7 @@ class PatchTest {
      * Tests the '-substitute -iff' PATCH command.
      */
     @Test public void
-    substituteIff() throws Exception {
+    substituteIff1() throws Exception {
         PatchTest.assertMain(
             new String[] {
                 "-substitute", "***", "line1", "LINE1", "-iff", "path =* '***dir3**'",
@@ -221,6 +222,25 @@ class PatchTest {
                     },
                 },
             })
+        );
+    }
+
+    /**
+     * Tests the '-substitute -iff occurrence==x' PATCH command.
+     */
+    @Test public void
+    substituteIff2() throws Exception {
+        PatchTest.assertPatch(
+            "xxxAAAxxx xxxBBBxxx xxxAAAxxx", // expectedPatchedContents
+            "xxxAAAxxx xxxAAAxxx xxxAAAxxx", // unpatchedContents
+            new String[] {                   // args
+                "--substitute",
+                "**",
+                "AAA",
+                "BBB",
+                "--iff",
+                "occurrence==1"
+            }
         );
     }
 
@@ -648,6 +668,26 @@ class PatchTest {
         Main.main(args);
 
         Files actual = new Files(PatchTest.PATCHED);
+        PatchTest.assertNoDiff(expected, actual);
+    }
+
+    private static void
+    assertPatch(String expectedPatchedContents, String unpatchedContents, String[] args) throws IOException, Exception {
+
+        if (PatchTest.UNPATCHED.exists()) FileUtil.deleteRecursively(PatchTest.UNPATCHED);
+        new Files(new Object[] { "file.txt", unpatchedContents }).save(PatchTest.UNPATCHED);
+
+        if (PatchTest.PATCHED.exists()) FileUtil.deleteRecursively(PatchTest.PATCHED);
+        Assert.assertTrue(PatchTest.PATCHED.mkdirs());
+
+        args                  = Arrays.copyOf(args, args.length + 2);
+        args[args.length - 2] = PatchTest.UNPATCHED.getPath() + "/file.txt";
+        args[args.length - 1] = PatchTest.PATCHED.getPath()   + "/file.txt";
+
+        Main.main(args);
+
+        Files expected = new Files(new Object[] { "file.txt", expectedPatchedContents });
+        Files actual   = new Files(PatchTest.PATCHED);
         PatchTest.assertNoDiff(expected, actual);
     }
 
