@@ -398,6 +398,8 @@ class Main {
      *   <dd>The "path" of the file or ZIP entry that contains the match</dd>
      *   <dt><var>match</var></dt>
      *   <dd>The matching text</dd>
+     *   <dt><var>occurrence</var></dt>
+     *   <dd>The index of the occurrence within the document, starting at zero</dd>
      * </dl>
      *
      * @param substituteConditions [ <var>condition</var> ... ]
@@ -418,15 +420,19 @@ class Main {
             pattern,            // pattern
             replacement,        // replacement
             (                   // condition
-                condition == Expression.TRUE ? SubstitutionContentsTransformer.Condition.ALWAYS :
-                condition == Expression.FALSE ? SubstitutionContentsTransformer.Condition.NEVER :
+                condition == Expression.TRUE  ? SubstitutionContentsTransformer.Condition.ALWAYS :
+                condition == Expression.FALSE ? SubstitutionContentsTransformer.Condition.NEVER  :
                 new SubstitutionContentsTransformer.Condition() {
 
                     @Override public boolean
-                    evaluate(String path, CharSequence match) {
+                    evaluate(String path, CharSequence match, int occurrence) {
                         try {
                             return ExpressionEvaluator.toBoolean(condition.evaluate(
-                                Mappings.<String, Object>mapping("path", path, "match", match)
+                                Mappings.<String, Object>mapping(
+                                    "path",       path, // SUPPRESS CHECKSTYLE Wrap:2
+                                    "match",      match,
+                                    "occurrence", occurrence
+                                )
                             ));
                         } catch (EvaluationException ee) {
                             throw new RuntimeException(ee);
@@ -686,7 +692,7 @@ class Main {
     public static
     class SubstituteConditions extends Conditions {
 
-        public SubstituteConditions() { super("path", "match"); }
+        public SubstituteConditions() { super("path", "match", "occurrence"); }
     }
 
     /**
