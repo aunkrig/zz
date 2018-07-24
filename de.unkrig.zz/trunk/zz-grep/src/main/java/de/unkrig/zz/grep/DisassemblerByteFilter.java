@@ -59,11 +59,11 @@ class DisassemblerByteFilter implements ByteFilter<Void> {
         Disassembler disassembler = new Disassembler();
 
         disassembler.setOut(out);
-        
+
         disassembler.setVerbose(this.verbose);
-        disassembler.setSourceDirectory(this.sourceDirectory);
-        disassembler.setHideLines(this.hideLines);
-        disassembler.setHideVars(this.hideVars);
+        disassembler.setSourcePath(new File[] { this.sourceDirectory });
+        disassembler.setShowLineNumbers(!this.hideLines);
+        disassembler.setShowVariableNames(!this.hideVars);
         disassembler.setSymbolicLabels(this.symbolicLabels);
 
         disassembler.disasm(in);
