@@ -8,7 +8,7 @@
 
 	<groupId>de.unkrig.zz</groupId>
 	<artifactId>zz-parent</artifactId>
-	<version>1.3.5-SNAPSHOT</version>
+	<version>1.3.6</version>
 
 	<packaging>pom</packaging>
 
@@ -221,7 +221,7 @@
 								<docletArtifact>
 									<groupId>de.unkrig</groupId>
 									<artifactId>doclet-main</artifactId>
-									<version>1.0.3</version>
+									<version>1.0.4</version>
 								</docletArtifact>
 
 								<additionalparam>
@@ -250,7 +250,7 @@
 						<dependency>
 							<groupId>de.unkrig</groupId>
 							<artifactId>html2txt</artifactId>
-							<version>1.0.2</version>
+							<version>1.0.3</version>
 						</dependency>
 					</dependencies>
 
