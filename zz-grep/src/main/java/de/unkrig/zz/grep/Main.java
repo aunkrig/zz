@@ -372,6 +372,7 @@ class Main {
     setQuiet() {
         this.levelFilteredPrinter.setNoError();
         this.grep.setOperation(Operation.QUIET);
+        SimpleLogging.setQuiet();
     }
 
     /**
@@ -380,7 +381,10 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setNowarn() { this.levelFilteredPrinter.setNoWarn(); }
+    setNowarn() {
+        this.levelFilteredPrinter.setNoWarn();
+        SimpleLogging.setNoWarn();
+    }
 
     /**
      * Print verbose messages.
@@ -388,7 +392,10 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setVerbose() { this.levelFilteredPrinter.setVerbose(); }
+    setVerbose() {
+        this.levelFilteredPrinter.setVerbose();
+        SimpleLogging.setVerbose();
+    }
 
     /**
      * Print verbose and debug messages.
@@ -396,7 +403,12 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setDebug() { this.levelFilteredPrinter.setDebug(); }
+    setDebug() {
+        this.levelFilteredPrinter.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+    }
 
     /**
      * Add logging at level {@code FINE} on logger "{@code de.unkrig}" to STDERR using the {@code FormatFormatter}
