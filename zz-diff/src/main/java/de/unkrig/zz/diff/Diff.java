@@ -69,7 +69,7 @@ import de.unkrig.commons.text.Printer;
 import de.unkrig.commons.text.Printers;
 import de.unkrig.commons.util.TreeComparator;
 import de.unkrig.commons.util.TreeComparator.Node;
-import de.unkrig.commons.util.collections.CollectionUtil;
+import de.unkrig.commons.util.collections.Sets;
 import de.unkrig.commons.util.concurrent.ConcurrentUtil;
 import de.unkrig.commons.util.concurrent.SquadExecutor;
 
@@ -430,7 +430,7 @@ class Diff extends DocumentDiff {
                     process(String path, File file) throws FileNotFoundException, IOException, InterruptedException {
 
                         if (file.isDirectory()) {
-                            return new DirectoryNode(path, CollectionUtil.<NodeWithPath>emptySortedSet());
+                            return new DirectoryNode(path, Sets.<NodeWithPath>emptySortedSet());
                         }
 
                         return regularFileProcessor.process(path, file);
