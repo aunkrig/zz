@@ -35,6 +35,7 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -134,30 +135,30 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
         );
 
         // Set up a "replacement string replacer".
-        FunctionWhichThrows<Matcher, String, ? extends RuntimeException>
+        FunctionWhichThrows<MatchResult, String, ? extends RuntimeException>
         replacer = PatternUtil.<RuntimeException>replacementStringMatchReplacer(this.replacementString);
 
         // Honor the "replacement condition".
         if (SubstitutionContentsTransformer.this.condition != SubstitutionContentsTransformer.Condition.ALWAYS) {
 
-            final FunctionWhichThrows<Matcher, String, ? extends RuntimeException> replacer2 = replacer;
-            replacer = new Function<Matcher, String>() {
+            final FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer2 = replacer;
+            replacer = new Function<MatchResult, String>() {
 
                 private int occurrence;
 
                 @Override @Nullable public String
-                call(@Nullable Matcher matcher) {
-                    assert matcher != null;
+                call(@Nullable MatchResult matchResult) {
+                    assert matchResult != null;
 
-                    String replacement = replacer2.call(matcher);
+                    String replacement = replacer2.call(matchResult);
 
                     // Because "prev" is a "replacementStringReplacer()", the replacement will never be null.
                     assert replacement != null;
 
                     return SubstitutionContentsTransformer.this.condition.evaluate(
-                        path,             // path
-                        matcher.group(),  // match
-                        this.occurrence++ // occurrence
+                        path,                // path
+                        matchResult.group(), // match
+                        this.occurrence++    // occurrence
                     ) ? replacement : null;
                 }
             };
