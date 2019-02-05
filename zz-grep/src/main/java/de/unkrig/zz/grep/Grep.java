@@ -256,12 +256,14 @@ class Grep {
 
 //                if (!Grep.this.includeExclude.matches(name)) return null;
 
+                // Check which searches apply to this path.
                 final List<Pattern> patterns = new ArrayList<Pattern>();
                 for (Search search : Grep.this.searches) {
                     if (search.path.matches(path)) patterns.add(search.pattern);
                 }
-
                 if (patterns.isEmpty()) return null;
+
+                Printers.verbose(path);
 
                 if (Grep.this.disassembleClassFiles && path.endsWith(".class")) {
 
