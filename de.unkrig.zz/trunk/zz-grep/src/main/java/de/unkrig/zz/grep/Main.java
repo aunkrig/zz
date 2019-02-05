@@ -164,9 +164,9 @@ class Main {
     public static void
     main(final String[] args) {
 
-        new Main().levelFilteredPrinter.run(new Runnable() {
-            @Override public void run() { new Main().main2(args); }
-        });
+        final Main main = new Main();
+
+        main.levelFilteredPrinter.run(new Runnable() { @Override public void run() { main.main2(args); } });
     }
 
     private void
@@ -368,10 +368,11 @@ class Main {
      *
      * @main.commandLineOptionGroup Output-Generation
      */
-    @CommandLineOption(name = { "q", "quiet" }) public void
+    @CommandLineOption(name = { "q", "quiet", "silent" }) public void
     setQuiet() {
-        this.levelFilteredPrinter.setNoError();
         this.grep.setOperation(Operation.QUIET);
+
+        this.levelFilteredPrinter.setQuiet();
         SimpleLogging.setQuiet();
     }
 
@@ -387,7 +388,7 @@ class Main {
     }
 
     /**
-     * Print verbose messages.
+     * Print the names of files and archive entries that are searched.
      *
      * @main.commandLineOptionGroup Output-Generation
      */
