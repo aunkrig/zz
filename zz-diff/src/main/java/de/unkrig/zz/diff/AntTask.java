@@ -558,7 +558,7 @@ class AntTask extends Task {
                 @Override public void
                 run() throws Exception {
 
-                    long differenceCount = AntTask.this.diff.execute(file1, file2);
+                    long differenceCount = AntTask.this.diff.execute(file1.toURI().toURL(), file2.toURI().toURL());
 
                     String property = AntTask.this.property;
                     if (property != null && differenceCount == 0) {

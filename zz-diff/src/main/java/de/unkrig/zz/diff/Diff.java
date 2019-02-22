@@ -27,10 +27,9 @@
 package de.unkrig.zz.diff;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.Collator;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,10 +49,9 @@ import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessings;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessings.ArchiveCombiner;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessor;
-import de.unkrig.commons.file.fileprocessing.FileProcessings;
-import de.unkrig.commons.file.fileprocessing.FileProcessings.DirectoryCombiner;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
-import de.unkrig.commons.file.fileprocessing.SelectiveFileProcessor;
+import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
+import de.unkrig.commons.file.resourceprocessing.ResourceProcessor;
 import de.unkrig.commons.io.InputStreams;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.ThreadUtil;
@@ -69,7 +67,6 @@ import de.unkrig.commons.text.Printer;
 import de.unkrig.commons.text.Printers;
 import de.unkrig.commons.util.TreeComparator;
 import de.unkrig.commons.util.TreeComparator.Node;
-import de.unkrig.commons.util.collections.Sets;
 import de.unkrig.commons.util.concurrent.ConcurrentUtil;
 import de.unkrig.commons.util.concurrent.SquadExecutor;
 
@@ -244,25 +241,25 @@ class Diff extends DocumentDiff {
      * them and reports all differences.
      */
     public long
-    execute(File file1, File file2) throws IOException, InterruptedException {
+    execute(URL resource1, URL resource2) throws IOException, InterruptedException {
 
         SquadExecutor<NodeWithPath> squadExecutor = new SquadExecutor<NodeWithPath>(
             this.sequential ? ConcurrentUtil.SEQUENTIAL_EXECUTOR_SERVICE : Diff.PARALLEL_EXECUTOR_SERVICE
         );
 
-        FileProcessor<NodeWithPath> dfp = this.fileProcessor(squadExecutor);
+        ResourceProcessor<NodeWithPath> rp = this.resourceProcessor(squadExecutor);
 
-        Printers.verbose("Scanning ''{0}''...", file1);
-        final NodeWithPath node1 = dfp.process("", file1);
+        Printers.verbose("Scanning ''{0}''...", resource1);
+        final NodeWithPath node1 = rp.process("", resource1);
         if (node1 == null) {
-            Printers.error("\"" + file1 + "\" does not exist or all subnodes are excluded");
+            Printers.error("\"" + resource1 + "\" does not exist or all subnodes are excluded");
             return 0;
         }
 
-        Printers.verbose("Scanning ''{0}''...", file2);
-        final NodeWithPath node2 = dfp.process("", file2);
+        Printers.verbose("Scanning ''{0}''...", resource2);
+        final NodeWithPath node2 = rp.process("", resource2);
         if (node2 == null) {
-            Printers.error("\"" + file2 + "\" does not exist or all subnodes are excluded");
+            Printers.error("\"" + resource2 + "\" does not exist or all subnodes are excluded");
             return 0;
         }
 
@@ -278,26 +275,12 @@ class Diff extends DocumentDiff {
 
         Printers.verbose("Computing differences...");
 
-        long differenceCount = this.diff(file1.getPath(), file2.getPath(), node1, node2);
+        long differenceCount = this.diff(node1, node2);
 
         Printers.verbose("{0,choice,0#No differences|1#1 difference|1<{0} differences} found.", differenceCount);
 
         return differenceCount;
     }
-
-    /**
-     * Compares (potentially compressed) content with (potentially compressed) content, or two trees of archive
-     * entries, and reports all differences via {@link Printers#info(String)}.
-     *
-     * @param opener1 Must produce a non-{@code null} {@link InputStream}
-     * @param opener2 Must produce a non-{@code null} {@link InputStream}
-     * @return        The number of differences found
-     */
-    public long
-    execute(
-        ProducerWhichThrows<? extends InputStream, IOException> opener1,
-        ProducerWhichThrows<? extends InputStream, IOException> opener2
-    ) throws IOException { return this.execute("(first)", "(second)", opener1, opener2); }
 
     /**
      * Compares (potentially compressed) content with (potentially compressed) content, or two trees of archive
@@ -316,16 +299,12 @@ class Diff extends DocumentDiff {
      * > CHANGED LINE
      * }</pre>
      *
-     * @param path1   Used when reporting differences
-     * @param path2   Used when reporting differences
      * @param opener1 Must produce a non-{@code null} {@link InputStream}
      * @param opener2 Must produce a non-{@code null} {@link InputStream}
      * @return        The number of differences found
      */
     public long
     execute(
-        String                                                  path1,
-        String                                                  path2,
         ProducerWhichThrows<? extends InputStream, IOException> opener1,
         ProducerWhichThrows<? extends InputStream, IOException> opener2
     ) throws IOException {
@@ -338,7 +317,7 @@ class Diff extends DocumentDiff {
 
         Printers.verbose("Computing differences...");
 
-        long differenceCount = this.diff(path1, path2, node1, node2);
+        long differenceCount = this.diff(node1, node2);
 
         Printers.verbose("{0,choice,0#No differences|1#1 difference|1<{0} differences} found.", differenceCount);
 
@@ -367,8 +346,8 @@ class Diff extends DocumentDiff {
      * Notice that the returned {@link FileProcessor} may return {@code null} if, e.g., the file is excluded, or
      * is a directory which can impossibly contain relevant (not-excluded) documents.
      */
-    private FileProcessor<NodeWithPath>
-    fileProcessor(SquadExecutor<NodeWithPath> squadExecutor) {
+    private ResourceProcessor<NodeWithPath>
+    resourceProcessor(SquadExecutor<NodeWithPath> squadExecutor) {
 
         ArchiveCombiner<NodeWithPath> archiveEntryCombiner = new ArchiveCombiner<Diff.NodeWithPath>() {
 
@@ -382,65 +361,16 @@ class Diff extends DocumentDiff {
             }
         };
 
-        FileProcessor<NodeWithPath>
-        regularFileProcessor1 = FileProcessings.recursiveCompressedAndArchiveFileProcessor(
-            this.lookIntoFormat,      // lookIntoFormat
-            this.pathPredicate,       // pathPredicate
-            archiveEntryCombiner,     // archiveEntryCombiner
-            this.contentsProcessor(), // contentsProcessor
-            this.exceptionHandler     // exceptionHandler
+        return ResourceProcessings.recursiveCompressedAndArchiveResourceProcessor(
+            this.lookIntoFormat,        // lookIntoFormat
+            this.pathPredicate,         // pathPredicate
+            null,                       // directoryMemberNameComparator
+            this.recurseSubdirectories, // recurseSubdirectories
+            archiveEntryCombiner,       // archiveEntryCombiner
+            this.contentsProcessor(),   // normalContentsProcessor
+            squadExecutor,              // squadExecutor
+            this.exceptionHandler       // exceptionHandler
         );
-        final FileProcessor<NodeWithPath> regularFileProcessor = new SelectiveFileProcessor<NodeWithPath>(
-            this.pathPredicate,
-            regularFileProcessor1,
-            FileProcessings.<NodeWithPath>nop()
-        );
-
-        DirectoryCombiner<NodeWithPath> dmc = new DirectoryCombiner<NodeWithPath>() { // directoryMemberCombiner
-
-            @Override public NodeWithPath
-            combine(String directoryPath, File directory, List<NodeWithPath> memberCombinables) {
-
-                // Filter out "null" values, which can
-                TreeSet<NodeWithPath> memberNodes = new TreeSet<NodeWithPath>(Diff.this.normalizedPathComparator);
-                for (NodeWithPath memberNode : memberCombinables) {
-                    if (memberNode != null) memberNodes.add(memberNode);
-                }
-                return new DirectoryNode(directoryPath, memberNodes);
-            }
-        };
-
-        if (this.recurseSubdirectories) {
-            return FileProcessings.directoryTreeProcessor(
-                this.pathPredicate,     // pathPredicate
-                regularFileProcessor,   // regularFileProcessor
-                Collator.getInstance(), // directoryMemberNameComparator
-                dmc,                    // directoryMemberCombiner
-                squadExecutor,          // squadExecutor
-                this.exceptionHandler   // exceptionHandler
-            );
-        } else {
-            return FileProcessings.directoryProcessor(
-                this.pathPredicate,                 // pathPredicate
-                regularFileProcessor,               // regularFileProcessor
-                Collator.getInstance(),             // directoryMemberNameComparator
-                new FileProcessor<NodeWithPath>() { // directoryMemberProcessor
-
-                    @Override @Nullable public NodeWithPath
-                    process(String path, File file) throws FileNotFoundException, IOException, InterruptedException {
-
-                        if (file.isDirectory()) {
-                            return new DirectoryNode(path, Sets.<NodeWithPath>emptySortedSet());
-                        }
-
-                        return regularFileProcessor.process(path, file);
-                    }
-                },
-                dmc,                                // directoryMemberCombiner
-                squadExecutor,                      // squadExecutor
-                this.exceptionHandler               // exceptionHandler
-            );
-        }
     }
 
     /**
@@ -478,8 +408,8 @@ class Diff extends DocumentDiff {
                     open() throws IOException { return AssertionUtil.notNull(opener.produce()); }
 
                     @Override public long   getSize()  { return finalSize; }
-                    @Override public int    getCrc32() { return finalCrc; }
-                    @Override public String toString() { return path; }
+                    @Override public int    getCrc32() { return finalCrc;  }
+                    @Override public String toString() { return path;      }
                 };
             }
         };
@@ -524,7 +454,7 @@ class Diff extends DocumentDiff {
      * @return The number of differences
      */
     private long
-    diff(final String path1, final String path2, NodeWithPath node1, final NodeWithPath node2) throws IOException {
+    diff(NodeWithPath node1, final NodeWithPath node2) throws IOException {
 
         final long[] differenceCount = new long[1];
 
@@ -572,13 +502,11 @@ class Diff extends DocumentDiff {
 
                 case COMPARE_WITH_EMPTY:
                     for (DocumentNode document : this.getDocuments(node)) {
-                        String path = document.getPath();
-                        Diff.this.reportFileDeleted(path1);
                         differenceCount[0] += Diff.this.diff(
-                            path,              // path1
-                            "(missing)",       // path2
-                            document.open(),   // inputStream1
-                            InputStreams.EMPTY // inputStream2
+                            document.getPath(), // path1
+                            "(missing)",        // path2
+                            document.open(),    // inputStream1
+                            InputStreams.EMPTY  // inputStream2
                         );
                     }
                     break;
@@ -592,6 +520,10 @@ class Diff extends DocumentDiff {
                 }
             }
 
+            /**
+             * @return The <var>node</var>, iff it is a {@link DocumentNode}, otherwise all the {@link DocumentNode}s
+             *         <em>under</em> the <var>node</var>
+             */
             private List<DocumentNode>
             getDocuments(NodeWithPath node) {
 
@@ -885,7 +817,7 @@ class Diff extends DocumentDiff {
         final long finalSize  = size;
         final int  finalCrc32 = (int) crc32.getValue();
         return new SizeAndCrc32() {
-            @Override public long getSize()  { return finalSize; }
+            @Override public long getSize()  { return finalSize;  }
             @Override public int  getCrc32() { return finalCrc32; }
         };
     }
