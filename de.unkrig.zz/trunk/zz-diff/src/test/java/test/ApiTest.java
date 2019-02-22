@@ -47,7 +47,7 @@ public
 class ApiTest {
 
     /**
-     * Tests the {@link Diff#execute(String, String, ProducerWhichThrows, ProducerWhichThrows)} API.
+     * Tests the {@link Diff#execute(ProducerWhichThrows, ProducerWhichThrows)} API.
      */
     @Test public void
     test1() throws IOException {
@@ -57,8 +57,6 @@ class ApiTest {
             @Override public void
             run() throws IOException {
                 new Diff().execute(
-                    "path1",
-                    "path2",
                     ApiTest.opener("---\n---\n---\n---\nDELETED LINE\n---\n---\nCHANGD LINE\n---\n---\n"),
                     ApiTest.opener("---\n---\nADDED LINE\n---\n---\n---\n---\nCHANGED LINE\n---\n---\n")
                 );

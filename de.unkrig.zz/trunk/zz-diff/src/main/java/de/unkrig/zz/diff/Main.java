@@ -28,12 +28,15 @@ package de.unkrig.zz.diff;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.Authenticator;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
 
 import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
+import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
@@ -52,7 +55,8 @@ import de.unkrig.zz.diff.Diff.LineEquivalence;
 import de.unkrig.zz.diff.DocumentDiff.Tokenization;
 
 /**
- * A DIFF utility that can recurse into directories, archive files and compressed files.
+ * A DIFF utility that processes not only files and directories, but also web resources, compressed contents and
+ * archives.
  */
 public
 class Main {
@@ -63,10 +67,10 @@ class Main {
      * <h2>Usage:</h2>
      *
      * <dl>
-     *   <dt>{@code zzdiff} [ <var>option</var> ] ... <var>file1</var> <var>file2</var></dt>
+     *   <dt>{@code zzdiff} [ <var>option</var> ] ... <var>file-or-url1</var> <var>file-or-url2</var></dt>
      *   <dd>
-     *     Show contents differences between <var>file1</var> and <var>file2</var> in DIFF format. The "path"
-     *     (relevant, e.g., for the "--path" command line option, see below) is "" (the empty string).
+     *     Show contents differences between <var>file-or-url1</var> and <var>file-or-url2</var> in DIFF format.
+     *     The "path" (relevant, e.g., for the "--path" command line option, see below) is "" (the empty string).
      *   </dd>
      *   <dt>{@code zzdiff} [ <var>option</var> ] ... <var>dir1</var> <var>dir2</var></dt>
      *   <dd>
@@ -80,8 +84,8 @@ class Main {
      * <h2>Description:</h2>
      *
      * <p>
-     *   Compares files line by line; detects directories, compressed and archive files, and even <em>nested</em>
-     *   archives, and compares their entries instead of their raw contents.
+     *   Compares files and web resources line by line; detects directories, compressed and archive files, and even
+     *   <em>nested</em> archives, and compares their entries instead of their raw contents.
      * </p>
      * <p>
      *   The default output format is the "<a href="http://en.wikipedia.org/wiki/Diff_utility#Usage">normal
@@ -179,6 +183,25 @@ class Main {
     public static void
     main(final String[] args) {
 
+        // Install the "de.unkrig.commons.net.authenticator.CustomAuthenticator", if it can be found on the
+        // classpath.
+        try {
+            ClassLoader cl = ClassLoader.getSystemClassLoader();
+
+            Class<?> cacheModeClass = cl.loadClass("de.unkrig.commons.net.authenticator.CustomAuthenticator$CacheMode");
+            Class<?> storeModeClass = cl.loadClass("de.unkrig.commons.net.authenticator.CustomAuthenticator$StoreMode");
+
+            Authenticator customAuthenticator = (Authenticator) (
+                cl
+                .loadClass("de.unkrig.commons.net.authenticator.CustomAuthenticator")
+                .getConstructor(cacheModeClass, storeModeClass)
+                .newInstance(cacheModeClass.getEnumConstants()[2], storeModeClass.getEnumConstants()[2])
+            );
+            Authenticator.setDefault(customAuthenticator);
+        } catch (Exception e) {
+            ;
+        }
+
         final Main main = new Main();
         main.levelFilteredPrinter.run(new Runnable() {
 
@@ -219,21 +242,21 @@ class Main {
             System.exit(2);
         }
 
-        this.main4(new File(args[0]), new File(args[1]));
+        this.main4(ResourceProcessings.toUrl(args[0]), ResourceProcessings.toUrl(args[1]));
     }
 
     /**
      * Handles the {@link #outputFile}.
      */
     private void
-    main4(final File file1, final File file2) throws Exception {
+    main4(final URL resource1, final URL resource2) throws Exception {
 
         Printers.redirectToFile(
             Level.INFO,                            // level
             this.outputFile,                       // outputFile
             null,                                  // charset
             new RunnableWhichThrows<Exception>() { // runnable
-                @Override public void run() throws Exception { Main.this.main5(file1, file2); }
+                @Override public void run() throws Exception { Main.this.main5(resource1, resource2); }
             }
         );
     }
@@ -242,9 +265,9 @@ class Main {
      * Exits with status "1" iff there are one or more differences.
      */
     private void
-    main5(final File file1, final File file2) throws Exception {
+    main5(final URL resource1, final URL resource2) throws Exception {
 
-        long differenceCount = Main.this.diff.execute(file1, file2);
+        long differenceCount = Main.this.diff.execute(resource1, resource2);
 
         if (differenceCount > 0) System.exit(1);
     }
@@ -566,7 +589,7 @@ class Main {
 
         this.diff.setExceptionHandler(new ExceptionHandler<IOException>() {
             @Override public void handle(String path, IOException ioe)     { Printers.error(path, ioe.getMessage()); }
-            @Override public void handle(String path, RuntimeException re) { Printers.error(path, re.getMessage()); }
+            @Override public void handle(String path, RuntimeException re) { Printers.error(path, re.getMessage());  }
         });
     }
 
