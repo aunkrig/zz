@@ -51,7 +51,7 @@ import de.unkrig.commons.util.annotation.CommandLineOptionGroup;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.zz.diff.Diff.AbsentFileMode;
 import de.unkrig.zz.diff.Diff.DiffMode;
-import de.unkrig.zz.diff.Diff.LineEquivalence;
+import de.unkrig.zz.diff.DocumentDiff.LineEquivalence;
 import de.unkrig.zz.diff.DocumentDiff.Tokenization;
 
 /**
