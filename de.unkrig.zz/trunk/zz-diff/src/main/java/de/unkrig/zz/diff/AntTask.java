@@ -46,7 +46,7 @@ import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.zz.diff.Diff.AbsentFileMode;
 import de.unkrig.zz.diff.Diff.DiffMode;
-import de.unkrig.zz.diff.Diff.LineEquivalence;
+import de.unkrig.zz.diff.DocumentDiff.LineEquivalence;
 import de.unkrig.zz.diff.DocumentDiff.Tokenization;
 
 /**

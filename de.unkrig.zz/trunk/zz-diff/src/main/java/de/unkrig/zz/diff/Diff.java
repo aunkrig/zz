@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -87,36 +86,6 @@ class Diff extends DocumentDiff {
         Runtime.getRuntime().availableProcessors() * 3,
         ThreadUtil.DAEMON_THREAD_FACTORY
     );
-
-    /**
-     * Iff the paths of the two contents sources match the {@link #pathPattern}, and the line from source 1 ("line 1")
-     * and the line from source 2 ("Line 2") both match the {@link #lineRegex}, and the capturing groups have
-     * equal text, then the two lines are regarded as "equal", although their texts may not be equal.
-     */
-    public static
-    class LineEquivalence {
-
-        /**
-         * To which files / elements this object applies.
-         */
-        public final Predicate<? super String> pathPattern;
-
-        /**
-         * The regex that is applied to each line.
-         */
-        public final Pattern lineRegex;
-
-        public
-        LineEquivalence(Predicate<? super String> pathPattern, Pattern lineRegex) {
-            this.pathPattern = pathPattern;
-            this.lineRegex   = lineRegex;
-        }
-
-        @Override public String
-        toString() {
-            return this.pathPattern + ":" + this.lineRegex;
-        }
-    }
 
     /**
      * The DIFF output format.
@@ -177,8 +146,6 @@ class Diff extends DocumentDiff {
 
     private Predicate<? super String>         pathPredicate    = PredicateUtil.always();
     private final List<Pattern>               equivalentPaths  = new ArrayList<Pattern>();
-    private final Collection<LineEquivalence> equivalentLines  = new ArrayList<LineEquivalence>();
-    private final Collection<LineEquivalence> ignores          = new ArrayList<LineEquivalence>();
     private AbsentFileMode                    addedFileMode    = AbsentFileMode.REPORT;
     private AbsentFileMode                    deletedFileMode  = AbsentFileMode.REPORT;
     private boolean                           reportUnchangedFiles;
@@ -190,7 +157,6 @@ class Diff extends DocumentDiff {
 
     // SETTERS FOR THE VARIOUS CONFIGURATION PARAMETERS
 
-    // CHECKSTYLE JavadocMethod:OFF
     public void
     setRecurseSubdirectories(boolean value) { this.recurseSubdirectories = value; }
 
@@ -206,7 +172,7 @@ class Diff extends DocumentDiff {
     public void
     setLookInto(Predicate<? super String> value) { this.lookIntoFormat = value; }
 
-    public void
+    public void // SUPPRESS CHECKSTYLE JavadocMethod
     setDiffMode(DiffMode value) {
 
         switch ((this.diffMode = value)) {
@@ -228,13 +194,6 @@ class Diff extends DocumentDiff {
 
     public void
     addEquivalentPath(Pattern path) { this.equivalentPaths.add(path); }
-
-    public void
-    addEquivalentLine(LineEquivalence lineEquivalence) { this.equivalentLines.add(lineEquivalence); }
-
-    public void
-    addIgnore(LineEquivalence lineEquivalence) { this.ignores.add(lineEquivalence); }
-    // CHECKSTYLE MethodCheck:ON
 
     /**
      * Creates two trees of directories, normal files, compressed files, archive files and archive entries, compares

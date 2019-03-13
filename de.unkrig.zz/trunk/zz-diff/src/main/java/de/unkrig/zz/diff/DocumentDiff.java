@@ -264,7 +264,6 @@ class DocumentDiff {
 
     public void
     addIgnore(LineEquivalence lineEquivalence) { this.ignores.add(lineEquivalence); }
-    // CHECKSTYLE MethodCheck:ON
 
     /**
      * Analyzes the contents of the two documents and reports that the contents is "equal" or has "changed", and,
