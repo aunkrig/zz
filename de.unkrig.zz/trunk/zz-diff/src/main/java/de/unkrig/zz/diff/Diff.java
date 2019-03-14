@@ -48,6 +48,7 @@ import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessings;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessings.ArchiveCombiner;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessor;
+import de.unkrig.commons.file.fileprocessing.FileProcessings.DirectoryCombiner;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
 import de.unkrig.commons.file.resourceprocessing.ResourceProcessor;
@@ -308,7 +309,19 @@ class Diff extends DocumentDiff {
     private ResourceProcessor<NodeWithPath>
     resourceProcessor(SquadExecutor<NodeWithPath> squadExecutor) {
 
-        ArchiveCombiner<NodeWithPath> archiveEntryCombiner = new ArchiveCombiner<Diff.NodeWithPath>() {
+        DirectoryCombiner<NodeWithPath> directoryEntryCombiner = new DirectoryCombiner<NodeWithPath>() {
+
+            @Override @Nullable public NodeWithPath
+            combine(String directoryPath, File directory, List<NodeWithPath> combinables) {
+                TreeSet<NodeWithPath> memberNodes = new TreeSet<NodeWithPath>(Diff.this.normalizedPathComparator);
+                for (NodeWithPath c : combinables) {
+                    if (c != null) memberNodes.add(c);
+                }
+                return new DirectoryNode(directoryPath, memberNodes);
+            }
+        };
+
+        ArchiveCombiner<NodeWithPath> archiveEntryCombiner = new ArchiveCombiner<NodeWithPath>() {
 
             @Override @Nullable public NodeWithPath
             combine(String archivePath, List<NodeWithPath> archiveCombinables) {
@@ -325,6 +338,7 @@ class Diff extends DocumentDiff {
             this.pathPredicate,         // pathPredicate
             null,                       // directoryMemberNameComparator
             this.recurseSubdirectories, // recurseSubdirectories
+            directoryEntryCombiner,     // directoryEntryCombiner
             archiveEntryCombiner,       // archiveEntryCombiner
             this.contentsProcessor(),   // normalContentsProcessor
             squadExecutor,              // squadExecutor
@@ -338,7 +352,7 @@ class Diff extends DocumentDiff {
     private ContentsProcessor<NodeWithPath>
     contentsProcessor() {
 
-        ContentsProcessor<NodeWithPath> normalContentsProcessor = new ContentsProcessor<Diff.NodeWithPath>() {
+        ContentsProcessor<NodeWithPath> normalContentsProcessor = new ContentsProcessor<NodeWithPath>() {
 
             @Override @Nullable public NodeWithPath
             process(
@@ -380,7 +394,7 @@ class Diff extends DocumentDiff {
                 @Override @Nullable public NodeWithPath
                 combine(String archivePath, List<NodeWithPath> combinables) {
                     SortedSet<NodeWithPath>
-                    archiveEntries = new TreeSet<Diff.NodeWithPath>(Diff.this.normalizedPathComparator);
+                    archiveEntries = new TreeSet<NodeWithPath>(Diff.this.normalizedPathComparator);
                     archiveEntries.addAll(combinables);
                     return new ArchiveNode(archivePath, archiveEntries);
                 }
