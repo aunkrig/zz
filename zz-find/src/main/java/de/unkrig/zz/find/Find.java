@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -57,6 +59,7 @@ import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveForma
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
+import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
 import de.unkrig.commons.io.InputStreams;
 import de.unkrig.commons.io.IoUtil;
 import de.unkrig.commons.lang.AssertionUtil;
@@ -73,6 +76,9 @@ import de.unkrig.commons.lang.protocol.RunnableUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.Printers;
+import de.unkrig.commons.text.expression.EvaluationException;
+import de.unkrig.commons.text.expression.ExpressionEvaluator;
+import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.jdisasm.Disassembler;
@@ -164,12 +170,12 @@ class Find {
     }
 
     /**
-     * Under some conditions recovery from exceptions within {@link #findInFile(File)} and {@link
+     * Under some conditions recovery from exceptions within {@link #findInResource(String, URL)} and {@link
      * #findInStream(InputStream)} makes sense, e.g. by continuing with the "next file". For this purpose a custom
      * exception handler can be configured.
      * <p>
-     *   The default behavior is to not attempt exception recovery, i.e. {@link #findInFile(File)} resp. {@link
-     *   #findInStream(InputStream)} complete abnormally on the first {@link IOException} that occurs.
+     *   The default behavior is to not attempt exception recovery, i.e. {@link #findInResource(String, URL)} resp.
+     *   {@link #findInStream(InputStream)} complete abnormally on the first {@link IOException} that occurs.
      * </p>
      */
     public Find
@@ -206,15 +212,16 @@ class Find {
          *   <dd>
          *     The type of the file, directory or archive entry:
          *     <dl>
-         *       <dt>"{@code directory}"</dt><dd>A directory on the file system</dd>
-         *       <dt>"{@code file}"</dt><dd>A file on the file system</dd>
-         *       <dt>"{@code archive-file}"</dt><dd>An archive file on the file system</dd>
-         *       <dt>"{@code compressed-file}"</dt><dd>A compressed file on the file system</dd>
-         *       <dt>"{@code directory-entry}"</dt><dd>An archive entry which denotes a directory</dd>
-         *       <dt>"{@code archive}"</dt><dd>An archive nested inside an archive or compressed file</dd>
-         *       <dt>"{@code compressed-contents}"</dt><dd>Nested compressed contents</dd>
-         *       <dt>"{@code normal-contents}"</dt>
-         *       <dd>(Non-compressed, non-archive) contents in an archive or in a compressed file</dd>
+         *       <dt>"{@code directory}"</dt>                                <dd>A directory on the file system</dd>
+         *       <dt>"{@code file}"</dt>                                     <dd>A file on the file system</dd>
+         *       <dt>"{@code archive-file}"</dt>                             <dd>An archive file on the file system</dd>
+         *       <dt>"{@code archive-xxx-resource}" (e.g. xxx="http")</dt>   <dd>A resource designated by a URL</dd>
+         *       <dt>"{@code compressed-file}"</dt>                          <dd>A compressed file on the file system</dd>
+         *       <dt>"{@code compressed-xxx-resource}" (e.g. xxx="http")</dt><dd>A compressed resource</dd>
+         *       <dt>"{@code directory-entry}"</dt>                          <dd>An archive entry which denotes a directory</dd>
+         *       <dt>"{@code archive}"</dt>                                  <dd>An archive nested inside an archive or compressed file</dd>
+         *       <dt>"{@code compressed-contents}"</dt>                      <dd>Nested compressed contents</dd>
+         *       <dt>"{@code normal-contents}"</dt>                          <dd>(Non-compressed, non-archive) contents in an archive or in a compressed file</dd>
          *     </dl>
          *   </dd>
          * </dl>
@@ -362,7 +369,7 @@ class Find {
     }
 
     /**
-     * Evaluates {@code lhs}, then {@code rhs}, and reutrns the result of the latter evaluation.
+     * Evaluates {@code lhs}, then {@code rhs}, and returns the result of the latter evaluation.
      */
     public static
     class CommaTest extends BinaryTest {
@@ -669,7 +676,7 @@ class Find {
     }
 
     /**
-     * Prints the path of the current file and returns {@code true}.
+     * Prints one message and returns {@code true}.
      */
     public static
     class EchoAction implements Action {
@@ -692,6 +699,54 @@ class Find {
 
         @Override public String
         toString() { return "(echo '" + this.message + "')"; }
+    }
+
+    /**
+     * Prints one message and returns {@code true}.
+     */
+    public static
+    class PrintfAction implements Action {
+
+        private final String   format;
+        private final String[] argExpressions;
+
+        PrintfAction(String format, String[] argExpressions) {
+            this.format         = format;
+            this.argExpressions = argExpressions;
+        }
+
+        @Override public boolean
+        evaluate(Mapping<String, Object> properties) {
+
+            Object[] args = new Object[this.argExpressions.length];
+            for (int i = 0; i < args.length; i++) {
+                String argExpression = this.argExpressions[i];
+                try {
+                    args[i] = (
+                        new ExpressionEvaluator(Mappings.containsKeyPredicate(properties))
+                        .evaluate(argExpression, properties)
+                    );
+                } catch (ParseException pe) {
+                    throw ExceptionUtil.wrap("Parsing '" + argExpression + "'", pe, RuntimeException.class);
+                } catch (EvaluationException ee) {
+                    throw ExceptionUtil.wrap("Evaluating '" + argExpression + "'", ee, RuntimeException.class);
+                }
+            }
+
+            String message;
+            try {
+                message = new Formatter().format(this.format, args).out().toString();
+            } catch (RuntimeException re) {
+                throw ExceptionUtil.wrap("Formatting '" + this.format + "'", re);
+            }
+
+            Printers.info(message);
+
+            return true;
+        }
+
+        @Override public String
+        toString() { return "(echo '" + this.format + "')"; }
     }
 
     /**
@@ -1231,26 +1286,25 @@ class Find {
     }
 
     /**
-     * Executes the search in the <var>file</var> (which may be a normal file or a directory).
+     * Executes the search in the <var>resource</var> (which may be a normal file, a directory, or any other resource).
+     * <p>
+     *   This method is thread-safe.
+     * </p>
+     */
+    public void
+    findInResource(String path, URL resource) throws IOException {
+        this.findInResource(path, resource, 0);
+    }
+
+    /**
+     * Executes the search in the <var>file</var> (which may be a normal file, or a directory).
      * <p>
      *   This method is thread-safe.
      * </p>
      */
     public void
     findInFile(File file) throws IOException {
-
-        this.findInDirectoryTree(file.getPath(), file, 0);
-    }
-
-    private void
-    findInDirectoryTree(final String path, File fileOrDirectory, int currentDepth)
-    throws IOException {
-
-        if (fileOrDirectory.isDirectory()) {
-            this.findInDirectory(path, fileOrDirectory, currentDepth);
-        } else {
-            this.findInFile(path, fileOrDirectory, currentDepth);
-        }
+        this.findInResource(file.getPath(), file.toURI().toURL(), 0);
     }
 
     private void
@@ -1304,9 +1358,9 @@ class Find {
 
                             try {
 
-                                Find.this.findInDirectoryTree(
+                                Find.this.findInResource(
                                     directoryPath + File.separatorChar + memberName,
-                                    new File(directory, memberName),
+                                    new File(directory, memberName).toURI().toURL(),
                                     currentDepth + 1
                                 );
                             } catch (IOException ioe) {
@@ -1359,176 +1413,248 @@ class Find {
         });
     }
 
+    @SuppressWarnings("unused") public static Mapping<String, Object>
+    resourceProperties(final String path, final URL resource) {
+
+        try {
+            return Mappings.augment(
+                Find.fileProperties(path, new File(resource.toURI())),
+                "type", "file"
+            );
+        } catch (URISyntaxException e) {
+            throw new AssertionError(e);
+        } catch (IllegalArgumentException iae) {
+
+            // "resource" does not designate a FILE resource.
+            ;
+        }
+
+        return Mappings.propertiesOf(new Object() {
+
+            public String getType()         { return resource.getProtocol() + "-resource"; }
+            public String getAuthority()    { return resource.getAuthority();              }
+            public int    getDefaultPort()  { return resource.getDefaultPort();            }
+            public String getExternalForm() { return resource.toExternalForm();            }
+            public String getFile()         { return resource.getFile();                   }
+            public String getHost()         { return resource.getHost();                   }
+            public String getPath()         { return path;                                 }
+            public int    getPort()         { return resource.getPort();                   }
+            public String getProtocol()     { return resource.getProtocol();               }
+            public String getQuery()        { return resource.getQuery();                  }
+            public String getRef()          { return resource.getRef();                    }
+            public String getUserInfo()     { return resource.getUserInfo();               }
+
+            @Override public String toString() { return "Resource \"" + path + "\""; }
+        });
+    }
+
     private void
-    findInFile(final String path, final File file, final int currentDepth)
+    findInResource(final String path, final URL resource, final int currentDepth)
     throws IOException {
 
-        Find.LOGGER.log(Level.FINER, "Processing file \"{0}\" (path is \"{1}\")", new Object[] { file, path });
+        Find.LOGGER.log(Level.FINER, "Processing \"{0}\" (path is \"{1}\")", new Object[] { resource, path });
 
-        CompressUtil.processFile(
-            path,                               // path
-            file,                               // file
-            this.lookIntoFormat,                // lookIntoFormat
-            new ArchiveHandler<Void>() {        // archiveHandler
+        // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
+        // handle directories, only normal files!)
+        {
+            File file = ResourceProcessings.isFile(resource);
+            if (file != null && file.isDirectory()) {
+                this.findInDirectory(path, file, currentDepth);
+                return;
+            }
+        }
 
-                @Override @Nullable public Void
-                handleArchive(final ArchiveInputStream archiveInputStream, final ArchiveFormat archiveFormat)
-                throws IOException {
+        ArchiveHandler<Void> archiveHandler = new ArchiveHandler<Void>() {
 
-                    final boolean[] prune = new boolean[1];
+            @Override @Nullable public Void
+            handleArchive(final ArchiveInputStream archiveInputStream, final ArchiveFormat archiveFormat)
+            throws IOException {
 
-                    RunnableUtil.swapIf(
-                        Find.this.descendantsFirst,
-                        new RunnableWhichThrows<IOException>() {
+                final boolean[] prune = new boolean[1];
 
-                            @Override public void
-                            run() {
+                RunnableUtil.swapIf(
+                    Find.this.descendantsFirst,
+                    new RunnableWhichThrows<IOException>() {
 
-                                // Evaluate the FIND expression for the archive file.
-                                Find.this.evaluateExpression(Mappings.augment(
-                                    Find.fileProperties(path, file),
-                                    "type",                   "archive-file", // SUPPRESS CHECKSTYLE Wrap:3
-                                    "archiveFormat",          archiveFormat,
-                                    "depth",                  currentDepth,
-                                    Find.PRUNE_PROPERTY_NAME, prune
-                                ));
-                            }
-                        },
-                        new RunnableWhichThrows<IOException>() {
+                        @Override public void
+                        run() {
 
-                            @Override public void
-                            run() throws IOException {
+                            // Evaluate the FIND expression for the archive resource.
+                            Mapping<String, Object> rps = Find.resourceProperties(path, resource);
+                            Find.this.evaluateExpression(Mappings.override(
+                                rps,
+                                "type",                   "archive-" + rps.get("type"), // SUPPRESS CHECKSTYLE Wrap:3
+                                "archiveFormat",          archiveFormat,
+                                "depth",                  currentDepth,
+                                Find.PRUNE_PROPERTY_NAME, prune
+                            ));
+                        }
+                    },
+                    new RunnableWhichThrows<IOException>() {
 
-                                if (prune[0] || currentDepth >= Find.this.maxDepth) return;
+                        @Override public void
+                        run() throws IOException {
 
-                                // Process the archive's entries.
-                                for (;;) {
-                                    try {
+                            if (prune[0] || currentDepth >= Find.this.maxDepth) return;
 
-                                        final ArchiveEntry ae = archiveInputStream.getNextEntry();
-                                        if (ae == null) break;
+                            // Process the archive's entries.
+                            for (;;) {
+                                try {
 
-                                        String entryPath = (
-                                            path
-                                            + '!'
-                                            + ArchiveFormatFactory.normalizeEntryName(ae.getName())
-                                        );
+                                    final ArchiveEntry ae = archiveInputStream.getNextEntry();
+                                    if (ae == null) break;
 
-                                        if (ae.isDirectory()) {
+                                    String entryPath = (
+                                        path
+                                        + '!'
+                                        + ArchiveFormatFactory.normalizeEntryName(ae.getName())
+                                    );
 
-                                            // Evaluate the FIND expression for the directory entry.
-                                            Find.this.evaluateExpression(Mappings.override(
+                                    if (ae.isDirectory()) {
+
+                                        // Evaluate the FIND expression for the directory entry.
+                                        Find.this.evaluateExpression(Mappings.override(
+                                            Mappings.union(
+                                                Mappings.propertiesOf(ae),
+                                                Find.resourceProperties(path, resource)
+                                            ),
+                                            "path",          entryPath, // SUPPRESS CHECKSTYLE Wrap:5
+                                            "name",          ArchiveFormatFactory.normalizeEntryName(ae.getName()),
+                                            "archiveFormat", archiveFormat,
+                                            "type",          "directory-entry",
+                                            "depth",         currentDepth + 1
+                                        ));
+                                    } else {
+                                        Find.this.findInStream(
+                                            entryPath,
+                                            archiveInputStream,
+                                            Mappings.override(
                                                 Mappings.union(
                                                     Mappings.propertiesOf(ae),
-                                                    Find.fileProperties(path, file)
+                                                    Find.resourceProperties(path, resource)
                                                 ),
-                                                "path",          entryPath, // SUPPRESS CHECKSTYLE Wrap:5
-                                                "name",          ArchiveFormatFactory.normalizeEntryName(ae.getName()),
-                                                "archiveFormat", archiveFormat,
-                                                "type",          "directory-entry",
-                                                "depth",         currentDepth + 1
-                                            ));
-                                        } else {
-                                            Find.this.findInStream(
-                                                entryPath,
-                                                archiveInputStream,
-                                                Mappings.override(
-                                                    Mappings.union(
-                                                        Mappings.propertiesOf(ae),
-                                                        Find.fileProperties(path, file)
-                                                    ),
-                                                    "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
-                                                ),
-                                                currentDepth + 1
-                                            );
-                                        }
-                                    } catch (UnsupportedZipFeatureException uzfe) {
-
-                                        // Cannot use "ExceptionUtil.wrap(prefix, cause)" here, because this exception
-                                        // has none of the "usual" constructors.
-                                        Find.this.exceptionHandler.consume(new IOException((
-                                            path
-                                            + "!"
-                                            + uzfe.getEntry().getName()
-                                            + ": Unsupported ZIP feature \""
-                                            + uzfe.getFeature()
-                                            + "\""
-                                        ), uzfe));
-                                    } catch (IOException ioe) {
-                                        Find.this.exceptionHandler.consume(ExceptionUtil.wrap(path, ioe));
+                                                "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap
+                                            ),
+                                            currentDepth + 1
+                                        );
                                     }
+                                } catch (UnsupportedZipFeatureException uzfe) {
+
+                                    // Cannot use "ExceptionUtil.wrap(prefix, cause)" here, because this exception
+                                    // has none of the "usual" constructors.
+                                    Find.this.exceptionHandler.consume(new IOException((
+                                        path
+                                        + "!"
+                                        + uzfe.getEntry().getName()
+                                        + ": Unsupported ZIP feature \""
+                                        + uzfe.getFeature()
+                                        + "\""
+                                    ), uzfe));
+                                } catch (IOException ioe) {
+                                    Find.this.exceptionHandler.consume(ExceptionUtil.wrap(path, ioe));
                                 }
                             }
                         }
-                    );
+                    }
+                );
 
-                    return null;
-                }
-            },
-            new CompressorHandler<Void>() {     // compressorHandler
-
-                @Override @Nullable public Void
-                handleCompressor(
-                    final CompressorInputStream compressorInputStream,
-                    final CompressionFormat     compressionFormat
-                ) throws IOException {
-
-                    RunnableUtil.swapIf(
-                        Find.this.descendantsFirst,
-                        new RunnableWhichThrows<IOException>() {
-
-                            @Override public void
-                            run() {
-
-                                // Evaluate the FIND expression for the compressed file.
-                                // Notice that we don't define an "inputStream" property, because otherwise we couldn't
-                                // process the CONTENTS of the compressed file.
-                                Find.this.evaluateExpression(Mappings.augment(
-                                    Find.fileProperties(path, file),
-                                    "type",              "compressed-file", // SUPPRESS CHECKSTYLE Wrap:3
-                                    "compressionFormat", compressionFormat,
-                                    "depth",             currentDepth
-                                ));
-                            }
-                        },
-                        new RunnableWhichThrows<IOException>() {
-
-                            @Override public void
-                            run() throws IOException {
-
-                                // Process compressed file's contents.
-                                if (currentDepth < Find.this.maxDepth) {
-                                    Find.this.findInStream(path + '%', compressorInputStream, Mappings.override(
-                                        Find.fileProperties(path, file),
-                                        "compressionFormat", compressionFormat, // SUPPRESS CHECKSTYLE Wrap:3
-                                        "name",              file.getName() + '%',
-                                        "size",              -1L
-                                    ), currentDepth + 1);
-                                }
-                            }
-                        }
-                    );
-
-                    return null;
-                }
-            },
-            new NormalContentsHandler<Void>() { // normalContentsHandler
-
-                @Override @Nullable public Void
-                handleNormalContents(final InputStream inputStream) {
-
-                    // Evaluate the FIND expression for the normal file.
-                    Find.this.evaluateExpression(Mappings.augment(
-                        Find.fileProperties(path, file),
-                        "type",        "file",      // SUPPRESS CHECKSTYLE Wrap:3
-                        "inputStream", inputStream,
-                        "depth",       currentDepth
-                    ));
-
-                    return null;
-                }
+                return null;
             }
-        );
+        };
+
+        CompressorHandler<Void> compressorHandler = new CompressorHandler<Void>() {
+
+            @Override @Nullable public Void
+            handleCompressor(
+                final CompressorInputStream compressorInputStream,
+                final CompressionFormat     compressionFormat
+            ) throws IOException {
+
+                RunnableUtil.swapIf(
+                    Find.this.descendantsFirst,
+                    new RunnableWhichThrows<IOException>() {
+
+                        @Override public void
+                        run() {
+
+                            // Evaluate the FIND expression for the compressed resource.
+                            // Notice that we don't define an "inputStream" property, because otherwise we couldn't
+                            // process the CONTENTS of the compressed resource.
+                            Mapping<String, Object> rps = Find.resourceProperties(path, resource);
+                            Find.this.evaluateExpression(Mappings.override(
+                                rps,
+                                "type",              "compressed-" + rps.get("type"), // SUPPRESS CHECKSTYLE Wrap:3
+                                "compressionFormat", compressionFormat,
+                                "depth",             currentDepth
+                            ));
+                        }
+                    },
+                    new RunnableWhichThrows<IOException>() {
+
+                        @Override public void
+                        run() throws IOException {
+
+                            // Process compressed resource's contents.
+                            if (currentDepth < Find.this.maxDepth) {
+                                Mapping<String, Object> rps = Find.resourceProperties(path, resource);
+                                Find.this.findInStream(path + '%', compressorInputStream, Mappings.override(
+                                    rps,
+                                    "compressionFormat", compressionFormat, // SUPPRESS CHECKSTYLE Wrap:3
+                                    "name",              rps.get("name") + "%",
+                                    "size",              -1L
+                                ), currentDepth + 1);
+                            }
+                        }
+                    }
+                );
+
+                return null;
+            }
+        };
+
+        NormalContentsHandler<Void> normalContentsHandler = new NormalContentsHandler<Void>() {
+
+            @Override @Nullable public Void
+            handleNormalContents(final InputStream inputStream) {
+
+                // Evaluate the FIND expression for the normal file.
+                Find.this.evaluateExpression(Mappings.augment(
+                    Find.resourceProperties(path, resource),
+                    "inputStream", inputStream, // SUPPRESS CHECKSTYLE Wrap:1
+                    "depth",       currentDepth
+                ));
+
+                return null;
+            }
+        };
+
+        final File file = ResourceProcessings.isFile(resource);
+        if (file != null) {
+            CompressUtil.processFile(
+                path,                 // path
+                file,                 // file
+                this.lookIntoFormat,  // lookIntoFormat
+                archiveHandler,       // archiveHandler
+                compressorHandler,    // compressorHandler
+                normalContentsHandler // normalContentsHandler
+            );
+        } else {
+            InputStream is = resource.openStream();
+            try {
+
+                CompressUtil.processStream(
+                    path,                 // path
+                    is,                   // inputStream
+                    this.lookIntoFormat,  // lookIntoFormat
+                    archiveHandler,       // archiveHandler
+                    compressorHandler,    // compressorHandler
+                    normalContentsHandler // normalContentsHandler
+                );
+                is.close();
+            } finally {
+                try { is.close(); } catch (Exception e) {}
+            }
+        }
     }
 
     private void

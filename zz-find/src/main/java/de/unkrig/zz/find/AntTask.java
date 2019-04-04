@@ -595,8 +595,10 @@ class AntTask extends AbstractElementWithOperands {
      *   <dt>{@code file}</dt>
      *   <dd>A (non-archive, not-compressed) file</dd>
      *   <dt>{@code archive-file}</dt>
+     *   <dt>{@code archive-xxx-resource} (e.g. xxx="http")</dt>
      *   <dd>An archive file</dd>
      *   <dt>{@code compressed-file}</dt>
+     *   <dt>{@code compressed-xxx-resource} (e.g. xxx="http")</dt>
      *   <dd>A compressed file</dd>
      *   <dt>{@code archive}</dt>
      *   <dd>A nested archive</dd>

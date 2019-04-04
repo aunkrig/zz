@@ -62,6 +62,7 @@ import de.unkrig.zz.find.Find.OrTest;
 import de.unkrig.zz.find.Find.PathTest;
 import de.unkrig.zz.find.Find.PipeAction;
 import de.unkrig.zz.find.Find.PrintAction;
+import de.unkrig.zz.find.Find.PrintfAction;
 import de.unkrig.zz.find.Find.PruneAction;
 import de.unkrig.zz.find.Find.ReadabilityTest;
 import de.unkrig.zz.find.Find.SizeTest;
@@ -214,13 +215,13 @@ class Parser {
     parsePrimary() throws ParseException {
         switch (this.parser.read(
 
-            // SUPPRESS CHECKSTYLE Wrap:5
-            "(",       "!",         "-not",      "-name",       "-path",
-            "-type",   "-readable", "-writable", "-executable", "-size",
-            "-mtime",  "-mmin",     "-print",    "-echo",       "-ls",
-            "-exec",   "-pipe",     "-cat",      "-copy",       "-disassemble",
-            "-digest", "-checksum", "-true",     "-false",      "-prune",
-            "-delete"
+            // SUPPRESS CHECKSTYLE Wrap:6
+            "(",            "!",         "-not",      "-name",       "-path",
+            "-type",        "-readable", "-writable", "-executable", "-size",
+            "-mtime",       "-mmin",     "-print",    "-echo",       "-printf",
+            "-ls",          "-exec",     "-pipe",     "-cat",        "-copy",
+            "-disassemble", "-digest",   "-checksum", "-true",       "-false",
+            "-prune",       "-delete"
         )) {
         case 0:  // '('
             final Expression result = this.parseComma();
@@ -259,30 +260,36 @@ class Parser {
         case 13: // '-echo'
             this.hadAction = true;
             return new EchoAction(this.parser.read().text);
-        case 14: // '-ls'
+        case 14: // '-printf'
+            this.hadAction = true;
+            String       format         = this.parser.read().text;
+            List<String> argExpressions = new ArrayList<String>();
+            while (!this.parser.peekRead(";")) argExpressions.add(this.parser.read().text);
+            return new PrintfAction(format, argExpressions.toArray(new String[argExpressions.size()]));
+        case 15: // '-ls'
             this.hadAction = true;
             return new LsAction();
-        case 15: // '-exec' word ... ';'
+        case 16: // '-exec' word ... ';'
             {
                 List<String> command = new ArrayList<String>();
                 while (!this.parser.peekRead(";")) command.add(this.parser.read().text);
                 this.hadAction = true;
                 return new ExecAction(command);
             }
-        case 16: // '-pipe' word ... ';'
+        case 17: // '-pipe' word ... ';'
             {
                 List<String> command = new ArrayList<String>();
                 while (!this.parser.peekRead(";")) command.add(this.parser.read().text);
                 this.hadAction = true;
                 return new PipeAction(command, null);
             }
-        case 17: // '-cat'
+        case 18: // '-cat'
             this.hadAction = true;
             return new CatAction(this.outOS);
-        case 18: // '-copy'
+        case 19: // '-copy'
             this.hadAction = true;
             return new CopyAction(new File(this.parser.read().text), false);
-        case 19: // "-disassemble"
+        case 20: // "-disassemble"
             this.hadAction = true;
             return new DisassembleAction(
                 this.parser.peekRead("-verbose"),        // verbose
@@ -296,10 +303,10 @@ class Parser {
                 this.parser.peekRead("-symbolicLabels"), // symbolicLabels
                 null                                     // file
             );
-        case 20: // "-digest"
+        case 21: // "-digest"
             this.hadAction = true;
             return new DigestAction(this.parser.read().text);
-        case 21: // "-checksum"
+        case 22: // "-checksum"
             this.hadAction = true;
             ChecksumType cst;
             try {
@@ -313,13 +320,13 @@ class Parser {
                 );
             }
             return new ChecksumAction(cst);
-        case 22: // "-true"
+        case 23: // "-true"
             return Test.TRUE;
-        case 23: // "-false"
+        case 24: // "-false"
             return Test.FALSE;
-        case 24: // "-prune"
+        case 25: // "-prune"
             return new PruneAction();
-        case 25: // "-delete"
+        case 26: // "-delete"
             return new DeleteAction();
         default:
             throw new IllegalStateException();
