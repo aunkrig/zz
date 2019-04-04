@@ -26,7 +26,6 @@
 
 package de.unkrig.zz.find;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.Provider;
@@ -37,6 +36,7 @@ import java.util.List;
 
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
+import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
 import de.unkrig.commons.lang.protocol.ProducerUtil;
@@ -184,6 +184,28 @@ class Main {
      *     the value of the property. For the list of supported properties, see section "Properties of files and
      *     archive entries", below.
      *   </dd>
+     *   <dt>{@code -printf} <var>format</var> <var>expr</var> ... {@code ;}</dt>
+     *   <dd>
+     *     Generate a message, print it, and return true. The <var>format</var> is the same as for Java's
+     *     {@code java.util.Formatter}, and the <var>expr</var>essions support a Java-like syntax and can use all
+     *     properties.
+     *     For the list of supported properties, see section "Properties of files and archive entries", below.
+     *     <br />
+     *     Example:
+     *     <blockquote>
+     *       {@code -printf}                         <br />
+     *       {@code "%c%c%c%c %10d %6$tF %6$tT %7$s"}<br />
+     *       {@code "directory  ? 'd' : '-'"}        <br />
+     *       {@code "readable   ? 'r' : '-'"}        <br />
+     *       {@code "writable   ? 'w' : '-'"}        <br />
+     *       {@code "executable ? 'x' : '-'"}        <br />
+     *       {@code size}                            <br />
+     *       {@code lastModifiedDate}                <br />
+     *       {@code path}                            <br />
+     *       {@code ;}
+     *     </blockquote>
+     *     is equivalent with "{@code -ls}".
+     *   </dd>
      *   <dt>{@code -ls}</dt>
      *   <dd>
      *     Print file type, readability, writability, executability, size, modification time and path, and return true.
@@ -276,20 +298,15 @@ class Main {
      *   <dd>
      *     The "type" of the current subject; the actual types are:
      *     <dl>
-     *       <dt>{@code directory}</dt>
-     *       <dd>A directory</dd>
-     *       <dt>{@code file}</dt>
-     *       <dd>A (non-archive, not-compressed) file</dd>
-     *       <dt>{@code archive-file}</dt>
-     *       <dd>An archive file</dd>
-     *       <dt>{@code compressed-file}</dt>
-     *       <dd>A compressed file</dd>
-     *       <dt>{@code archive}</dt>
-     *       <dd>A nested archive</dd>
-     *       <dt>{@code normal-contents}</dt>
-     *       <dd>Normal (non-archive, not-compressed) content</dd>
-     *       <dt>{@code directory-entry}</dt>
-     *       <dd>A "directory entry" in an archive.</dd>
+     *       <dt>{@code directory}</dt>                                <dd>A directory</dd>
+     *       <dt>{@code file}</dt>                                     <dd>A (non-archive, not-compressed) file</dd>
+     *       <dt>{@code archive-file}</dt>                             <dd>An archive file</dd>
+     *       <dt>{@code archive-xxx-resource} (e.g. xxx="http")</dt>   <dd>An archive file</dd>
+     *       <dt>{@code compressed-file}</dt>                          <dd>A compressed file</dd>
+     *       <dt>{@code compressed-xxx-resource} (e.g. xxx="http")</dt><dd>A compressed file</dd>
+     *       <dt>{@code archive}</dt>                                  <dd>A nested archive</dd>
+     *       <dt>{@code normal-contents}</dt>                          <dd>Normal (non-archive, not-compressed) content</dd>
+     *       <dt>{@code directory-entry}</dt>                          <dd>A "directory entry" in an archive.</dd>
      *     </dl>
      *   </dd>
      *   <dt>{@code "absolutePath"}:</dt>
@@ -309,8 +326,9 @@ class Main {
      *   </dd>
      *   <dt>{@code "size"}:</dt>
      *   <dd>
-     *     The size, in bytes, for types "archive", "archive-file", "compressed-contents", "compressed-file", "file" or
-     *     "normal-contents", -1 for type "directory-entry", and 0 for type "directory".
+     *     The size, in bytes, for types "archive", "archive-file", "archive-xxx-resource", "compressed-contents",
+     *     "compressed-file", "compressed-xxx-resource", "file" or "normal-contents", -1 for type "directory-entry",
+     *     and 0 for type "directory".
      *   </dd>
      *   <dt>{@code "isDirectory"}:</dt>
      *   <dd>
@@ -339,7 +357,7 @@ class Main {
      *   </dd>
      *   <dt>{@code "archiveFormat"}:</dt>
      *   <dd>
-     *     For types "archive" and "archive-file": The format.
+     *     For types "archive", "archive-file" and "archive-xxx-resource": The format.
      *     <br />
      *     For types "normal-contents", "compressed-contents" and "directory-entry": The format of the immediately
      *     enclosing archive.
@@ -348,7 +366,7 @@ class Main {
      *   </dd>
      *   <dt>{@code "compressionFormat"}:</dt>
      *   <dd>
-     *     For types "compressed-contents" and "compressed-file": The format.
+     *     For types "compressed-contents", "compressed-file" and "compressed-xxx-resource": The format.
      *     <br />
      *     For type "normal-contents": The format of the immediately enclosing compressed contents.
      *     <br />
@@ -502,7 +520,7 @@ class Main {
                     if ("-".equals(file)) {
                         this.find.findInStream(System.in);
                     } else {
-                        this.find.findInFile(new File(file));
+                        this.find.findInResource(file, ResourceProcessings.toUrl(file));
                     }
                 } catch (IOException ioe) {
                     exceptionHandler.consume(ioe);
