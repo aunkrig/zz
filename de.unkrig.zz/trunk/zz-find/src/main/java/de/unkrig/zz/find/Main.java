@@ -64,6 +64,7 @@ class Main {
 
     private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
 
+    // SUPPRESS CHECKSTYLE LineLength:245
     /**
      * A command line utility to find files, directories and archive entries by various criteria, and optionally
      * execute some actions.

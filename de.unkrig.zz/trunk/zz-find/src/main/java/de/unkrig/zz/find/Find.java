@@ -196,6 +196,7 @@ class Find {
     public
     interface Expression extends Predicate<Mapping<String, Object>> {
 
+        // SUPPRESS CHECKSTYLE LineLength:26
         /**
          * Evaluates to {@code true} or {@code false}, depending on the <var>properties</var>:
          * <dl>
