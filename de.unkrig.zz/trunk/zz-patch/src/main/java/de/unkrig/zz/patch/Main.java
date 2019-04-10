@@ -660,7 +660,7 @@ class Main {
     addLog(String spec) { SimpleLogging.configureLoggers(spec); }
 
     private void
-    main3(String[] args) throws Exception {
+    main3(String[] args) throws IOException {
 
         if (args.length == 0) {
 
