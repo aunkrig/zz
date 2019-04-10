@@ -55,6 +55,7 @@ import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.AbstractPrinter;
+import de.unkrig.commons.text.expression.EvaluationException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.zz.find.Find.Action;
@@ -363,7 +364,7 @@ class AntTask extends AbstractElementWithOperands {
     /**
      * Prints a text and evaluates to {@code true}.
      * <p>
-     *   All occurrences of "{@code @{variable-name}}" in the text are replaced with the value of the named variable.
+     *   All occurrences of "{@code ${variable-name}}" in the text are replaced with the value of the named variable.
      *   For the list of supported variables, see <a
      *   href="../../javadoc/de/unkrig/zz/find/Find.Expression.html#evaluate(de.unkrig.commons.lang.protocol.Mapping)">
      *here</a>.
@@ -457,21 +458,28 @@ class AntTask extends AbstractElementWithOperands {
     static
     class PropertyAction implements Action {
 
-        private final Project project;
-        private final String  propertyName;
-        private final String  propertyValue;
+        private final Project                                      project;
+        private final de.unkrig.commons.text.expression.Expression propertyName;
+        private final de.unkrig.commons.text.expression.Expression propertyValue;
 
         PropertyAction(Project project, String propertyName, String propertyValue) {
             this.project       = project;
-            this.propertyName  = propertyName;
-            this.propertyValue = propertyValue;
+            this.propertyName  = Find.parseExt(propertyName);
+            this.propertyValue = Find.parseExt(propertyValue);
         }
 
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
-            String pn = Find.expandVariables(this.propertyName, properties);
-            String pv = Find.expandVariables(this.propertyValue, properties);
+            String pn, pv;
+            try {
+                pn = this.propertyName.evaluateTo(properties, String.class);
+                pv = this.propertyValue.evaluateTo(properties, String.class);
+            } catch (EvaluationException ee) {
+                throw new BuildException(ee);
+            }
+
             this.project.setProperty(pn, pv);
+
             return true;
         }
 
@@ -632,6 +640,7 @@ class AntTask extends AbstractElementWithOperands {
      */
     public static
     class NotElement extends AbstractElementWithOperands implements ExpressionElement {
+
         @Nullable private Expression operand;
 
         /**

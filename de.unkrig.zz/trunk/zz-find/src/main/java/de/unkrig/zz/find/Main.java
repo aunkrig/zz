@@ -106,7 +106,7 @@ class Main {
      *   <dt>{@code -type} <var>glob</var></dt>
      *   <dd>
      *     Whether the type matches the <var>glob</var>. See the "type" property, described below.
-     *     If you are unsure about types, run {@code zzfind} with <code>-echo "&#64;{type} &#64;{path}"</code> first.
+     *     If you are unsure about types, run {@code zzfind} with <code>-echo "${type} ${path}"</code> first.
      *   </dd>
      *   <dt>{@code -readable}</dt>
      *   <dd>
@@ -180,7 +180,7 @@ class Main {
      *   <dt>{@code -echo} <var>message</var></dt>
      *   <dd>
      *     Print the <var>message</var> and return true.
-     *     All occurrences of "<code>&#64;{<i>property-name</i>}</code>" in the <var>message</var> are replaced with
+     *     All occurrences of "<code>${<i>property-name</i>}</code>" in the <var>message</var> are replaced with
      *     the value of the property. For the list of supported properties, see section "Properties of files and
      *     archive entries", below.
      *   </dd>
@@ -228,7 +228,7 @@ class Main {
      *   <dt>{@code -copy} <var>tofile</var></dt>
      *   <dd>
      *     Copy file contents to the named file.
-     *     All occurrences of "<code>&#64;{<i>property-name</i>}</code>" in the <var>tofile</var> are replaced with
+     *     All occurrences of "<code>${<i>property-name</i>}</code>" in the <var>tofile</var> are replaced with
      *     the value of the property. For the list of supported properties, see section "Properties of files and
      *     archive entries", below.
      *   </dd>
@@ -595,7 +595,7 @@ class Main {
      * <p>
      *   If in doubt, try:
      * </p>
-     * <pre>zzfind ... -print -echo @{depth}</pre>
+     * <pre>zzfind ... -print -echo ${depth}</pre>
      */
     @CommandLineOption public void
     setMaxDepth(int levels) { this.find.setMaxDepth(levels); }
