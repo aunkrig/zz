@@ -24,6 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// SUPPRESS CHECKSTYLE Javadoc:9999
+
 package test;
 
 import java.io.File;
@@ -213,10 +215,10 @@ class FindTest extends TestCase {
         FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-echo", (
-                "name=@{name} path=@{path} type=@{type} absolutePath=@{absolutePath} canonicalPath=@{canonicalPath} "
-                + "lastModifiedDate=@{lastModifiedDate} size=@{size} isDirectory=@{isDirectory} isFile=@{isFile} "
-                + "isHidden=@{isHidden} isReadable=@{isReadable} isWritable=@{isWritable} isExecutable=@{isExecutable} "
-                + "archiveFormat=@{archiveFormat} compressionFormat=@{compressionFormat} depth=@{depth}"
+                "name=${name} path=${path} type=${type} absolutePath=§´${absolutePath} canonicalPath=${canonicalPath} "
+                + "lastModifiedDate=${lastModifiedDate} size=${size} isDirectory=${isDirectory} isFile=${isFile} "
+                + "isHidden=${isHidden} isReadable=${isReadable} isWritable=${isWritable} isExecutable=${isExecutable} "
+                + "archiveFormat=${archiveFormat} compressionFormat=${compressionFormat} depth=${depth}"
             ) },
             "name=files path=files type=directory absolutePath=\\S+files canonicalPath=\\S+files lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=0 isDirectory=true isFile=false isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat= depth=0",
             "name=dir1 path=files\\\\dir1 type=directory absolutePath=\\S+files\\\\dir1 canonicalPath=\\S+files\\\\dir1 lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=0 isDirectory=true isFile=false isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat= depth=1",
@@ -247,7 +249,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputMatches(
             find,
-            new String[] { "-echo", "path=@{path}" },
+            new String[] { "-echo", "path=${path}" },
             "path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1",
             "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2",
             "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5",
@@ -277,7 +279,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputMatches(
             find,
-            new String[] { "-echo", "path=@{path}" },
+            new String[] { "-echo", "path=${path}" },
 //            "path=files",
 //            "path=files\\\\dir1",
             "path=files\\\\dir1\\\\dir2",
@@ -307,7 +309,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputMatches(
             find,
-            new String[] { "-echo", "path=@{path}" },
+            new String[] { "-echo", "path=${path}" },
 //            "path=files",
 //            "path=files\\\\dir1",
 //            "path=files\\\\dir1\\\\dir2",
@@ -337,7 +339,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputMatches(
             find,
-            new String[] { "-echo", "path=@{path}" },
+            new String[] { "-echo", "path=${path}" },
             "path=files",
             "path=files\\\\dir1",
             "path=files\\\\dir1\\\\dir2"
@@ -367,7 +369,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputMatches(
             find,
-            new String[] { "-echo", "path=@{path}" },
+            new String[] { "-echo", "path=${path}" },
             "path=files",
             "path=files\\\\dir1",
             "path=files\\\\dir1\\\\dir2",
@@ -412,6 +414,16 @@ class FindTest extends TestCase {
             "files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",          "b1a8c371", // CRC32 of "456"
             "files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%", "96ff1ef4", // CRC32 of "789"
             "files\\\\dir1\\\\dir2\\\\file3.Z%",                             "884863d2"  // CRC32 of "123"
+        );
+    }
+
+    @Test public void
+    testEcho() throws Exception {
+
+        FindTest.assertFindOutputMatches(
+            new Find(),
+            new String[] { "-name", "files", "-echo", "${import java.util.regex.*; Pattern.compile(\"A\")}" },
+            "A"
         );
     }
 
