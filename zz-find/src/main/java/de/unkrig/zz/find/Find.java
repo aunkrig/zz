@@ -681,19 +681,13 @@ class Find {
     public static
     class EchoAction implements Action {
 
-        private final String message;
+        private final de.unkrig.commons.text.expression.Expression message;
 
-        EchoAction(String message) {
-            this.message = message;
-        }
+        EchoAction(String message) { this.message = Find.parseExt(message); }
 
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
-
-            String message = Find.expandVariables(this.message, properties);
-
-            Printers.info(message);
-
+            Printers.info(Find.evaluateExpression(this.message, properties));
             return true;
         }
 
@@ -784,23 +778,21 @@ class Find {
     public static
     class ExecAction implements Action {
 
-        private final List<String> command;
+        private final List<de.unkrig.commons.text.expression.Expression>
+        command = new ArrayList<de.unkrig.commons.text.expression.Expression>();
 
-        ExecAction(List<String> command) { this.command = command; }
+        ExecAction(List<String> command) {
+            for (String word : command) this.command.add(Find.parseExt(word));
+        }
 
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
 
             List<String> command2;
             {
-                String path = null;
                 command2 = new ArrayList<String>();
-                for (String word : this.command) {
-                    if (word.contains("{}")) {
-                        if (path == null) path = Mappings.getNonNull(properties, "path", String.class);
-                        word = word.replace("{}", path);
-                    }
-                    command2.add(Find.expandVariables(word, properties));
+                for (de.unkrig.commons.text.expression.Expression e : this.command) {
+                    command2.add(Find.evaluateExpression(e, properties));
                 }
             }
 
@@ -856,19 +848,21 @@ class Find {
     public static
     class CopyAction implements Action {
 
-        private final File    tofile;
-        private final boolean mkdirs;
+        private final de.unkrig.commons.text.expression.Expression tofile;
+        private final boolean                                      mkdirs;
 
         CopyAction(File tofile, boolean mkdirs) {
-            this.tofile  = tofile;
-            this.mkdirs  = mkdirs;
+            this.tofile = Find.parseExt(tofile.getPath());
+            this.mkdirs = mkdirs;
         }
 
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
-            try {
 
-                File tofile = new File(Find.expandVariables(this.tofile.getPath(), properties));
+            File tofile = new File(Find.evaluateExpression(this.tofile, properties));
+            assert tofile != null;
+
+            try {
 
                 if (this.mkdirs) IoUtil.createMissingParentDirectoriesFor(tofile);
 
@@ -897,11 +891,13 @@ class Find {
     public static
     class PipeAction implements Action {
 
-        private final List<String>   command;
+        private final List<de.unkrig.commons.text.expression.Expression>
+        command = new ArrayList<de.unkrig.commons.text.expression.Expression>();
+
         @Nullable private final File workingDirectory;
 
         PipeAction(List<String> command, @Nullable File workingDirectory) {
-            this.command          = command;
+            for (String word : command) this.command.add(Find.parseExt(word));
             this.workingDirectory = workingDirectory;
         }
 
@@ -911,8 +907,8 @@ class Find {
             final InputStream in = Mappings.getNonNull(properties, "inputStream", InputStream.class);
 
             List<String> command2 = new ArrayList<String>();
-            for (String word : this.command) {
-                command2.add(Find.expandVariables(word, properties));
+            for (de.unkrig.commons.text.expression.Expression word : this.command) {
+                command2.add(Find.evaluateExpression(word, properties));
             }
 
             try {
@@ -1186,82 +1182,6 @@ class Find {
     }
 
     /**
-     * Replaces all occurrences of "<code>&#64;<i>variableName</i></code>" or
-     * "<code>&#64;{<i>variable-name</i>}</code>" in {@code s} with the value to which <var>variables</var> maps the
-     * <code><i>variable-name</i></code>, or with "" iff the named variable is not mapped.
-     * <p>
-     *   Notice that in the first notation the <code><i>variableName</i></code> must follow the rules of a Java
-     *   identifier, while in the second notation <code><i>variable-name</i></code> can contain <em>any</em> any
-     *   character except "<code>}</code>".
-     * </p>
-     * <p>
-     *   "<code>&#64;</code>" characters are left untouched under any of the following conditions:
-     * </p>
-     * <ul>
-     *   <li>It is the <em>last</em> character of the subject string</li>
-     *   <li>The closing "<code>}</code>" for a "<code>@{</code>" is missing</li>
-     *   <li>It is followed neither by "<code>{</code>" nor Java-identifier-start-letter</li>
-     * </ul>
-     *
-     * @param s         The subject string
-     * @param variables The {@link Mapping} that is used for variable expansion
-     * @return          The subject string with the variables expanded
-     */
-    public static String
-    expandVariables(String s, Mapping<String, ?> variables) {
-
-        for (int idx = s.indexOf('@'); idx != -1; idx = s.indexOf('@', idx)) {
-
-            if (idx == s.length() - 1) {
-
-                // The '@' is the LAST character of the string; terminate.
-                break;
-            }
-
-            int    from = idx, to; // The region to replace.
-            String variableName;
-
-            char c = s.charAt(from + 1);
-            if (c == '{') {
-
-                to = s.indexOf('}', from + 2);
-                if (to == -1) {
-
-                    // Closing '} missing: Terminate.
-                    break;
-                }
-
-                variableName = s.substring(from + 2, to++);
-            } else
-            if (Character.isJavaIdentifierStart(c)) {
-
-                to = from + 2;
-                for (; to < s.length() && Character.isJavaIdentifierPart(s.charAt(to)); to++);
-
-                variableName = s.substring(from + 1, to);
-            } else
-            {
-
-                // '@' is followed neither by a JavaIdentifierStart letter nor by '{'; leave it as a literal '@'.
-                idx++;
-                continue;
-            }
-
-            Object value = variables.get(variableName);
-
-            String replacement = value == null ? "" : value.toString();
-
-            // Substitute the match with the replacement string.
-            s = s.substring(0, from) + replacement + s.substring(to);
-
-            // Continue the search BEHIND the replacement.
-            idx += replacement.length();
-        }
-
-        return s;
-    }
-
-    /**
      * Executes the search in STDIN, with path "-".
      * <p>
      *   This method is thread-safe.
@@ -1419,7 +1339,7 @@ class Find {
         try {
             return Mappings.augment(
                 Find.fileProperties(path, new File(resource.toURI())),
-                "type", "file"
+                "type", "file" // SUPPRESS CHECKSTYLE Wrap
             );
         } catch (URISyntaxException e) {
             throw new AssertionError(e);
@@ -1446,6 +1366,34 @@ class Find {
 
             @Override public String toString() { return "Resource \"" + path + "\""; }
         });
+    }
+
+    public static de.unkrig.commons.text.expression.Expression
+    parseExt(String spec) {
+
+        ExpressionEvaluator ee = new ExpressionEvaluator(PredicateUtil.<String>always());
+
+        try {
+            return ee.parseExt(spec);
+        } catch (ParseException pe) {
+            throw ExceptionUtil.wrap("Parsing \"" + spec + "\"", pe, IllegalArgumentException.class);
+        }
+    }
+
+    @Nullable private static String
+    evaluateExpression(de.unkrig.commons.text.expression.Expression expression, Mapping<String, Object> variables) {
+
+        // The default value for missing variables is "".
+        variables = Mappings.union(variables, Mappings.<String, Object>constant(""));
+
+        try {
+            return expression.evaluateTo(
+                variables,
+                String.class
+            );
+        } catch (EvaluationException ee) {
+            throw ExceptionUtil.wrap("Evaluating \"" + expression + "\"", ee, IllegalArgumentException.class);
+        }
     }
 
     private void
