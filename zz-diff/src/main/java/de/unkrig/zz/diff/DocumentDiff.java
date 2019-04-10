@@ -53,7 +53,6 @@ import org.incava.util.diff.Difference;
 
 import de.unkrig.commons.io.ByteFilterInputStream;
 import de.unkrig.commons.lang.AssertionUtil;
-import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.AbstractPrinter;
@@ -262,26 +261,39 @@ class DocumentDiff {
     public void
     addEquivalentLine(LineEquivalence lineEquivalence) { this.equivalentLines.add(lineEquivalence); }
 
+    /**
+     * Differences where <em>all</em> deleted lines and <em>all</em> added lines contain matches of any of
+     * {@link LineEquivalence#lineRegex} are not printed.
+     * <p>
+     *   Only {@link LineEquivalence}s take effect where {@link LineEquivalence#pathPattern} matches the document's
+     *   {@code path1}.
+     * </p>
+     */
     public void
     addIgnore(LineEquivalence lineEquivalence) { this.ignores.add(lineEquivalence); }
 
     /**
-     * Analyzes the contents of the two documents and reports that the contents is "equal" or has "changed", and,
-     * in the latter case, prints the actual differences.
+     * Honors {@link #equivalentLines}, invokes {@link #diff2(Line[], Line[], Collection)} and reports that the
+     * contents is "equal" or has "changed", and, in the latter case, prints the actual differences. Reporting is
+     * done through {@link Printers#info(String)}.
      * <p>
      *   The two input streams are closed in any case, even on abrupt completion.
      * </p>
      *
-     * @param stream1 {@code null} means {@code path1} designates a 'deleted' file
-     * @param stream2 {@code null} means {@code path2} designates an 'added' file
-     * @return        The number of detected differences
+     * @return The number of reported differences
      */
     public long
     diff(String path1, String path2, InputStream stream1, InputStream stream2) throws IOException {
 
+        // Determine which of the "equivalent lines" are effective for this path.
+        final Collection<Pattern> effectiveEquivalentLines = new ArrayList<Pattern>();
+        for (LineEquivalence le : this.equivalentLines) {
+            if (le.pathPattern.evaluate(path1)) effectiveEquivalentLines.add(le.lineRegex);
+        }
+
         // Read the contents of the two pathes.
-        Line[] lines1 = this.readAllLines(stream1, path1);
-        Line[] lines2 = this.readAllLines(stream2, path2);
+        Line[] lines1 = this.readAllLines(stream1, effectiveEquivalentLines, path1);
+        Line[] lines2 = this.readAllLines(stream2, effectiveEquivalentLines, path2);
 
         Printers.verbose(
             "''{0}'' ({1} {1,choice,0#lines|1#line|1<lines}) vs. ''{2}'' ({3} {3,choice,0#lines|1#line|1<lines})",
@@ -291,80 +303,89 @@ class DocumentDiff {
             lines2.length
         );
 
-        // Compute the contents differences.
-        List<Difference> diffs = this.logicalDiff(lines1, lines2);
-
-        Printers.verbose("{0} raw {0,choice,0#differences|1#difference|1<differences} found", diffs.size());
-
-        if (diffs.isEmpty()) {
-
-            // At this point, the two documents equal, honoring also the "line equivalences" and the "tokenization".
-            return 0;
-        }
-
         // Determine which of the "ignores" are effective for this path.
-        final List<Pattern> effectiveIgnores = new ArrayList<Pattern>();
+        final Collection<Pattern> effectiveIgnores = new ArrayList<Pattern>();
         for (LineEquivalence ignore : DocumentDiff.this.ignores) {
-            if (ignore.pathPattern.evaluate(path1)) {
-                effectiveIgnores.add(ignore.lineRegex);
-            }
+            if (ignore.pathPattern.evaluate(path1)) effectiveIgnores.add(ignore.lineRegex);
         }
-        if (!effectiveIgnores.isEmpty()) {
 
-            // Now remove all differences that are "ignorable".
-            IGNORABLE:
-            for (Iterator<Difference> it = diffs.iterator(); it.hasNext();) {
-                Difference d = it.next();
+        List<Difference> differences = this.diff2(lines1, lines2, effectiveIgnores);
 
-                if (d.getDeletedStart() != Difference.NONE) {
-                    for (int i = d.getDeletedStart(); i <= d.getDeletedEnd(); i++) {
-                        if (!DocumentDiff.contains(lines1[i].text, effectiveIgnores)) continue IGNORABLE;
-                    }
-                }
-                if (d.getAddedStart() != Difference.NONE) {
-                    for (int i = d.getAddedStart(); i <= d.getAddedEnd(); i++) {
-                        if (!DocumentDiff.contains(lines2[i].text, effectiveIgnores)) continue IGNORABLE;
-                    }
-                }
-                it.remove();
-            }
-            Printers.verbose("Reduced to {0} non-ignorable differences", diffs.size());
-
-            if (diffs.isEmpty()) {
-
-                // At this point, the two documents equal, honoring also the "ignores".
-                return 0;
-            }
-        }
+        if (differences.isEmpty()) return 0;
 
         // Report the actual differences.
         switch (DocumentDiff.this.documentDiffMode) {
 
         case NORMAL:
-            DocumentDiff.normalDiff(lines1, lines2, diffs);
+            DocumentDiff.normalDiff(lines1, lines2, differences);
             break;
 
         case CONTEXT:
             Printers.info("*** " + path1);
             Printers.info("--- " + path2);
-            DocumentDiff.this.contextDiff(lines1, lines2, diffs);
+            DocumentDiff.this.contextDiff(lines1, lines2, differences);
             break;
 
         case UNIFIED:
             Printers.info("--- " + path1);
             Printers.info("+++ " + path2);
-            DocumentDiff.this.unifiedDiff(lines1, lines2, diffs);
+            DocumentDiff.this.unifiedDiff(lines1, lines2, differences);
             break;
 
         default:
             throw new AssertionError();
         }
 
-        return diffs.size();
+        return differences.size();
     }
 
+    /**
+     * Determines the {@link Difference}s between the given two contents. Invokes {@link #diff3(Line[], Line[])} and
+     * adds the <var>ignores</var> feature.
+     *
+     * @return The found differences
+     */
     private List<Difference>
-    logicalDiff(Line[] lines1, Line[] lines2) {
+    diff2(Line[] lines1, Line[] lines2, Collection<Pattern> ignores) {
+
+        // Compute the contents differences.
+        List<Difference> diffs = this.diff3(lines1, lines2);
+
+        Printers.verbose("{0} raw {0,choice,0#differences|1#difference|1<differences} found", diffs.size());
+
+        // Now remove all differences that are "ignorable".
+        if (!ignores.isEmpty()) {
+
+            IGNORABLE:
+            for (Iterator<Difference> it = diffs.iterator(); it.hasNext();) {
+                Difference d = it.next();
+
+                if (d.getDeletedStart() != Difference.NONE) {
+                    for (int i = d.getDeletedStart(); i <= d.getDeletedEnd(); i++) {
+                        if (!DocumentDiff.contains(lines1[i].text, ignores)) continue IGNORABLE;
+                    }
+                }
+                if (d.getAddedStart() != Difference.NONE) {
+                    for (int i = d.getAddedStart(); i <= d.getAddedEnd(); i++) {
+                        if (!DocumentDiff.contains(lines2[i].text, ignores)) continue IGNORABLE;
+                    }
+                }
+                it.remove();
+            }
+            Printers.verbose("Reduced to {0} non-ignorable differences", diffs.size());
+        }
+
+        return diffs;
+    }
+
+    /**
+     * Determines the {@link Difference}s between the given two contents. Implements the {@link #tokenization}
+     * feature.
+     *
+     * @return The found differences
+     */
+    private List<Difference>
+    diff3(Line[] lines1, Line[] lines2) {
 
         switch (this.tokenization) {
 
@@ -737,17 +758,15 @@ class DocumentDiff {
 
     /**
      * Reads the contents of the entry with the given {@code path} and transforms it to an array of {@link Line}s.
-     * Honors {@link #disassembleClassFiles}, {@link #equivalentLines} and {@link #ignoreWhitespace}.
+     * Honors {@link #disassembleClassFiles}, <var>equivalentLines</var> and {@link #ignoreWhitespace}.
      * <p>
      *   Eventually closes the <var>inputStream</var>, even on abrupt completion.
      * </p>
-     *
-     * @param path E.g. ".class" files are filtered through a bytecode disassembler
      */
     private Line[]
-    readAllLines(InputStream inputStream, String path) throws IOException {
+    readAllLines(InputStream inputStream, Iterable<Pattern> equivalentLines, String path) throws IOException {
         try {
-            return this.readAllLines2(inputStream, path);
+            return this.readAllLines2(inputStream, equivalentLines, path);
         } finally {
             try { inputStream.close(); } catch (IOException ioe) {}
         }
@@ -755,13 +774,11 @@ class DocumentDiff {
 
     /**
      * Reads the contents of the given {@link InputStream} and transforms it to an array of {@link Line}s. The
-     * {@link InputStream} is not closed. Honors {@link #disassembleClassFiles}, {@link #equivalentLines} and {@link
+     * {@link InputStream} is not closed. Honors {@link #disassembleClassFiles}, <var>equivalentLines</var> and {@link
      * #ignoreWhitespace}.
-     *
-     * @param path E.g. ".class" files are filtered through a bytecode disassembler
      */
     private Line[]
-    readAllLines2(InputStream is, String path) throws IOException {
+    readAllLines2(InputStream is, Iterable<Pattern> equivalentLines, String path) throws IOException {
 
         // Deploy the .class file disassembler as appropriate.
         if (this.disassembleClassFiles && path.endsWith(".class")) {
@@ -776,24 +793,11 @@ class DocumentDiff {
 
         BufferedReader br = new BufferedReader(new InputStreamReader(is, this.charset));
 
-        Collection<Pattern> equivalences = new ArrayList<Pattern>();
-        for (LineEquivalence le : this.equivalentLines) {
-            if (le.pathPattern.evaluate(path)) {
-                equivalences.add(le.lineRegex);
-            }
-        }
-
         List<Line> contents = new ArrayList<Line>();
-        try {
-            for (;;) {
-                Line line = this.readLine(br, equivalences);
-                if (line == null) break;
-                contents.add(line);
-            }
-        } catch (IOException ioe) {
-            throw ExceptionUtil.wrap("Reading '" + path + "'", ioe);
-        } catch (RuntimeException re) {
-            throw ExceptionUtil.wrap("Reading '" + path + "'", re);
+        for (;;) {
+            Line line = this.readLine(br, equivalentLines);
+            if (line == null) break;
+            contents.add(line);
         }
 
         return contents.toArray(new Line[contents.size()]);
@@ -803,7 +807,7 @@ class DocumentDiff {
      * @return {@code null} on end-of-input
      */
     @Nullable private Line
-    readLine(BufferedReader br, Collection<Pattern> equivalences) throws IOException {
+    readLine(BufferedReader br, Iterable<Pattern> equivalences) throws IOException {
         final String line = br.readLine();
         if (line == null) return null;
 
@@ -826,36 +830,78 @@ class DocumentDiff {
     private
     class Line implements Checksummable {
 
-        private final String  text;
-        private byte[]        value;
+        /**
+         * The "raw" (unmodified) text of the line, not including the trailing line separator.
+         */
+        private final String text;
 
-        Line(String text, Collection<Pattern> equivalences) {
+        /**
+         * An arbitrary set of data which is <em>equal</em> for <em>equivalent</em> lines.
+         */
+        private final byte[] value;
+
+        /**
+         * Equality of two {@link Line}s is determined as follows.
+         * <ul>
+         *   <li>Two {@link Line}s with equal <var>text</var> are equivalent.</li>
+         *   <li>
+         *     If {@link DocumentDiff#ignoreWhitespace}, then two {@link Line}s are also equivalent when their
+         *     <var>text</var>s, with each whitespace replaced with one SPACE, are equal.
+         *   </li>
+         *   <li>
+         *     If the <var>text</var> contains matches of one of the <var>equivalences</var>:
+         *     <ul>
+         *       <li>
+         *         If that regex does not declare any capturing groups, then two {@link Line}s are equivalent if their
+         *         <var>text</var>s, with all matches deleted, are equal.
+         *         <br />
+         *         Example: {@code \d+}
+         *       </li>
+         *       <li>
+         *         If that regex declares one or more capturing groups, then two {@link Line}s are equivalent if their
+         *         <var>text</var>s, with all captured subsequences deleted, are equal.
+         *         <br />
+         *         Example: {@code version=(\d+)}
+         *       </li>
+         *     </ul>
+         *   </li>
+         * </ul>
+         */
+        Line(String text, Iterable<Pattern> equivalentLines) {
             this.text = text;
 
             if (DocumentDiff.this.ignoreWhitespace) {
                 text = DocumentDiff.WHITESPACE_PATTERN.matcher(text).replaceAll(" ");
             }
 
-            for (Pattern p : equivalences) {
+            for (Pattern p : equivalentLines) {
                 Matcher matcher = p.matcher(text);
                 if (matcher.find()) {
-                    if (matcher.groupCount() == 0) {
-                        this.value = DocumentDiff.IGNORED_LINE;
-                        return;
-                    }
-
-                    StringBuffer sb = new StringBuffer();
+                    int           lastAppendPosition = 0;
+                    StringBuilder sb                 = new StringBuilder();
                     do {
-                        String replacement = "";
-                        for (int i = 1; i <= matcher.groupCount(); i++) {
-                            replacement += "$" + i;
+                        sb.append(text, lastAppendPosition, matcher.start());
+                        if (matcher.groupCount() == 0) {
+                            sb.append('\u7fff');
+                            lastAppendPosition = matcher.end();
+                        } else {
+                            for (int i = 1; i <= matcher.groupCount(); i++) {
+                                int s = matcher.start(i);
+
+                                // Ignore nested and non-matched capturing groups.
+                                if (s >= lastAppendPosition) {
+                                    sb.append(text, lastAppendPosition, s);
+                                    sb.append('\u7fff');
+                                    lastAppendPosition = matcher.end(i);
+                                }
+                            }
                         }
-                        matcher.appendReplacement(sb, replacement);
                     } while (matcher.find());
-                    matcher.appendTail(sb);
+                    sb.append(text, lastAppendPosition, text.length());
                     text = sb.toString();
                 }
             }
+
             this.value = text.getBytes(Charset.forName("UTF-8"));
         }
 
@@ -883,5 +929,5 @@ class DocumentDiff {
             checksum.update(this.value, 0, this.value.length);
         }
     }
-    private static final byte[] IGNORED_LINE = { 0x7f, 0x2f, 0x19 };
+//    private static final byte[] IGNORED_LINE = { 0x7f, 0x2f, 0x19 };
 }
