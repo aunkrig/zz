@@ -288,7 +288,8 @@ class Parser {
             return new CatAction(this.outOS);
         case 19: // '-copy'
             this.hadAction = true;
-            return new CopyAction(new File(this.parser.read().text), false);
+            boolean append = this.parser.peekRead("-a", "--append") != -1;
+            return new CopyAction(new File(this.parser.read().text), append);
         case 20: // "-disassemble"
             this.hadAction = true;
             return new DisassembleAction(
