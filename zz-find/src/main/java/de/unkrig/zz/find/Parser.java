@@ -92,7 +92,7 @@ class Parser {
      * @param producer The source of tokens to parse
      * @param out      Where the {@link CatAction} writes its output
      */
-    public <EX extends Exception>
+    public <EX extends Throwable>
     Parser(final ProducerWhichThrows<String, ? extends EX> producer, OutputStream out) {
 
         this.parser = new AbstractParser<TokenType>(new ProducerWhichThrows<Token<TokenType>, ScanException>() {
@@ -103,7 +103,9 @@ class Parser {
                 String text;
                 try {
                     text = producer.produce();
-                } catch (Exception e) {
+                } catch (Error e) {     // SUPPRESS CHECKSTYLE IllegalCatch
+                    throw e;
+                } catch (Throwable e) { // SUPPRESS CHECKSTYLE IllegalCatch
                     throw ExceptionUtil.wrap(null, e, ScanException.class);
                 }
 
