@@ -66,7 +66,7 @@ class Main {
     {
         this.grep.setExceptionHandler(new ExceptionHandler<IOException>() {
             @Override public void handle(String path, IOException ioe)     { Printers.error(path, ioe); }
-            @Override public void handle(String path, RuntimeException re) { Printers.error(path, re); }
+            @Override public void handle(String path, RuntimeException re) { Printers.error(path, re);  }
         });
     }
     private boolean              caseSensitive  = true;
