@@ -114,7 +114,6 @@ class AntTask extends AbstractElementWithOperands {
     @Nullable private File                 outputFile;
     private final List<ResourceCollection> resourceCollections = new ArrayList<ResourceCollection>();
 
-
     /**
      * @ant.typeGroupSubdir  findExpressions
      * @ant.typeGroupName    FIND expression

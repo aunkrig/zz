@@ -288,7 +288,6 @@ class PatchTest {
             PatchTest.c("I: R2: files/unpatched/dir1/dir2/file.zip!dir1/dir2/file1, line3")
         );
 
-
         Files expected = new Files(new Object[] {
             "dir1", new Object[] {
                 "dir2", new Object[] {
