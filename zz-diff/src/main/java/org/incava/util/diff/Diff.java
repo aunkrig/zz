@@ -9,7 +9,6 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
-
 /**
  * Compares two lists, returning a list of the additions, changes, and deletions
  * between them. A <code>Comparator</code> may be passed as an argument to the
