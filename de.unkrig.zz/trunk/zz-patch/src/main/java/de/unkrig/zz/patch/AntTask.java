@@ -182,7 +182,6 @@ class AntTask extends Task {
         this.patch.setLookIntoFormat(Glob.compile(value, Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES));
     }
 
-
     /**
      * Adds another set of resources ({@code <fileset>}, {@code <path>}, ...) that will be patched.
      */

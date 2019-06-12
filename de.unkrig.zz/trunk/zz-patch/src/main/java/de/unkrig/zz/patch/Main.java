@@ -111,7 +111,6 @@ class Main {
         }
     };
 
-
     /**
      * <h2>Usage</h2>
      *

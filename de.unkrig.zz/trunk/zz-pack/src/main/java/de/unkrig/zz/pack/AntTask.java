@@ -79,7 +79,6 @@ class AntTask extends Task {
     @Nullable private File                 file;
     private final List<ResourceCollection> resourceCollections = new ArrayList<ResourceCollection>();
 
-
     // BEGIN CONFIGURATION SETTERS
 
     /**
