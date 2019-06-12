@@ -329,9 +329,9 @@ class Grep {
             PredicateUtil.always(),                         // pathPredicate
             ContentsProcessings.<Void>nopArchiveCombiner(), // archiveEntryCombiner
             new SelectiveContentsProcessor<Void>(           // contentsProcessor
-                pathPredicate,
-                this.contentsProcessor(),
-                ContentsProcessings.<Void>nopContentsProcessor()
+                pathPredicate,                                   // pathPredicate
+                this.contentsProcessor(),                        // trueDelegate
+                ContentsProcessings.<Void>nopContentsProcessor() // falseDelegate
             ),
             this.exceptionHandler                           // exceptionHandler
         );
