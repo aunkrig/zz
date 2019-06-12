@@ -1,6 +1,5 @@
 package org.incava.util.diff;
 
-
 /**
  * Represents a difference, as used in <code>Diff</code>. A difference consists
  * of two pairs of starting and ending points, each pair representing either the
