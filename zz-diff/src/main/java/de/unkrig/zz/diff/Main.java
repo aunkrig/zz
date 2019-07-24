@@ -90,7 +90,7 @@ class Main {
      * <p>
      *   The default output format is the "<a href="http://en.wikipedia.org/wiki/Diff_utility#Usage">normal
      *   format</a>", also known as the "traditional format". Other output formats can be chosen through command
-     *   line options, see "Output generation", below.
+     *   line options, see "<a href="#output_generation">Output generation</a>", below.
      * </p>
      *
      * <h2>Options:</h2>
@@ -113,19 +113,19 @@ class Main {
      * {@main.commandLineOptions Contents-Processing}
      * </dl>
      *
-     * <h3>Output generation</h3>
+     * <h3><a name="output_generation" />Output generation</h3>
      *
      * <dl>
      * {@main.commandLineOptions Output-Generation}
      * </dl>
      *
-     * <h2>Globs</h2>
+     * <h2><a name="globs" />Globs</h2>
      *
      * <p>
      *   A <var>glob</var> can have the form
      * </p>
      * <pre>
-     *   {@code *~*.c~*.h~foo.c}
+     *   {@code *~*.c~*.h,foo.c}
      * </pre>
      * <p>
      *   , which means "foo.c plus all that don't end with .c or .h".
@@ -144,7 +144,7 @@ class Main {
      *   </dd>
      *   <dt>{@code file.zip!dir/file}</dt>
      *   <dd>
-     *     Entry "dir/file" in archive file "dir/file.zip".
+     *     Entry "dir/file" in archive file "file.zip".
      *   </dd>
      *   <dt>{@code file.tar.gz%!dir/file}</dt>
      *   <dd>
@@ -287,7 +287,7 @@ class Main {
 
     /**
      * Process only matching files/entries, e.g."{@code dir/file.zip!dir/file}" or "<code>*&#42;/file</code>".
-     * See also "Globs", below.
+     * See also "<a href="#globs">Globs</a>", below.
      *
      * @main.commandLineOptionGroup File-Selection
      */
