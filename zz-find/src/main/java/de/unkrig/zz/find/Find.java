@@ -876,7 +876,7 @@ class Find {
                     try { out.close(); } catch (IOException e) {}
                 }
             } catch (IOException ioe) {
-                throw ExceptionUtil.wrap("Running 'copy' on '" + properties + "'", ioe, RuntimeException.class);
+                throw ExceptionUtil.wrap("Copying \"" + properties + "\" to \"" + tofile + "\"", ioe, RuntimeException.class);
             }
             return true;
         }
