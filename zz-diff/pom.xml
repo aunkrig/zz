@@ -11,7 +11,7 @@
 	<parent>
 		<groupId>de.unkrig.zz</groupId>
 		<artifactId>zz-parent</artifactId>
-		<version>1.3.7-SNAPSHOT</version>
+		<version>1.3.7</version>
 		<relativePath>../zz-parent</relativePath>
 	</parent>
 
@@ -30,7 +30,7 @@
 		<dependency>
 			<groupId>de.unkrig.jdisasm</groupId>
 			<artifactId>jdisasm</artifactId>
-			<version>1.0.2</version>
+			<version>1.0.4</version>
 		</dependency>
 	</dependencies>
 
