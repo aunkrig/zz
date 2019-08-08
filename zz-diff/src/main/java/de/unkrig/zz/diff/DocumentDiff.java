@@ -880,8 +880,8 @@ class DocumentDiff {
                     int           lastAppendPosition = 0;
                     StringBuilder sb                 = new StringBuilder();
                     do {
-                        sb.append(text, lastAppendPosition, matcher.start());
                         if (matcher.groupCount() == 0) {
+                            sb.append(text, lastAppendPosition, matcher.start());
                             sb.append('\u7fff');
                             lastAppendPosition = matcher.end();
                         } else {
