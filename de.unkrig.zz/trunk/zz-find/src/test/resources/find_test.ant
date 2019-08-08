@@ -1,5 +1,6 @@
 <project>
 
+<!--	<taskdef file="../classes/de/unkrig/zz/zz-find.xml" />-->
 	<taskdef file="target/classes/de/unkrig/zz/zz-find.xml" />
 
 	<target name="find1">
