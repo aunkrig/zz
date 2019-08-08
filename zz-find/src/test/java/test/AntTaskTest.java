@@ -40,6 +40,7 @@ import de.unkrig.commons.file.FileUtil;
 public
 class AntTaskTest extends BuildFileTest {
 
+//    private static final File FILES = new File("target/test-classes/files");
     private static final File FILES = new File("files");
 
     @Override public void
@@ -50,13 +51,13 @@ class AntTaskTest extends BuildFileTest {
         new Files(new Object[] {
             "dir1", new Object[] {
                 "dir2", new Object[] {
-                    "file1", "line1\nline2\nline3\n",
+                    "file1",    "line1\nline2\nline3\n",
                     "file.zip", new Object[] {
-                        "/dir1/dir2/file1", "line1\nline2\nline3\n",
-                        "dir3/dir4/file2", "line1\nline2\nline3\n",
+                        "/dir1/dir2/file1",   "line1\nline2\nline3\n",
+                        "dir3/dir4/file2",    "line1\nline2\nline3\n",
                         "dir3/dir4/file.zip", new Object[] {
                             "/dir5/dir6/file1", "line1\nline2\nline3\n",
-                            "dir7/dir8/file4", "line1\nline2\nline3\n",
+                            "dir7/dir8/file4",  "line1\nline2\nline3\n",
                         },
                     },
                 },

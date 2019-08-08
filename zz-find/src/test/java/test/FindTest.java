@@ -166,7 +166,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputEquals(
             new Find(),
-            new String[] { "-type", "file" },
+            new String[] { "-type", "normal-file" },
             new File(FindTest.FILES, "dir1/dir2/file1").getPath()
         );
     }
@@ -176,7 +176,7 @@ class FindTest extends TestCase {
 
         FindTest.assertFindOutputEquals(
             new Find(),
-            new String[] { "-type", "archive" },
+            new String[] { "-type", "archive-contents" },
             new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip"
         );
     }
@@ -215,7 +215,7 @@ class FindTest extends TestCase {
         FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-echo", (
-                "name=${name} path=${path} type=${type} absolutePath=§´${absolutePath} canonicalPath=${canonicalPath} "
+                "name=${name} path=${path} type=${type} absolutePath=${absolutePath} canonicalPath=${canonicalPath} "
                 + "lastModifiedDate=${lastModifiedDate} size=${size} isDirectory=${isDirectory} isFile=${isFile} "
                 + "isHidden=${isHidden} isReadable=${isReadable} isWritable=${isWritable} isExecutable=${isExecutable} "
                 + "archiveFormat=${archiveFormat} compressionFormat=${compressionFormat} depth=${depth}"
@@ -229,13 +229,13 @@ class FindTest extends TestCase {
             "name=dir3/dir4/dir5 path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5 type=directory-entry absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=0 isDirectory=true isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat= depth=4",
             "name=dir3/dir4/file3.Z path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z type=compressed-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=\\d+ isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat=gz depth=4",
             "name=dir3/dir4/file3.Z% path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z% type=normal-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=3 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat=gz depth=5",
-            "name=file.zip path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip type=archive absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=\\d+ isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat= depth=4",
+            "name=file.zip path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip type=archive-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=\\d+ isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat= depth=4",
             "name=/dir1/dir2/file1 path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1 type=normal-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=3 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat= depth=5",
             "name=dir3/dir4/file2 path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2 type=normal-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=0 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat= depth=5",
             "name=dir3/dir4/dir5 path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5 type=directory-entry absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=-1 isDirectory=true isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat= depth=5",
             "name=dir3/dir4/file3.Z path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z type=compressed-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=-1 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat=gz depth=5",
             "name=dir3/dir4/file3.Z% path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z% type=normal-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file.zip canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file.zip lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=3 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat=zip compressionFormat=gz depth=6",
-            "name=file1 path=files\\\\dir1\\\\dir2\\\\file1 type=file absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file1 canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file1 lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=0 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat= depth=3",
+            "name=file1 path=files\\\\dir1\\\\dir2\\\\file1 type=normal-file absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file1 canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file1 lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=0 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat= depth=3",
             "name=file3.Z path=files\\\\dir1\\\\dir2\\\\file3.Z type=compressed-file absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=\\d+ isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat=gz depth=3",
             "name=file3.Z% path=files\\\\dir1\\\\dir2\\\\file3.Z% type=normal-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=3 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat=gz depth=4"
         );
