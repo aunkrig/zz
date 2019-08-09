@@ -619,24 +619,13 @@ class AntTask extends Task {
 
     /***/
     public static
-    class TextElement {
+    class TextElement extends ProjectComponent {
 
         private String text = "";
 
         /** See ANT documentation. */
         public void
-        addText(String text) {
-            String oldText = this.text;
-            if (text.trim().isEmpty()) {
-                ;
-            } else
-            if (oldText.trim().isEmpty()) {
-                this.text = text;
-            } else
-            {
-                this.text = oldText + text;
-            }
-        }
+        addText(String text) { this.text += this.getProject().replaceProperties(text).trim(); }
     }
 
     private void
