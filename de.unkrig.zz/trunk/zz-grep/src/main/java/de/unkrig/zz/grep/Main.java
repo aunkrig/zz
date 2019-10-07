@@ -69,6 +69,7 @@ class Main {
             @Override public void handle(String path, RuntimeException re) { Printers.error(path, re);  }
         });
     }
+    @Nullable private Boolean    withPath; // null = "default behavior"
     private boolean              caseSensitive  = true;
     private final IncludeExclude includeExclude = new IncludeExclude();
 
@@ -105,6 +106,10 @@ class Main {
      * </dl>
      *
      * <h3>Output Generation:</h3>
+     * <p>
+     *   By default, print each matching line, prefixed with the filename/path (iff two or more files are
+     *   specified on the command line).
+     * </p>
      * <dl>
      * {@main.commandLineOptions Output-Generation}
      * </dl>
@@ -190,6 +195,9 @@ class Main {
             System.exit(2);
         }
 
+        // If neither "--with-path" nor "--no-path" was configured on the command line, compute the default behavior.
+        this.grep.setWithPath(this.withPath != null ? this.withPath : args.length >= 2);
+
         // Process pattern command line argument.
         if (args.length == 0) {
             System.err.println("Pattern missing, try \"--help\".");
@@ -204,7 +212,7 @@ class Main {
 
         if (files.isEmpty()) {
             this.grep.contentsProcessor().process(
-                "",                                                   // path
+                "(standard input)",                                   // path
                 System.in,                                            // inputStream
                 -1L,                                                  // size
                 -1L,                                                  // crc32
@@ -271,12 +279,113 @@ class Main {
     setEncoding(Charset charset) { this.grep.setCharset(charset); }
 
     /**
-     * Print only names of files containing matches.
+     * Print only filename/path, colon, and match count.
      *
      * @main.commandLineOptionGroup Output-Generation
      */
-    @CommandLineOption(name = { "l", "list" }) public void
-    setList() { this.grep.setOperation(Operation.LIST); }
+    @CommandLineOption(name = { "-c", "--count" }) public void
+    setCount() { this.grep.setOperation(Operation.COUNT); }
+
+    /**
+     * Print only filename/path of documents containing matches.
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-l", "--list", "--files-with-matches" }) public void
+    setFilesWithMatches() { this.grep.setOperation(Operation.FILES_WITH_MATCHES); }
+
+    /**
+     * Print only filename/path of documents that do <em>not</em> contain any matches.
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-L", "--files-without-match" }) public void
+    setFilesWithoutMatch() { this.grep.setOperation(Operation.FILES_WITHOUT_MATCH); }
+
+    /**
+     * Print this instead of filename/path
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = "--label") public void
+    setLabel(String value) { this.grep.setLabel(value); }
+
+    /**
+     * Prefix each match with the document filename/path (default if two or more files are specified on the command
+     * line)
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-H", "--with-path", "--with-filename" }) public void
+    setWithPath() { this.withPath = true; }
+
+    /**
+     * Do <em>not</em> prefix each match with the document path (default if zero or one files are specified on the
+     * command line)
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-h", "--no-path", "--no-filename" }) public void
+    setNoPath() { this.withPath = false; }
+
+    /**
+     * Prefix each match with the line number
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-n", "--line-number" }) public void
+    setLineNumber() { this.grep.setWithLineNumber(true); }
+
+    /**
+     * Prefix each match with the byte offset
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-b", "--byte-offset" }) public void
+    setByteOffset() { this.grep.setWithByteOffset(true); }
+
+    /**
+     * Print <var>n</var> lines of context after matching lines
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-A", "--after-context" }) public void
+    setAfterContext(int n) { this.grep.setAfterContext(n); }
+
+    /**
+     * Print <var>n</var> lines of context before matching lines
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-B", "--before-context" }) public void
+    setBeforeContext(int n) { this.grep.setBeforeContext(n); }
+
+    /**
+     * Print <var>n</var> lines of context before and after matching lines
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-C", "--context" }) public void
+    setContext(int n) {
+    	this.grep.setBeforeContext(n);
+    	this.grep.setAfterContext(n);
+	}
+
+    /**
+     * Print only the matched parts; prints one line per match
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-o", "--only-matching" }) public void
+    setOnlyMatching() { this.grep.setOperation(Operation.ONLY_MATCHING); }
+
+    /**
+     * Stop reading after <var>n</var> matching lines
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-m", "--max-count" }) public void
+    setMaxCount(int n) { this.grep.setMaxCount(n); }
 
     /**
      * Ignore case distinctions.

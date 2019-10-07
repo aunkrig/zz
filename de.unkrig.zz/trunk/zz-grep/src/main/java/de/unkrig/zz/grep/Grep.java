@@ -36,7 +36,9 @@ import java.nio.charset.Charset;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import de.unkrig.commons.file.ExceptionHandler;
@@ -50,6 +52,11 @@ import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveForma
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.io.ByteFilterInputStream;
+import de.unkrig.commons.io.InputStreams;
+import de.unkrig.commons.io.OutputStreams;
+import de.unkrig.commons.lang.AssertionUtil;
+import de.unkrig.commons.lang.protocol.ConsumerUtil;
+import de.unkrig.commons.lang.protocol.ConsumerUtil.Produmer;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
@@ -76,16 +83,31 @@ class Grep {
         /** For each match, print the file name, a colon, a space and the matched line. */
         NORMAL,
 
-        /** For each match, print the file name. */
-        LIST,
+        /** Print only file name/path, colon, and match count. */
+        COUNT,
+
+        /** Print only the file name/path iff the document contains at least one match. */
+        FILES_WITH_MATCHES,
+
+        /** Print only the file name/path iff the documentdoes not contain any matches. */
+        FILES_WITHOUT_MATCH,
+
+        /** Print only the matched parts; one line per match. */
+        ONLY_MATCHING,
 
         /** Do not print the matches. */
         QUIET,
     }
 
+	@Nullable private String              label;
+	private boolean                       withPath;
+	private boolean                       withLineNumber;
+	private boolean                       withByteOffset;
+	private int                           afterContext, beforeContext;
     private Predicate<? super String>     lookIntoFormat = PredicateUtil.always();
     private Charset                       charset        = Charset.defaultCharset();
     private Operation                     operation      = Operation.NORMAL;
+	private int                           maxCount       = Integer.MAX_VALUE;
     private boolean                       inverted;
     private boolean                       disassembleClassFiles;
     private boolean                       disassembleClassFilesVerbose;
@@ -115,6 +137,42 @@ class Grep {
     // BEGIN CONFIGURATION SETTERS
 
     /**
+     * @param value Is printed instead of file/path names
+     */
+    public void
+    setLabel(String value) { this.label = value; }
+
+    /**
+     * Whether to prefix each match with the document path and a colon.
+     */
+    public void
+    setWithPath(boolean value) { this.withPath = value; }
+
+    /**
+     * Whether to prefix each match with the line number.
+     */
+    public void
+    setWithLineNumber(boolean value) { this.withLineNumber = value; }
+
+    /**
+     * Whether to prefix each match with the byte offset.
+     */
+    public void
+    setWithByteOffset(boolean value) { this.withByteOffset = value; }
+
+    /**
+     * Print <var>n</var> lines of context after matching lines.
+     */
+    public void
+    setAfterContext(int value) { this.afterContext = value; }
+
+    /**
+     * Print <var>n</var> lines of context before matching lines.
+     */
+    public void
+    setBeforeContext(int value) { this.beforeContext = value; }
+
+    /**
      * @param value Is evaluated against <code>"<i>format</i>:<i>path</i>"</code>
      * @see         ArchiveFormatFactory#allFormats()
      * @see         ArchiveFormat#getName()
@@ -135,6 +193,12 @@ class Grep {
      */
     public void
     setOperation(Operation value) { this.operation = value; }
+
+    /**
+     * Stop reading after <var>n</var> matching lines.
+     */
+	public void
+	setMaxCount(int n) { this.maxCount = n; }
 
     /**
      * @param value Whether matching lines should be treated as non-matching, and vice versa
@@ -278,37 +342,136 @@ class Grep {
                     is = new ByteFilterInputStream(is, disassemblerByteFilter);
                 }
 
+                // For printing byte offsets ("-b").
+                Produmer<Long, Number> bytesRead = ConsumerUtil.cumulate();
+                if (Grep.this.withByteOffset) {
+                	is = InputStreams.wye(is, OutputStreams.lengthWritten(bytesRead));
+                }
+
+                int                      matchCountInDocument     = 0;
+                int                      lineNumber               = 1;
+                final LinkedList<String> beforeContext            = new LinkedList<String>();
+                int                      afterContextLinesToPrint = 0;
+
                 PushbackReader pbr = new PushbackReader(
                     new BufferedReader(new InputStreamReader(is, Grep.this.charset))
                 );
-                for (;;) {
+                READ_LINES:
+                for (;; lineNumber++) {
+
+                	long byteOffset = AssertionUtil.notNull(bytesRead.produce());
+
                     String line = Grep.readLine(pbr);
                     if (line == null) break;
 
-                    boolean found = false;
-                    for (Pattern pattern : patterns) {
-                        if (pattern.matcher(line).find()) { found = true; break; }
+                    // Are there any context lines to print after a preceeding match?
+                    if (afterContextLinesToPrint > 0) {
+                    	Printers.info(this.composeMatch(path, lineNumber, byteOffset, line, '-'));
                     }
 
-                    if (found ^ Grep.this.inverted) {
+                    boolean lineContainsMatches = false;
+                    MATCHES_IN_LINE:
+                    for (Pattern pattern : patterns) {
+                        Matcher m = pattern.matcher(line);
+
+						while (m.find()) {
+
+							// Per match in line:
+                        	switch (Grep.this.operation) {
+
+                        	case NORMAL:
+                        	case COUNT:
+                        	case FILES_WITH_MATCHES:
+                        	case FILES_WITHOUT_MATCH:
+                        	case QUIET:
+                        		lineContainsMatches = true;
+                        		break MATCHES_IN_LINE;
+
+                        	case ONLY_MATCHING:
+                        		Printers.info(this.composeMatch(path, lineNumber, byteOffset, m.group(0), ':'));
+                        		break;
+                    		}
+                    	}
+                    }
+
+                    // Per line:
+                    if (lineContainsMatches ^ Grep.this.inverted) {
                         Grep.this.linesSelected = true;
+                        matchCountInDocument++;
+
                         switch (Grep.this.operation) {
 
                         case NORMAL:
-                            Printers.info(path + ": " + line);
+                        	while (!beforeContext.isEmpty()) Printers.info(beforeContext.remove());
+                        	Printers.info(this.composeMatch(path, lineNumber, byteOffset, line, ':'));
+                        	afterContextLinesToPrint = Grep.this.afterContext + 1;
                             break;
 
-                        case LIST:
-                            Printers.info(path);
-                            return null;
+                        case COUNT:
+                        case ONLY_MATCHING:
+                        	break;
 
+                        case FILES_WITH_MATCHES:
+                        case FILES_WITHOUT_MATCH:
                         case QUIET:
-                            return null;
+                        	// No need to read any more lines.
+                        	break READ_LINES;
                         }
+
+                        if (matchCountInDocument >= Grep.this.maxCount) break;
                     }
+
+                    // Keep a copy of the current line in case a future match would like to print "before context".
+                    if (afterContextLinesToPrint == 0 && Grep.this.beforeContext > 0) {
+                    	if (beforeContext.size() >= Grep.this.beforeContext) beforeContext.remove();
+                    	beforeContext.add(
+                			this.composeMatch(path, lineNumber, byteOffset, line, '-')
+            			);
+                    }
+
+                    if (afterContextLinesToPrint > 0) afterContextLinesToPrint--;
                 }
+
+                // Per document:
+                switch (Grep.this.operation) {
+
+                case NORMAL:
+                case QUIET:
+                case ONLY_MATCHING:
+                	break;
+
+                case COUNT:
+                	Printers.info(path + ':' + matchCountInDocument);
+                	break;
+
+                case FILES_WITH_MATCHES:
+                	if (matchCountInDocument > 0) Printers.info(path);
+                	break;
+
+                case FILES_WITHOUT_MATCH:
+                	if (matchCountInDocument == 0) Printers.info(path);
+                	break;
+                }
+
                 return null;
             }
+
+			private String
+			composeMatch(String path, int lineNumber, long byteOffset, String text, char separator) {
+
+				StringBuilder sb = new StringBuilder();
+				if (Grep.this.withPath) {
+					sb.append(Grep.this.label != null ? Grep.this.label : path).append(separator);
+				}
+
+				if (Grep.this.withLineNumber) sb.append(lineNumber).append(separator);
+
+				if (Grep.this.withByteOffset) sb.append(byteOffset).append(separator);
+
+				sb.append(text);
+
+				return sb.toString();
+			}
         };
     }
 
