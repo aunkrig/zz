@@ -73,7 +73,9 @@ class Main {
     private boolean              caseSensitive  = true;
     private final IncludeExclude includeExclude = new IncludeExclude();
 
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
+	private final List<String> regexes = new ArrayList<String>();
+
+	private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
 
     /**
      * <h2>Usage:</h2>
@@ -198,17 +200,25 @@ class Main {
         // If neither "--with-path" nor "--no-path" was configured on the command line, compute the default behavior.
         this.grep.setWithPath(this.withPath != null ? this.withPath : args.length >= 2);
 
-        // Process pattern command line argument.
-        if (args.length == 0) {
-            System.err.println("Pattern missing, try \"--help\".");
-            System.exit(2);
+        int argi = 0;
+
+        // Next command line argument is the regex (unless "-e" was used).
+        if (this.regexes.isEmpty()) {
+	        if (argi >= args.length) {
+	            System.err.println("Regex missing, try \"--help\".");
+	            System.exit(2);
+	        }
+	        this.regexes.add(args[argi++]);
         }
 
-        this.grep.addSearch(this.includeExclude, args[0], this.caseSensitive);
+        // Configure search objects.
+        for (String regex : this.regexes) {
+        	this.grep.addSearch(this.includeExclude, regex, this.caseSensitive);
+		}
 
         // Process files command line arguments.
         final List<File> files = new ArrayList<File>();
-        for (int i = 1; i < args.length; i++) files.add(new File(args[i]));
+        while (argi < args.length) files.add(new File(args[argi++]));
 
         if (files.isEmpty()) {
             this.grep.contentsProcessor().process(
@@ -519,6 +529,17 @@ class Main {
         SimpleLogging.setDebug();
         SimpleLogging.setDebug();
     }
+
+    /**
+     * Useful for <em>multiple</em> regexes or regexes starting with "-"
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption(
+		name        = { "-e", "--regexp", "--regex" },
+		cardinality = CommandLineOption.Cardinality.ANY
+	) public void
+    addPattern(String regex) { this.regexes.add(regex); }
 
     /**
      * Add logging at level {@code FINE} on logger "{@code de.unkrig}" to STDERR using the {@code FormatFormatter}
