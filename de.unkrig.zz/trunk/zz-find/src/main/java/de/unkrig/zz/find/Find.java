@@ -876,7 +876,11 @@ class Find {
                     try { out.close(); } catch (IOException e) {}
                 }
             } catch (IOException ioe) {
-                throw ExceptionUtil.wrap("Copying \"" + properties + "\" to \"" + tofile + "\"", ioe, RuntimeException.class);
+                throw ExceptionUtil.wrap(
+                    "Copying \"" + properties + "\" to \"" + tofile + "\"",
+                    ioe,
+                    RuntimeException.class
+                );
             }
             return true;
         }
@@ -1523,7 +1527,7 @@ class Find {
                             // process the CONTENTS of the compressed resource.
                             Find.this.evaluateExpression(Mappings.override(
                                 properties,
-                                "type",              "compressed-" + properties.get("type"), // SUPPRESS CHECKSTYLE Wrap:3
+                                "type",              "compressed-" + properties.get("type"), // SUPPRESS CHECKSTYLE Wrap|LineLength:3
                                 "path",              path,
                                 "compressionFormat", compressionFormat,
                                 "depth",             currentDepth
@@ -1581,7 +1585,7 @@ class Find {
                             // Evaluate the FIND expression for the archive resource.
                             Find.this.evaluateExpression(Mappings.override(
                                 properties,
-                                "type",                   "archive-" + properties.get("type"), // SUPPRESS CHECKSTYLE Wrap:3
+                                "type",                   "archive-" + properties.get("type"), // SUPPRESS CHECKSTYLE Wrap|LineLength:3
                                 "archiveFormat",          archiveFormat,
                                 "depth",                  currentDepth,
                                 Find.PRUNE_PROPERTY_NAME, prune[0] // <= The "-prune" action will potentially change this value
