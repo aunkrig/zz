@@ -112,7 +112,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
          * A {@link Condition} that is always {@code true}.
          */
         Condition ALWAYS = new Condition() {
-            @Override public boolean evaluate(String name, CharSequence match, int occurrence) { return true; }
+            @Override public boolean evaluate(String name, CharSequence match, int occurrence) { return true;     }
             @Override public String  toString()                                                { return "ALWAYS"; }
         };
 
@@ -120,7 +120,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
          * A {@link Condition} that is always {@code false}.
          */
         Condition NEVER = new Condition() {
-            @Override public boolean evaluate(String name, CharSequence match, int occurrence) { return false; }
+            @Override public boolean evaluate(String name, CharSequence match, int occurrence) { return false;   }
             @Override public String  toString()                                                { return "NEVER"; }
         };
     }
