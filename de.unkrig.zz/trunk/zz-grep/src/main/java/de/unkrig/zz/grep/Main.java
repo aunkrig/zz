@@ -73,9 +73,9 @@ class Main {
     private boolean              caseSensitive  = true;
     private final IncludeExclude includeExclude = new IncludeExclude();
 
-	private final List<String> regexes = new ArrayList<String>();
+    private final List<String> regexes = new ArrayList<String>();
 
-	private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
 
     /**
      * <h2>Usage:</h2>
@@ -204,17 +204,17 @@ class Main {
 
         // Next command line argument is the regex (unless "-e" was used).
         if (this.regexes.isEmpty()) {
-	        if (argi >= args.length) {
-	            System.err.println("Regex missing, try \"--help\".");
-	            System.exit(2);
-	        }
-	        this.regexes.add(args[argi++]);
+            if (argi >= args.length) {
+                System.err.println("Regex missing, try \"--help\".");
+                System.exit(2);
+            }
+            this.regexes.add(args[argi++]);
         }
 
         // Configure search objects.
         for (String regex : this.regexes) {
-        	this.grep.addSearch(this.includeExclude, regex, this.caseSensitive);
-		}
+            this.grep.addSearch(this.includeExclude, regex, this.caseSensitive);
+        }
 
         // Process files command line arguments.
         final List<File> files = new ArrayList<File>();
@@ -377,9 +377,9 @@ class Main {
      */
     @CommandLineOption(name = { "-C", "--context" }) public void
     setContext(int n) {
-    	this.grep.setBeforeContext(n);
-    	this.grep.setAfterContext(n);
-	}
+        this.grep.setBeforeContext(n);
+        this.grep.setAfterContext(n);
+    }
 
     /**
      * Print only the matched parts; prints one line per match
@@ -536,9 +536,9 @@ class Main {
      * @main.commandLineOptionGroup Contents-Processing
      */
     @CommandLineOption(
-		name        = { "-e", "--regexp", "--regex" },
-		cardinality = CommandLineOption.Cardinality.ANY
-	) public void
+        name        = { "-e", "--regexp", "--regex" },
+        cardinality = CommandLineOption.Cardinality.ANY
+    ) public void
     addPattern(String regex) { this.regexes.add(regex); }
 
     /**
