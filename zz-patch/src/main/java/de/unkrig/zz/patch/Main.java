@@ -59,6 +59,7 @@ import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.CommandLineOptionGroup;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
+import de.unkrig.zz.patch.SubstitutionContentsTransformer.Mode;
 import de.unkrig.zz.patch.diff.DiffParser.Hunk;
 
 /**
@@ -155,6 +156,26 @@ class Main {
      *   <dd>
      *     Execute the preceding file transformation only iff <var>expr</var> evaluates to true. The parameters of the
      *     <var>expr</var> depend on the file transformation (see above).
+     *   </dd>
+     *   <dt>{@code --mode} {@code REPLACEMENT_STRING|CONSTANT|EXPRESSION} (only with "--substitute")</dt>
+     *   <dd>
+     *     Determines how the {@link #setReplacement(String)} is processed:
+     *     <dl>
+     *       <dt>{@code REPLACEMENT_STRING}</dt>
+     *       <dd>
+     *         A JRE <a href="http://docs.oracle.com/javase/7/docs/api/java/util/regex/Matcher.html#appendRepl
+     *acement%28java.lang.StringBuffer,%20java.lang.String%29">replacement string</a>
+     *       </dd>
+     *       <dt>{@code CONSTANT}</dt>
+     *       <dd>
+     *         A constant string - no character (esp. dollar, backslash) has a special meaning
+     *       </dd>
+     *       <dt>{@code EXPRESSION}</dt>
+     *       <dd>
+     *         A <a href="http://commons.unkrig.de/commons-text/apidocs/de/unkrig/commons/text/pattern/Expressio
+     *nMatchReplacer.html#parse-java.lang.String-">Java-like expression</a>
+     *       </dd>
+     *     </dl>
      *   </dd>
      * </dl>
      *
@@ -401,8 +422,8 @@ class Main {
      *   <dd>The index of the occurrence within the document, starting at zero</dd>
      * </dl>
      *
-     * @param substituteConditions [ <var>condition</var> ... ]
-     * @main.commandLineOptionGroup  File-Transformation
+     * @param substituteConditions  [ <var>condition</var> ... ]
+     * @main.commandLineOptionGroup File-Transformation
      */
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
     addSubstitute(
@@ -410,15 +431,16 @@ class Main {
         @RegexFlags(Pattern.MULTILINE) Pattern                       pattern,
         String                                                       replacement,
         SubstituteConditions                                         substituteConditions
-    ) {
+    ) throws ParseException {
         final Expression condition = substituteConditions.result;
 
         ContentsTransformer contentsTransformer = new SubstitutionContentsTransformer(
-            this.inputCharset,  // inputCharset
-            this.outputCharset, // outputCharset
-            pattern,            // pattern
-            replacement,        // replacement
-            (                   // condition
+            this.inputCharset,                    // inputCharset
+            this.outputCharset,                   // outputCharset
+            pattern,                              // pattern
+            substituteConditions.replacementMode, // replacementMode
+            replacement,                          // replacement
+            (                                     // condition
                 condition == Expression.TRUE  ? SubstitutionContentsTransformer.Condition.ALWAYS :
                 condition == Expression.FALSE ? SubstitutionContentsTransformer.Condition.NEVER  :
                 new SubstitutionContentsTransformer.Condition() {
@@ -691,7 +713,19 @@ class Main {
     public static
     class SubstituteConditions extends Conditions {
 
-        public SubstituteConditions() { super("path", "match", "occurrence"); }
+        public Mode replacementMode = Mode.REPLACEMENT_STRING;
+
+		public SubstituteConditions() { super("path", "match", "occurrence"); }
+
+        /**
+         * Evaluate and print the <var>expression</var> each time the preceding file transformation is executed, e.g.
+         * "{@code path + ": Add '" + name + "' from '" + contentsFile + "'"}". The parameters of the
+         * <var>expression</var> depend on the file transformation (see above).
+         */
+        @CommandLineOption public void
+        addMode(SubstitutionContentsTransformer.Mode replacementMode) {
+        	this.replacementMode = replacementMode;
+        }
     }
 
     /**
