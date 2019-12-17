@@ -169,7 +169,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
          * @param occurrence The index of the occurrence within the document, starting at zero
          * @return           Whether the matching text should be replaced, see {@link
          *                   SubstitutionContentsTransformer#SubstitutionContentsTransformer(Charset, Charset, Pattern,
-         *                   Mode, String, Condition)
+         *                   Mode, String, Condition)}
          */
         boolean evaluate(String path, CharSequence match, int occurrence);
 
