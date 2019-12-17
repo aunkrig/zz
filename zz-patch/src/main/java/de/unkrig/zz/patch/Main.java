@@ -159,7 +159,7 @@ class Main {
      *   </dd>
      *   <dt>{@code --mode} {@code REPLACEMENT_STRING|CONSTANT|EXPRESSION} (only with "--substitute")</dt>
      *   <dd>
-     *     Determines how the {@link #setReplacement(String)} is processed:
+     *     Determines how the replacement is processed:
      *     <dl>
      *       <dt>{@code REPLACEMENT_STRING}</dt>
      *       <dd>
