@@ -107,7 +107,8 @@ class Find {
      */
     private Expression expression = Test.TRUE;
 
-    private ConsumerWhichThrows<? super IOException, IOException> exceptionHandler = ConsumerUtil.throwsSubject();
+    private ConsumerWhichThrows<? super IOException, ? extends IOException>
+    exceptionHandler = ConsumerUtil.throwsSubject();
 
     // END CONFIGURATION VARIABLES
 
