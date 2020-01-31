@@ -347,7 +347,7 @@ class AntTask extends Task {
          */
         public void
         setReplacementMode(SubstitutionContentsTransformer.Mode replacementMode) {
-        	this.replacementMode = replacementMode;
+            this.replacementMode = replacementMode;
         }
 
         /**
