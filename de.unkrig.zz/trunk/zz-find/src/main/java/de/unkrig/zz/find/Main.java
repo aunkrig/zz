@@ -605,25 +605,39 @@ class Main {
      * Suppress all messages except errors.
      */
     @CommandLineOption public void
-    setNowarn() { this.levelFilteredPrinter.setNoWarn(); }
+    setNowarn() {
+        this.levelFilteredPrinter.setNoWarn();
+        SimpleLogging.setNoWarn();
+    }
 
     /**
      * Suppress normal output.
      */
     @CommandLineOption public void
-    setQuiet() { this.levelFilteredPrinter.setQuiet(); }
+    setQuiet() {
+        this.levelFilteredPrinter.setQuiet();
+        SimpleLogging.setQuiet();
+    }
 
     /**
      * Print verbose messages.
      */
     @CommandLineOption public void
-    setVerbose() { this.levelFilteredPrinter.setVerbose(); }
+    setVerbose() {
+        this.levelFilteredPrinter.setVerbose();
+        SimpleLogging.setVerbose();
+    }
 
     /**
      * Print verbose and debug messages.
      */
     @CommandLineOption public void
-    setDebug() { this.levelFilteredPrinter.setDebug(); }
+    setDebug() {
+        this.levelFilteredPrinter.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+    }
 
     /**
      * Add logging at level {@code FINE} on logger "{@code de.unkrig}" to STDERR using the "{@code FormatFormatter}"

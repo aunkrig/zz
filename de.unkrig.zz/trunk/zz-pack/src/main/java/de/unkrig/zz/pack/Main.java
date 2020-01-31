@@ -246,25 +246,39 @@ class Main {
      * Suppress all messages except errors.
      */
     @CommandLineOption public void
-    nowarn() { this.levelFilteredPrinter.setNoWarn(); }
+    setNowarn() {
+        this.levelFilteredPrinter.setNoWarn();
+        SimpleLogging.setNoWarn();
+    }
 
     /**
      * Suppress all normal output.
      */
     @CommandLineOption(name = { "q", "quiet" }) public void
-    quiet() { this.levelFilteredPrinter.setQuiet(); }
+    setQuiet() {
+        this.levelFilteredPrinter.setQuiet();
+        SimpleLogging.setQuiet();
+    }
 
     /**
      * Print verbose messages.
      */
     @CommandLineOption public void
-    verbose() { this.levelFilteredPrinter.setVerbose(); }
+    setVerbose() {
+        this.levelFilteredPrinter.setVerbose();
+        SimpleLogging.setVerbose();
+    }
 
     /**
      * Print verbose and debug messages.
      */
     @CommandLineOption public void
-    debug() { this.levelFilteredPrinter.setDebug(); }
+    setDebug() {
+        this.levelFilteredPrinter.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+    }
 
     /**
      * Add logging at level FINE on logger 'de.unkrig' to STDERR using the FormatFormatter and SIMPLE format, or the

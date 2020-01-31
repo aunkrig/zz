@@ -49,6 +49,7 @@ import de.unkrig.commons.util.CommandLineOptions;
 import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.CommandLineOptionGroup;
 import de.unkrig.commons.util.annotation.RegexFlags;
+import de.unkrig.commons.util.logging.SimpleLogging;
 import de.unkrig.zz.diff.Diff.AbsentFileMode;
 import de.unkrig.zz.diff.Diff.DiffMode;
 import de.unkrig.zz.diff.DocumentDiff.LineEquivalence;
@@ -640,7 +641,10 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setNoWarn() { this.levelFilteredPrinter.setNoWarn(); }
+    setNowarn() {
+        this.levelFilteredPrinter.setNoWarn();
+        SimpleLogging.setNoWarn();
+    }
 
     /**
      * Suppress "normal" output; print only errors and warnings.
@@ -648,7 +652,10 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setQuiet() { this.levelFilteredPrinter.setQuiet(); }
+    setQuiet() {
+        this.levelFilteredPrinter.setQuiet();
+        SimpleLogging.setQuiet();
+    }
 
     /**
      * Print verbose messages.
@@ -656,7 +663,10 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setVerbose() { this.levelFilteredPrinter.setVerbose(); }
+    setVerbose() {
+        this.levelFilteredPrinter.setVerbose();
+        SimpleLogging.setVerbose();
+    }
 
     /**
      * Print verbose and debug messages.
@@ -664,5 +674,20 @@ class Main {
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption public void
-    setDebug() { this.levelFilteredPrinter.setDebug(); }
+    setDebug() {
+        this.levelFilteredPrinter.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+    }
+
+    /**
+     * Add logging at level {@code FINE} on logger "{@code de.unkrig}" to STDERR using the {@code FormatFormatter}
+     * and {@code SIMPLE} format, or the given arguments (which are all optional).
+     *
+     * @param spec <var>level</var>:<var>logger</var>:<var>handler</var>:<var>formatter</var>:<var>format</var>
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public static void
+    addLog(String spec) { SimpleLogging.configureLoggers(spec); }
 }

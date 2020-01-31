@@ -650,25 +650,39 @@ class Main {
      * Suppress all messages except errors.
      */
     @CommandLineOption public void
-    noWarn() { this.levelFilteredPrinter.setNoWarn(); }
+    setNowarn() {
+        this.levelFilteredPrinter.setNoWarn();
+        SimpleLogging.setNoWarn();
+    }
 
     /**
      * Suppress normal output.
      */
     @CommandLineOption public void
-    quiet() { this.levelFilteredPrinter.setQuiet(); }
+    setQuiet() {
+        this.levelFilteredPrinter.setQuiet();
+        SimpleLogging.setQuiet();
+    }
 
     /**
      * Print verbose messages.
      */
     @CommandLineOption public void
-    verbose() { this.levelFilteredPrinter.setVerbose(); }
+    setVerbose() {
+        this.levelFilteredPrinter.setVerbose();
+        SimpleLogging.setVerbose();
+    }
 
     /**
      * Print verbose and debug messages.
      */
     @CommandLineOption public void
-    debug() { this.levelFilteredPrinter.setDebug(); }
+    setDebug() {
+        this.levelFilteredPrinter.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+        SimpleLogging.setDebug();
+    }
 
     /**
      * Add logging at level {@code FINE} on logger "{@code de.unkrig}" to STDERR using the "{@code FormatFormatter}"
@@ -715,7 +729,7 @@ class Main {
 
         public Mode replacementMode = Mode.REPLACEMENT_STRING;
 
-		public SubstituteConditions() { super("path", "match", "occurrence"); }
+        public SubstituteConditions() { super("path", "match", "occurrence"); }
 
         /**
          * Evaluate and print the <var>expression</var> each time the preceding file transformation is executed, e.g.
@@ -724,7 +738,7 @@ class Main {
          */
         @CommandLineOption public void
         addMode(SubstitutionContentsTransformer.Mode replacementMode) {
-        	this.replacementMode = replacementMode;
+            this.replacementMode = replacementMode;
         }
     }
 
