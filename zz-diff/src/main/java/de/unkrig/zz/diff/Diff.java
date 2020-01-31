@@ -49,7 +49,6 @@ import de.unkrig.commons.file.contentsprocessing.ContentsProcessings;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessings.ArchiveCombiner;
 import de.unkrig.commons.file.contentsprocessing.ContentsProcessor;
 import de.unkrig.commons.file.fileprocessing.FileProcessings.DirectoryCombiner;
-import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
 import de.unkrig.commons.file.resourceprocessing.ResourceProcessor;
 import de.unkrig.commons.io.InputStreams;
@@ -293,7 +292,13 @@ class Diff extends DocumentDiff {
 
         final NodeWithPath node1;
         try {
-            node1 = dcp.process("", stream1, -1L, -1L, opener);
+            node1 = dcp.process(
+                "",      // path
+                stream1, // inputStream
+                -1L,     // size
+                -1L,     // crc32
+                opener   // opener
+            );
             stream1.close();
         } finally {
             try { stream1.close(); } catch (Exception e) {}
@@ -303,7 +308,7 @@ class Diff extends DocumentDiff {
     }
 
     /**
-     * Notice that the returned {@link FileProcessor} may return {@code null} if, e.g., the file is excluded, or
+     * Notice that the returned {@link ResourceProcessor} may return {@code null} if, e.g., the resource is excluded, or
      * is a directory which can impossibly contain relevant (not-excluded) documents.
      */
     private ResourceProcessor<NodeWithPath>
@@ -743,7 +748,8 @@ class Diff extends DocumentDiff {
 
         DocumentNode(String path) { super(path); }
 
-        @Override @Nullable public SortedSet<NodeWithPath> children() { return null; }
+        @Override @Nullable public SortedSet<NodeWithPath>
+        children() { return null; }
 
         public abstract long
         getSize();
