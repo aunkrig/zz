@@ -54,17 +54,17 @@ import de.unkrig.commons.text.pattern.PatternUtil;
 public
 class SubstitutionContentsTransformer implements ContentsTransformer {
 
-	public enum Mode {
+    public enum Mode {
 
-		/** @see PatternUtil#replacementStringMatchReplacer(String) */
-		REPLACEMENT_STRING,
+        /** @see PatternUtil#replacementStringMatchReplacer(String) */
+        REPLACEMENT_STRING,
 
-		/** @see PatternUtil#constantMatchReplacer(String) */
-		CONSTANT,
+        /** @see PatternUtil#constantMatchReplacer(String) */
+        CONSTANT,
 
-		/** @see ExpressionMatchReplacer#parse(String) */
-		EXPRESSION,
-	}
+        /** @see ExpressionMatchReplacer#parse(String) */
+        EXPRESSION,
+    }
 
     private static final Logger LOGGER = Logger.getLogger(SubstitutionContentsTransformer.class.getName());
 
@@ -90,13 +90,13 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
         String      replacementString,
         Condition   condition
     ) {
-    	this(
-			inputCharset,
-			outputCharset,
-			pattern,
-			PatternUtil.<RuntimeException>replacementStringMatchReplacer(replacementString), // replacer
-			condition
-		);
+        this(
+            inputCharset,
+            outputCharset,
+            pattern,
+            PatternUtil.<RuntimeException>replacementStringMatchReplacer(replacementString), // replacer
+            condition
+        );
     }
 
     /**
@@ -110,23 +110,23 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
      */
     public
     SubstitutionContentsTransformer(
-		Charset     inputCharset,
-		Charset     outputCharset,
-		Pattern     pattern,
-		Mode        replacementMode,
-		String      replacement,
-		Condition   condition
-	) throws ParseException {
-    	this(
-			inputCharset,
-			outputCharset,
-			pattern,
-			SubstitutionContentsTransformer.makeReplacer(replacementMode, replacement), // replacer
-			condition
-		);
+        Charset     inputCharset,
+        Charset     outputCharset,
+        Pattern     pattern,
+        Mode        replacementMode,
+        String      replacement,
+        Condition   condition
+    ) throws ParseException {
+        this(
+            inputCharset,
+            outputCharset,
+            pattern,
+            SubstitutionContentsTransformer.makeReplacer(replacementMode, replacement), // replacer
+            condition
+        );
     }
 
-	/**
+    /**
      * Replaces all matches of the <var>regex</var> according to the <var>replacementString</var>.
      *
      * @param condition                Is checked for each match, and determines whether or not the match is replaced
@@ -134,17 +134,17 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
      */
     public
     SubstitutionContentsTransformer(
-		Charset                                                              inputCharset,
-		Charset                                                              outputCharset,
-		Pattern                                                              pattern,
-		FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer,
-		Condition                                                            condition
-	) {
-    	this.inputCharset  = inputCharset;
-    	this.outputCharset = outputCharset;
-    	this.pattern       = pattern;
-    	this.replacer      = replacer;
-    	this.condition     = condition;
+        Charset                                                              inputCharset,
+        Charset                                                              outputCharset,
+        Pattern                                                              pattern,
+        FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer,
+        Condition                                                            condition
+    ) {
+        this.inputCharset  = inputCharset;
+        this.outputCharset = outputCharset;
+        this.pattern       = pattern;
+        this.replacer      = replacer;
+        this.condition     = condition;
     }
 
     /**
@@ -238,27 +238,27 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
         switch (mode) {
 
         case REPLACEMENT_STRING:
-        	return PatternUtil.<RuntimeException>replacementStringMatchReplacer(s);
+            return PatternUtil.<RuntimeException>replacementStringMatchReplacer(s);
 
         case CONSTANT:
-        	return PatternUtil.constantMatchReplacer(s);
+            return PatternUtil.constantMatchReplacer(s);
 
         case EXPRESSION:
-        	return ExpressionMatchReplacer.parse(s);
+            return ExpressionMatchReplacer.parse(s);
 
-    	default:
-    		throw new AssertionError(mode);
+        default:
+            throw new AssertionError(mode);
         }
-	}
+    }
 
-	private static FunctionWhichThrows<MatchResult, String, ? extends RuntimeException>
-	conditional(
-		final String                                                               path,
-		final FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer,
-		final Condition                                                            condition
-	) {
+    private static FunctionWhichThrows<MatchResult, String, ? extends RuntimeException>
+    conditional(
+        final String                                                               path,
+        final FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer,
+        final Condition                                                            condition
+    ) {
 
-		if (condition == SubstitutionContentsTransformer.Condition.ALWAYS) return replacer;
+        if (condition == SubstitutionContentsTransformer.Condition.ALWAYS) return replacer;
 
         return new Function<MatchResult, String>() {
 
@@ -269,16 +269,16 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
                 assert matchResult != null;
 
                 if (!condition.evaluate(
-            		path,                // path
-            		matchResult.group(), // match
-            		this.occurrence++    // occurrence
-        		)) return null;
+                    path,                // path
+                    matchResult.group(), // match
+                    this.occurrence++    // occurrence
+                )) return null;
 
                 return replacer.call(matchResult);
             }
 
-			@Override public String
-			toString() { return "[if (" + condition + ") then (" + replacer + ")]"; }
+            @Override public String
+            toString() { return "[if (" + condition + ") then (" + replacer + ")]"; }
         };
-	}
+    }
 }
