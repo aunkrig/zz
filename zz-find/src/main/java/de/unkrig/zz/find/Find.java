@@ -1449,12 +1449,12 @@ class Find {
             try {
 
                 CompressUtil.processStream(
-                    path,
-                    is,
-                    this.lookIntoFormat,
-                    archiveHandler,
-                    compressorHandler,
-                    normalContentsHandler
+                    path,                 // path
+                    is,                   // inputStream
+                    this.lookIntoFormat,  // lookIntoFormat
+                    archiveHandler,       // archiveHandler
+                    compressorHandler,    // compressorHandler
+                    normalContentsHandler // normalContentsHandler
                 );
                 is.close();
             } finally {
