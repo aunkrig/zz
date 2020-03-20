@@ -83,19 +83,19 @@ class Grep {
         /** For each match, print the file name, a colon, a space and the matched line. */
         NORMAL,
 
-        /** Print only file name/path, colon, and match count. */
+        /** Print only file name/path, colon, and match count. (Implements {@code "-c"}.) */
         COUNT,
 
-        /** Print only the file name/path iff the document contains at least one match. */
+        /** Print only the file name/path iff the document contains at least one match. (Implements {@code "-l"}.) */
         FILES_WITH_MATCHES,
 
-        /** Print only the file name/path iff the documentdoes not contain any matches. */
+        /** Print only the file name/path iff the documentdoes not contain any matches. (Implements {@code "-L"}.) */
         FILES_WITHOUT_MATCH,
 
-        /** Print only the matched parts; one line per match. */
+        /** Print only the matched parts; one line per match. (Implements {@code "-o"}.) */
         ONLY_MATCHING,
 
-        /** Do not print the matches. */
+        /** Do not print the matches. (Implements {@code "-q"}.) */
         QUIET,
     }
 
@@ -195,7 +195,7 @@ class Grep {
     setOperation(Operation value) { this.operation = value; }
 
     /**
-     * Stop reading after <var>n</var> matching lines.
+     * Stop reading the current document after <var>n</var> matches.
      */
     public void
     setMaxCount(int n) { this.maxCount = n; }
@@ -285,19 +285,25 @@ class Grep {
     // BEGIN SEARCH RESULT VARIABLES
 
     /**
-     * Whether the last invocation of {@link #grep()} yielded one or more matches.
+     * The number of matches yielded by all invocations of {@link #grep()}.
      */
-    boolean linesSelected;
+    int totalMatchCount;
 
     // END SEARCH RESULT VARIABLES
 
     // BEGIN SEARCH RESULT GETTERS
 
     /**
-     * Whether the invocation of the {@link #contentsProcessor()} yielded one or more matches.
+     * Whether any of the invocations of {@link #grep()} yielded any matches.
      */
     public boolean
-    getLinesSelected() { return this.linesSelected; }
+    getLinesSelected() { return this.totalMatchCount > 0; }
+
+    /**
+     * @return The number of matches yielded by all invocations of {@link #grep()}
+     */
+    public int
+    getTotalMatchCount() { return this.totalMatchCount; }
 
     // END SEARCH RESULT GETTERS
 
@@ -364,11 +370,6 @@ class Grep {
                     String line = Grep.readLine(pbr);
                     if (line == null) break;
 
-                    // Are there any context lines to print after a preceeding match?
-                    if (afterContextLinesToPrint > 0) {
-                        Printers.info(this.composeMatch(path, lineNumber, byteOffset, line, '-'));
-                    }
-
                     boolean lineContainsMatches = false;
                     MATCHES_IN_LINE:
                     for (Pattern pattern : patterns) {
@@ -396,12 +397,17 @@ class Grep {
 
                     // Per line:
                     if (lineContainsMatches ^ Grep.this.inverted) {
-                        Grep.this.linesSelected = true;
                         matchCountInDocument++;
+                        Grep.this.totalMatchCount++;
 
                         switch (Grep.this.operation) {
 
                         case NORMAL:
+                            if (
+                                beforeContext.size() == Grep.this.beforeContext
+                                && afterContextLinesToPrint == 0
+                                && Grep.this.totalMatchCount > 1
+                            ) Printers.info("--");
                             while (!beforeContext.isEmpty()) Printers.info(beforeContext.remove());
                             Printers.info(this.composeMatch(path, lineNumber, byteOffset, line, ':'));
                             afterContextLinesToPrint = Grep.this.afterContext + 1;
@@ -419,6 +425,12 @@ class Grep {
                         }
 
                         if (matchCountInDocument >= Grep.this.maxCount) break;
+                    } else {
+
+                        // Are there any context lines to print after a preceeding match?
+                        if (afterContextLinesToPrint > 0) {
+                            Printers.info(this.composeMatch(path, lineNumber, byteOffset, line, '-'));
+                        }
                     }
 
                     // Keep a copy of the current line in case a future match would like to print "before context".
