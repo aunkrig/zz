@@ -234,7 +234,7 @@ class Main {
             FileProcessings.process(files, this.grep.fileProcessor(true));
         }
 
-        if (!this.grep.linesSelected) System.exit(1);
+        if (!this.grep.getLinesSelected()) System.exit(1);
     }
 
     /**
