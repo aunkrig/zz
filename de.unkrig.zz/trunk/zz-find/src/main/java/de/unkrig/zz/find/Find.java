@@ -27,6 +27,8 @@
 package de.unkrig.zz.find;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1326,19 +1328,20 @@ class Find {
 
         return Mappings.propertiesOf(new Object() {
 
-            public String  getAbsolutePath()                     { return file.getAbsolutePath();        }
-            public String  getCanonicalPath() throws IOException { return file.getCanonicalPath();       }
-            public File    getFile()                             { return file;                          }
-            public Date    getLastModifiedDate()                 { return new Date(file.lastModified()); }
-            public String  getName()                             { return file.getName();                }
-            public String  getPath()                             { return path;                          }
-            public long    getSize()                             { return file.length();                 }
-            public boolean isDirectory()                         { return file.isDirectory();            }
-            public boolean isFile()                              { return file.isFile();                 }
-            public boolean isHidden()                            { return file.isHidden();               }
-            public boolean isReadable()                          { return file.canRead();                }
-            public boolean isWritable()                          { return file.canWrite();               }
-            public boolean isExecutable()                        { return file.canExecute();             }
+            public String      getAbsolutePath()                          { return file.getAbsolutePath();        }
+            public String      getCanonicalPath() throws IOException      { return file.getCanonicalPath();       }
+            public File        getFile()                                  { return file;                          }
+            public Date        getLastModifiedDate()                      { return new Date(file.lastModified()); }
+            public String      getName()                                  { return file.getName();                }
+            public String      getPath()                                  { return path;                          }
+            public long        getSize()                                  { return file.length();                 }
+            public boolean     isDirectory()                              { return file.isDirectory();            }
+            public boolean     isFile()                                   { return file.isFile();                 }
+            public boolean     isHidden()                                 { return file.isHidden();               }
+            public boolean     isReadable()                               { return file.canRead();                }
+            public boolean     isWritable()                               { return file.canWrite();               }
+            public boolean     isExecutable()                             { return file.canExecute();             }
+            public InputStream inputStream() throws FileNotFoundException { return new FileInputStream(file);     }
 
             @Override public String toString() { return "File \"" + path + "\""; }
         });
