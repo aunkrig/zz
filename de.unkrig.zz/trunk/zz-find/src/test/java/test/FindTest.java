@@ -33,15 +33,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.junit.Test;
 
 import de.unkrig.commons.file.FileUtil;
 import de.unkrig.commons.junit4.AssertRegex;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
+import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.ProducerUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.text.AbstractPrinter;
+import de.unkrig.commons.text.Printers;
 import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
@@ -209,7 +213,7 @@ class FindTest extends TestCase {
     }
 
     @Test public void
-    testPrint() throws Exception {
+    testEcho1() throws Exception {
 
         // SUPPRESS CHECKSTYLE LineLength:27
         FindTest.assertFindOutputMatches(
@@ -239,6 +243,71 @@ class FindTest extends TestCase {
             "name=file3.Z path=files\\\\dir1\\\\dir2\\\\file3.Z type=compressed-file absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=\\d+ isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat=gz depth=3",
             "name=file3.Z% path=files\\\\dir1\\\\dir2\\\\file3.Z% type=normal-contents absolutePath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z canonicalPath=\\S+files\\\\dir1\\\\dir2\\\\file3.Z lastModifiedDate=... ... .. ..:..:.. \\w+ .... size=3 isDirectory=false isFile=true isHidden=false isReadable=true isWritable=true isExecutable=true archiveFormat= compressionFormat=gz depth=4"
         );
+    }
+
+    @Test public void
+    testExpressionVariables() throws Exception {
+
+        Find find = new Find();
+        find.setExpression(new Find.Expression() {
+
+            @Override public boolean
+            evaluate(Mapping<String, Object> properties) {
+
+                @SuppressWarnings("unchecked") Map<String, Object> map = (Map<String, Object>) properties.get("_map");
+
+                // Sort the map by key value to make equality assertions deterministic.
+                map = new TreeMap<>(map);
+
+                Printers.info(map.toString());
+
+                return true;
+            }
+        });
+
+        AssertRegex.assertMatches(Arrays.asList(new String[] { // SUPPRESS CHECKSTYLE LineLength:18
+            "\\{\\$PRUNE=\\[Z@\\w+, depth=0, file=C:\\\\dev\\\\workspaces\\\\zz\\\\zz-find\\\\files, name=files, path=files, type=directory\\}",
+            "\\{\\$PRUNE=\\[Z@\\w+, depth=1, file=C:\\\\dev\\\\workspaces\\\\zz\\\\zz-find\\\\files\\\\dir1, name=dir1, path=files\\\\dir1, type=directory\\}",
+            "\\{\\$PRUNE=\\[Z@\\w+, depth=2, file=C:\\\\dev\\\\workspaces\\\\zz\\\\zz-find\\\\files\\\\dir1\\\\dir2, name=dir2, path=files\\\\dir1\\\\dir2, type=directory\\}",
+            "\\{\\$PRUNE=false, archiveFormat=zip, depth=3, path=files\\\\dir1\\\\dir2\\\\file.zip, type=archive-file\\}",
+            "\\{archiveFormat=zip, crc=2099902701, depth=4, inputStream=java.io.BufferedInputStream@\\w+, isDirectory=false, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=/dir1/dir2/file1, path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1, size=3, type=normal-contents\\}",
+            "\\{archiveFormat=zip, crc=0, depth=4, inputStream=java.io.BufferedInputStream@\\w+, isDirectory=false, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file2, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2, size=0, type=normal-contents\\}",
+            "\\{archiveFormat=zip, crc=0, depth=4, isDirectory=true, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/dir5, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5, size=0, type=directory-entry\\}",
+            "\\{compressionFormat=gz, depth=4, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z, type=compressed-de.unkrig.commons.lang.protocol.ProducerUtil\\$12@\\w+\\}",
+            "\\{archiveFormat=zip, compressionFormat=gz, crc=0, depth=5, inputStream=java.io.BufferedInputStream@\\w+, isDirectory=false, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file3.Z%, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%, size=3, type=normal-contents\\}",
+            "\\{\\$PRUNE=false, archiveFormat=zip, depth=4, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip, type=archive-contents\\}",
+            "\\{archiveFormat=zip, crc=0, depth=5, inputStream=java.io.BufferedInputStream@\\w+, isDirectory=false, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=/dir1/dir2/file1, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1, size=3, type=normal-contents\\}",
+            "\\{archiveFormat=zip, crc=0, depth=5, inputStream=java.io.BufferedInputStream@\\w+, isDirectory=false, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file2, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2, size=0, type=normal-contents\\}",
+            "\\{archiveFormat=zip, crc=-1, depth=5, isDirectory=true, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/dir5, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5, size=-1, type=directory-entry\\}",
+            "\\{compressionFormat=gz, depth=5, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z, type=compressed-de.unkrig.commons.lang.protocol.ProducerUtil\\$12@\\w+\\}",
+            "\\{archiveFormat=zip, compressionFormat=gz, crc=0, depth=6, inputStream=java.io.BufferedInputStream@\\w+, isDirectory=false, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file3.Z%, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%, size=3, type=normal-contents\\}",
+            "\\{crc=0, depth=3, inputStream=de.unkrig.commons.io.InputStreams\\$9@\\w+, name=file1, path=files\\\\dir1\\\\dir2\\\\file1, size=0, type=normal-file, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file1\\}",
+            "\\{compressionFormat=gz, depth=3, path=files\\\\dir1\\\\dir2\\\\file3.Z, type=compressed-de.unkrig.commons.lang.protocol.ProducerUtil\\$12@\\w+\\}",
+            "\\{compressionFormat=gz, crc=0, depth=4, inputStream=java.io.BufferedInputStream@\\w+, name=file3.Z%, path=files\\\\dir1\\\\dir2\\\\file3.Z%, size=3, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file3.Z\\}"
+        }), FindTest.find(find));
+
+//        FindTest.assertFindOutputMatches(
+//            new Find(),
+//            new String[] { "-echo", "${_map}" },
+//            "\\{path=files, file=C:\\\\dev\\\\workspaces\\\\zz\\\\zz-find\\\\files, depth=0, name=files, \\$PRUNE=\\[Z@\\w+, type=directory\\}",
+//            "\\{path=files\\\\dir1, file=C:\\\\dev\\\\workspaces\\\\zz\\\\zz-find\\\\files\\\\dir1, depth=1, name=dir1, \\$PRUNE=\\[Z@\\w+, type=directory\\}",
+//            "\\{path=files\\\\dir1\\\\dir2, file=C:\\\\dev\\\\workspaces\\\\zz\\\\zz-find\\\\files\\\\dir1\\\\dir2, depth=2, name=dir2, \\$PRUNE=\\[Z@\\w+, type=directory\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file.zip, depth=3, archiveFormat=zip, \\$PRUNE=false, type=archive-file\\}",
+//            "\\{lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1, depth=4, size=3, crc=-?\\d{7,}, SIZE_UNKNOWN=-1, name=file.zip, lastModified=-?\\d{7,}, isDirectory=false\\}",
+//            "\\{lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2, depth=4, size=0, crc=-?\\d{7,}, SIZE_UNKNOWN=-1, name=file.zip, lastModified=-?\\d{7,}, isDirectory=false\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5, depth=4, size=0, crc=-1, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, name=dir3/dir4/dir5, SIZE_UNKNOWN=-1, lastModified=-?\\d{7,}, type=directory-entry, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, isDirectory=true\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z, depth=4, compressionFormat=gz, type=compressed-de.unkrig.commons.lang.protocol.ProducerUtil\\$12@\\w+\\}",
+//            "\\{lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, compressionFormat=gz, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%, depth=5, size=3, crc=-?\\d{7,}, SIZE_UNKNOWN=-1, name=file.zip%, lastModified=-?\\d{7,}, isDirectory=false\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip, depth=4, archiveFormat=zip, \\$PRUNE=false, type=archive-contents\\}",
+//            "\\{lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1, depth=5, size=546, crc=-?\\d{7,}, SIZE_UNKNOWN=-1, name=file.zip, lastModified=-?\\d{7,}, isDirectory=false\\}",
+//            "\\{lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2, depth=5, size=546, crc=-?\\d{7,}, SIZE_UNKNOWN=-1, name=file.zip, lastModified=-?\\d{7,}, isDirectory=false\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5, depth=5, size=-1, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, crc=-1, archiveFormat=zip, SIZE_UNKNOWN=-1, name=dir3/dir4/dir5, lastModified=-?\\d{7,}, type=directory-entry, isDirectory=true, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z, depth=5, compressionFormat=gz, type=compressed-de.unkrig.commons.lang.protocol.ProducerUtil\\$12@\\w+\\}",
+//            "\\{lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, archiveFormat=zip, compressionFormat=gz, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%, depth=6, size=3, crc=-?\\d{7,}, SIZE_UNKNOWN=-1, name=file.zip%, lastModified=-?\\d{7,}, isDirectory=false\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file1, depth=3, size=0, crc=0, name=file1, inputStream=de.unkrig.commons.io.InputStreams\\$9@\\w+, type=normal-file, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file1\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file3.Z, depth=3, compressionFormat=gz, type=compressed-de.unkrig.commons.lang.protocol.ProducerUtil\\$12@\\w+\\}",
+//            "\\{path=files\\\\dir1\\\\dir2\\\\file3.Z%, depth=4, size=3, crc=-?\\d{7,}, name=file3.Z%, compressionFormat=gz, inputStream=java.io.BufferedInputStream@\\w+, type=normal-contents, url=file:/C:/dev/workspaces/zz/zz-find/files/dir1/dir2/file3.Z\\}"
+//        );
     }
 
     @Test public void
@@ -397,7 +466,7 @@ class FindTest extends TestCase {
         // SUPPRESS CHECKSTYLE LineLength|Wrap:6
         FindTest.assertFindOutputMatches(
             new Find(),
-            new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" },
+            new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" }, // SUPPRESS CHECKSTYLE LineLength:3
             "files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",          "250cf8b51c773f3f8dc8b4be867a9a02", // The MD5 of "456"
             "files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%", "68053af2923e00204c3ca7c6a3150cf7", // The MD5 of "789"
             "files\\\\dir1\\\\dir2\\\\file3.Z%",                             "202cb962ac59075b964b07152d234b70"  // The MD5 of "123"
@@ -460,6 +529,12 @@ class FindTest extends TestCase {
 
         Parser parser = new Parser(ProducerUtil.fromElements(expression), System.out);
         find.setExpression(parser.parse());
+
+        return FindTest.find(find);
+    }
+
+    private static List<String>
+    find(final Find find) throws IOException {
 
         List<String> lines = new ArrayList<String>();
         AbstractPrinter.getContextPrinter().redirectInfo(
