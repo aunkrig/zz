@@ -27,14 +27,13 @@
 package de.unkrig.zz.find;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.net.URISyntaxException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -42,9 +41,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Formatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -69,11 +72,14 @@ import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.ProcessUtil;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
 import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
+import de.unkrig.commons.lang.protocol.Function;
 import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.Mappings;
+import de.unkrig.commons.lang.protocol.NoException;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.Producer;
+import de.unkrig.commons.lang.protocol.ProducerUtil;
 import de.unkrig.commons.lang.protocol.RunnableUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
@@ -83,6 +89,7 @@ import de.unkrig.commons.text.expression.ExpressionEvaluator;
 import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
+import de.unkrig.commons.util.collections.MapUtil;
 import de.unkrig.jdisasm.Disassembler;
 
 /**
@@ -91,11 +98,11 @@ import de.unkrig.jdisasm.Disassembler;
 public
 class Find {
 
-    private static final String PRUNE_PROPERTY_NAME = "$PRUNE";
-
     static { AssertionUtil.enableAssertionsForThisClass(); }
 
     private static final Logger LOGGER = Logger.getLogger(Find.class.getName());
+
+    private static final String PRUNE_PROPERTY_NAME = "$PRUNE";
 
     // BEGIN CONFIGURATION VARIABLES
 
@@ -199,7 +206,7 @@ class Find {
     public
     interface Expression extends Predicate<Mapping<String, Object>> {
 
-        // SUPPRESS CHECKSTYLE LineLength:26
+        // SUPPRESS CHECKSTYLE LineLength:27
         /**
          * Evaluates to {@code true} or {@code false}, depending on the <var>properties</var>:
          * <dl>
@@ -725,9 +732,9 @@ class Find {
                         .evaluate(argExpression, properties)
                     );
                 } catch (ParseException pe) {
-                    throw ExceptionUtil.wrap("Parsing '" + argExpression + "'", pe, RuntimeException.class);
+                    throw ExceptionUtil.wrap("Parsing '-printf " + argExpression + "'", pe, RuntimeException.class);
                 } catch (EvaluationException ee) {
-                    throw ExceptionUtil.wrap("Evaluating '" + argExpression + "'", ee, RuntimeException.class);
+                    throw ExceptionUtil.wrap("Evaluating '-printf " + argExpression + "'", ee, RuntimeException.class);
                 }
             }
 
@@ -1108,19 +1115,7 @@ class Find {
 
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
-
-            Checksum cs = this.checksumType.newChecksum();
-
-            InputStream is = Mappings.getNonNull(properties, "inputStream", InputStream.class);
-
-            try {
-                ChecksumAction.updateAll(cs, is);
-            } catch (IOException ioe) {
-                throw ExceptionUtil.wrap("Running '-checksum' on '" + properties + "'", ioe, RuntimeException.class);
-            }
-
-            Printers.info(Long.toHexString(cs.getValue()));
-
+            Printers.info(Long.toHexString(Find.checksum(properties, this.checksumType.newChecksum())));
             return true;
         }
 
@@ -1200,17 +1195,16 @@ class Find {
 
         if (this.maxDepth < 0) return;
 
-        this.findInStream("-", System.in, Mappings.<String, Object>mapping(
+        final Map<String, Producer<Object>> properties = new HashMap<String, Producer<Object>>();
+        properties.put("isDirectory",      ProducerUtil.constantProducer(false));
+        properties.put("isExecutable",     ProducerUtil.constantProducer(false));
+        properties.put("isReadable",       ProducerUtil.constantProducer(true));
+        properties.put("isWritable",       ProducerUtil.constantProducer(false));
+        properties.put("lastModifiedDate", ProducerUtil.constantProducer(new Date()));
+        properties.put("path",             ProducerUtil.constantProducer("-"));
+        properties.put("size",             ProducerUtil.constantProducer(-1L));
 
-            // SUPPRESS CHECKSTYLE Wrap:7
-            "isDirectory",      false,
-            "isExecutable",     false,
-            "isReadable",       true,
-            "isWritable",       false,
-            "lastModifiedDate", new Date(),
-            "path",             "-",
-            "size",             -1L
-        ), 0);
+        this.findInStream("-", System.in, properties, 0);
     }
 
     /**
@@ -1255,12 +1249,15 @@ class Find {
                 run() {
 
                     // Evaluate the FIND expression for the directory.
-                    Find.this.evaluateExpression(Mappings.augment(
-                        Find.fileProperties(directoryPath, directory),
-                        "type",                   "directory", // SUPPRESS CHECKSTYLE Wrap:2
-                        "depth",                  currentDepth,
-                        Find.PRUNE_PROPERTY_NAME, prune // <= The "-prune" action will potentially change this value
-                    ));
+                    Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                    properties2.put("type",                   ProducerUtil.constantProducer("directory"));
+                    properties2.put("name",                   ProducerUtil.constantProducer(directory.getName()));
+                    properties2.put("path",                   ProducerUtil.constantProducer(directoryPath));
+                    properties2.put("file",                   ProducerUtil.constantProducer(directory));
+                    properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
+                    properties2.put(Find.PRUNE_PROPERTY_NAME, ProducerUtil.constantProducer(prune)); // <= The "-prune" action will potentially change this value
+
+                    Find.this.evaluateExpression(properties2);
                 }
             },
             new RunnableWhichThrows<IOException>() {
@@ -1306,82 +1303,6 @@ class Find {
         );
     }
 
-    /**
-     * Returns a mapping of all relevant properties of the given {@code file}.
-     * <dl>
-     *   <dt>{@code "absolutePath"}:</dt><dd>{@code String}</dd>
-     *   <dt>{@code "canonicalPath"}:</dt><dd>{@code String}</dd>
-     *   <dt>{@code "lastModifiedDate"}:</dt><dd>{@link Date}</dd>
-     *   <dt>{@code "name"}:</dt><dd>{@code String}</dd>
-     *   <dt>{@code "path"}:</dt><dd>{@code String}</dd>
-     *   <dt>{@code "size"}:</dt><dd>{@code long}</dd>
-     *   <dt>{@code "isDirectory"}:</dt><dd>{@code boolean}</dd>
-     *   <dt>{@code "isFile"}:</dt><dd>{@code boolean}</dd>
-     *   <dt>{@code "isHidden"}:</dt><dd>{@code boolean}</dd>
-     *   <dt>{@code "isReadable"}:</dt><dd>{@code boolean}</dd>
-     *   <dt>{@code "isWritable"}:</dt><dd>{@code boolean}</dd>
-     *   <dt>{@code "isExecutable"}:</dt><dd>{@code boolean}</dd>
-     *  </dl>
-     */
-    @SuppressWarnings("unused") public static Mapping<String, Object>
-    fileProperties(final String path, final File file) {
-
-        return Mappings.propertiesOf(new Object() {
-
-            public String      getAbsolutePath()                          { return file.getAbsolutePath();        }
-            public String      getCanonicalPath() throws IOException      { return file.getCanonicalPath();       }
-            public File        getFile()                                  { return file;                          }
-            public Date        getLastModifiedDate()                      { return new Date(file.lastModified()); }
-            public String      getName()                                  { return file.getName();                }
-            public String      getPath()                                  { return path;                          }
-            public long        getSize()                                  { return file.length();                 }
-            public boolean     isDirectory()                              { return file.isDirectory();            }
-            public boolean     isFile()                                   { return file.isFile();                 }
-            public boolean     isHidden()                                 { return file.isHidden();               }
-            public boolean     isReadable()                               { return file.canRead();                }
-            public boolean     isWritable()                               { return file.canWrite();               }
-            public boolean     isExecutable()                             { return file.canExecute();             }
-            public InputStream inputStream() throws FileNotFoundException { return new FileInputStream(file);     }
-
-            @Override public String toString() { return "File \"" + path + "\""; }
-        });
-    }
-
-    @SuppressWarnings("unused") public static Mapping<String, Object>
-    resourceProperties(final String path, final URL resource) {
-
-        try {
-            return Mappings.augment(
-                Find.fileProperties(path, new File(resource.toURI())),
-                "type", "file" // SUPPRESS CHECKSTYLE Wrap
-            );
-        } catch (URISyntaxException e) {
-            throw new AssertionError(e);
-        } catch (IllegalArgumentException iae) {
-
-            // "resource" does not designate a FILE resource.
-            ;
-        }
-
-        return Mappings.propertiesOf(new Object() {
-
-            public String getType()         { return resource.getProtocol() + "-resource"; }
-            public String getAuthority()    { return resource.getAuthority();              }
-            public int    getDefaultPort()  { return resource.getDefaultPort();            }
-            public String getExternalForm() { return resource.toExternalForm();            }
-            public String getFile()         { return resource.getFile();                   }
-            public String getHost()         { return resource.getHost();                   }
-            public String getPath()         { return path;                                 }
-            public int    getPort()         { return resource.getPort();                   }
-            public String getProtocol()     { return resource.getProtocol();               }
-            public String getQuery()        { return resource.getQuery();                  }
-            public String getRef()          { return resource.getRef();                    }
-            public String getUserInfo()     { return resource.getUserInfo();               }
-
-            @Override public String toString() { return "Resource \"" + path + "\""; }
-        });
-    }
-
     public static de.unkrig.commons.text.expression.Expression
     parseExt(String spec) {
 
@@ -1418,11 +1339,18 @@ class Find {
 
         // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
         // handle directories, only normal files!)
+        String type, name = null;
         {
             File file = ResourceProcessings.isFile(resource);
-            if (file != null && file.isDirectory()) {
-                this.findInDirectory(path, file, currentDepth);
-                return;
+            if (file != null) {
+                if (file.isDirectory()) {
+                    this.findInDirectory(path, file, currentDepth);
+                    return;
+                }
+                type = "file";
+                name = file.getName();
+            } else {
+                type = resource.getProtocol() + "-resource";
             }
         }
 
@@ -1430,7 +1358,22 @@ class Find {
         CompressorHandler<Void>     compressorHandler;
         NormalContentsHandler<Void> normalContentsHandler;
         {
-            Mapping<String, Object> resourceProperties = Find.resourceProperties(path, resource);
+//            Mapping<String, Object> resourceProperties = Find.resourceProperties(path, resource);
+
+            Map<String, Producer<Object>> resourceProperties = new HashMap<String, Producer<Object>>();
+            if (name != null) resourceProperties.put("name",  ProducerUtil.constantProducer(name));
+            resourceProperties.put("url",  ProducerUtil.constantProducer(resource));
+            resourceProperties.put("path", ProducerUtil.constantProducer(path));
+            resourceProperties.put("type", ProducerUtil.constantProducer(type));
+            resourceProperties.put("crc",  () -> {
+                final CRC32 cs = new java.util.zip.CRC32();
+                try (InputStream is = resource.openConnection().getInputStream()) {
+                    ChecksumAction.updateAll(cs, is);
+                } catch (IOException ioe) {
+                    throw ExceptionUtil.wrap("Computing CRC of \"" + resource + "\"", ioe, RuntimeException.class);
+                }
+                return (int) cs.getValue();
+            });
 
             archiveHandler        = this.archiveHandler(path, resourceProperties, currentDepth);
             compressorHandler     = this.compressorHandler(path, resourceProperties, currentDepth);
@@ -1468,17 +1411,15 @@ class Find {
 
     private void
     findInStream(
-        final String            path,
-        InputStream             inputStream,
-        Mapping<String, Object> streamProperties,
-        final int               currentDepth
+        final String                  path,
+        InputStream                   inputStream,
+        Map<String, Producer<Object>> streamProperties,
+        final int                     currentDepth
     ) throws IOException {
 
-        streamProperties = Mappings.override(
-            streamProperties,
-            "type", "contents", // SUPPRESS CHECKSTYLE Wrap:1
-            "path", path
-        );
+        streamProperties = new HashMap<String, Producer<Object>>(streamProperties);
+        streamProperties.put("type", ProducerUtil.constantProducer("contents"));
+        streamProperties.put("path", ProducerUtil.constantProducer(path));
 
         try {
             CompressUtil.processStream(
@@ -1509,7 +1450,7 @@ class Find {
     }
 
     private CompressorHandler<Void>
-    compressorHandler(final String path, final Mapping<String, Object> properties, final int currentDepth) {
+    compressorHandler(final String path, final Map<String, Producer<Object>> properties, final int currentDepth) {
 
         return new CompressorHandler<Void>() {
 
@@ -1529,13 +1470,13 @@ class Find {
                             // Evaluate the FIND expression for the compressed resource.
                             // Notice that we don't define an "inputStream" property, because otherwise we couldn't
                             // process the CONTENTS of the compressed resource.
-                            Find.this.evaluateExpression(Mappings.override(
-                                properties,
-                                "type",              "compressed-" + properties.get("type"), // SUPPRESS CHECKSTYLE Wrap|LineLength:3
-                                "path",              path,
-                                "compressionFormat", compressionFormat,
-                                "depth",             currentDepth
-                            ));
+                            Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                            properties2.put("type",              ProducerUtil.constantProducer("compressed-" + properties.get("type")));
+                            properties2.put("path",              ProducerUtil.constantProducer(path));
+                            properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
+                            properties2.put("depth",             ProducerUtil.constantProducer(currentDepth));
+
+                            Find.this.evaluateExpression(properties2);
                         }
                     },
                     new RunnableWhichThrows<IOException>() {
@@ -1545,17 +1486,20 @@ class Find {
 
                             // Process the compressed resource's contents.
                             if (currentDepth < Find.this.maxDepth) {
-                                Object name = properties.get("name");
+                                Producer<Object> vg = properties.get("name");
+                                assert vg != null;
+                                Object name = vg.produce();
                                 assert name != null;
+
+                                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>(properties);
+                                properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
+                                properties2.put("name",              ProducerUtil.constantProducer(name + "%"));
+                                properties2.put("size",              ProducerUtil.constantProducer(-1L));
+
                                 Find.this.findInStream(
                                     path + '%',
                                     compressorInputStream,
-                                    Mappings.override(
-                                        properties,
-                                        "compressionFormat", compressionFormat, // SUPPRESS CHECKSTYLE Wrap:3
-                                        "name",              name + "%",
-                                        "size",              -1L
-                                    ),
+                                    properties2,
                                     currentDepth + 1
                                 );
                             }
@@ -1569,7 +1513,7 @@ class Find {
     }
 
     private ArchiveHandler<Void>
-    archiveHandler(final String path, final Mapping<String, Object> properties, final int currentDepth) {
+    archiveHandler(final String path, final Map<String, Producer<Object>> properties, final int currentDepth) {
 
         return new ArchiveHandler<Void>() {
 
@@ -1585,15 +1529,16 @@ class Find {
 
                         @Override public void
                         run() {
-
                             // Evaluate the FIND expression for the archive resource.
-                            Find.this.evaluateExpression(Mappings.override(
-                                properties,
-                                "type",                   "archive-" + properties.get("type"), // SUPPRESS CHECKSTYLE Wrap|LineLength:3
-                                "archiveFormat",          archiveFormat,
-                                "depth",                  currentDepth,
-                                Find.PRUNE_PROPERTY_NAME, prune[0] // <= The "-prune" action will potentially change this value
-                            ));
+                            Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                            properties2.put("type",                   ProducerUtil.constantProducer("archive-" + properties.get("type").produce()));
+                            properties2.put("path",                   ProducerUtil.constantProducer(path));
+                            properties2.put("archiveFormat",          ProducerUtil.constantProducer(archiveFormat));
+                            properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
+                            properties2.put(Find.PRUNE_PROPERTY_NAME, new Producer<Object>() {
+                                @Override @Nullable public Object produce() throws NoException { return prune[0]; }
+                            });
+                            Find.this.evaluateExpression(properties2);
                         }
                     },
                     new RunnableWhichThrows<IOException>() {
@@ -1613,26 +1558,39 @@ class Find {
                                 String entryName = ArchiveFormatFactory.normalizeEntryName(ae.getName());
                                 String entryPath = path + '!' + entryName;
 
+                                Producer<Object> crcGetter = Find.methodPropertyGetter(ae, "getCrc");
+                                if (crcGetter == null) crcGetter = ProducerUtil.constantProducer(-1);
+
+                                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                                properties2.put("lastModifiedDate", ProducerUtil.constantProducer(ae.getLastModifiedDate())); // SUPPRESS CHECKSTYLE LineLength:1
+                                properties2.put("lastModified",     ProducerUtil.constantProducer(ae.getLastModifiedDate().getTime()));
+                                properties2.put("name",             ProducerUtil.constantProducer(ae.getName()));
+                                properties2.put("size",             ProducerUtil.constantProducer(ae.getSize()));
+                                properties2.put("isDirectory",      ProducerUtil.constantProducer(ae.isDirectory()));
+                                properties2.put("crc",              crcGetter);
+
+//                                Find.putAllPropertiesOf(ae, Find.PROPERTIES_OF_ARCHIVE_ENTRY, properties2);
                                 if (ae.isDirectory()) {
 
                                     // Evaluate the FIND expression for the directory entry.
-                                    Find.this.evaluateExpression(Mappings.override(
-                                        Mappings.union(Mappings.propertiesOf(ae), properties),
-                                        "path",          entryPath, // SUPPRESS CHECKSTYLE Wrap:4
-                                        "name",          entryName,
-                                        "archiveFormat", archiveFormat,
-                                        "type",          "directory-entry",
-                                        "depth",         currentDepth + 1
-                                    ));
+                                    properties2.put("path",          ProducerUtil.constantProducer(entryPath));
+                                    properties2.put("name",          ProducerUtil.constantProducer(entryName));
+                                    properties2.put("archiveFormat", ProducerUtil.constantProducer(archiveFormat));
+                                    properties2.put("type",          ProducerUtil.constantProducer("directory-entry"));
+                                    properties2.put("depth",         ProducerUtil.constantProducer(currentDepth + 1));
+
+                                    Find.this.evaluateExpression(properties2);
                                 } else {
+
+                                    // Evaluate the FIND expression for the non-directory entry.
+//                                    properties2.putAll(properties);
+                                    properties2.put("archiveFormat", ProducerUtil.constantProducer(archiveFormat));
+
                                     try {
                                         Find.this.findInStream(
                                             entryPath,
                                             archiveInputStream,
-                                            Mappings.override(
-                                                Mappings.union(Mappings.propertiesOf(ae), properties),
-                                                "archiveFormat", archiveFormat // SUPPRESS CHECKSTYLE Wrap:1
-                                            ),
+                                            properties2,
                                             currentDepth + 1
                                         );
                                     } catch (IOException ioe) {
@@ -1656,7 +1614,7 @@ class Find {
     }
 
     private NormalContentsHandler<Void>
-    normalContentsHandler(final String path, final Mapping<String, Object> properties, final int currentDepth) {
+    normalContentsHandler(final String path, final Map<String, Producer<Object>> properties, final int currentDepth) {
 
         return new NormalContentsHandler<Void>() {
 
@@ -1664,38 +1622,47 @@ class Find {
             handleNormalContents(final InputStream inputStream) {
 
                 // Evaluate the FIND expression for the nested normal contents.
-                Find.this.evaluateExpression(Mappings.override(
-                    properties,
-                    "path",        path,              // SUPPRESS CHECKSTYLE Wrap:5
-                    "type",        "normal-" + properties.get("type"),
-                    "inputStream", inputStream,
-                    "depth",       currentDepth,
-                    "size",        new Producer<Long>() {
-
-                        @Override @Nullable public Long
-                        produce() {
-
-                            // Check if the "size" property inherited from the ArchiveEntry has a reasonable
-                            // value (ZipArchiveEntries have size -1 iff the archive was created in "streaming
-                            // mode").
-                            Long size = (Long) properties.get("size");
-                            assert size != null;
-                            if (size != -1) return size;
-
-                            // Compute the value of the "size" property only IF it is needed, and WHEN it is
-                            // needed, because it consumes the contents.
-                            try {
-                                return InputStreams.skipAll(inputStream);
-                            } catch (IOException ioe) {
-                                throw ExceptionUtil.wrap(
-                                    "Measuring size of \"" + path + "\"",
-                                    ioe,
-                                    RuntimeException.class
-                                );
-                            }
-                        }
+                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>(properties);
+                properties2.put("path",        ProducerUtil.constantProducer(path));
+                properties2.put("type",        () -> "normal-" + properties.get("type").produce());
+                properties2.put("inputStream", ProducerUtil.constantProducer(inputStream));
+                properties2.put("depth",       ProducerUtil.constantProducer(currentDepth));
+                properties2.put("crc",         () -> {
+                    final CRC32 cs = new java.util.zip.CRC32();
+                    try {
+                        ChecksumAction.updateAll(cs, inputStream);
+                    } catch (IOException ioe) {
+                        throw ExceptionUtil.wrap("Computing CRC of \"" + path + "\"", ioe, RuntimeException.class);
                     }
-                ));
+                    return (int) cs.getValue();
+                });
+
+                properties2.put("size",        () -> {
+
+                    // Check if the "size" property inherited from the ArchiveEntry has a reasonable
+                    // value (ZipArchiveEntries have size -1 iff the archive was created in "streaming
+                    // mode").
+                    Producer<Object> sizeValueProducer = properties.get("size");
+                    if (sizeValueProducer != null) {
+                        Long size = (Long) sizeValueProducer.produce();
+                        assert size != null;
+                        if (size != -1) return size;
+                    }
+
+                    // Compute the value of the "size" property only IF it is needed, and WHEN it is
+                    // needed, because it consumes the contents.
+                    try {
+                        return InputStreams.skipAll(inputStream);
+                    } catch (IOException ioe) {
+                        throw ExceptionUtil.wrap(
+                            "Measuring size of \"" + path + "\"",
+                            ioe,
+                            RuntimeException.class
+                        );
+                    }
+                });
+
+                Find.this.evaluateExpression(properties2);
 
                 return null;
             }
@@ -1703,12 +1670,12 @@ class Find {
     }
 
     private void
-    evaluateExpression(Mapping<String, Object> properties) {
+    evaluateExpression(Map<String, Producer<Object>> properties) {
 
         // Do not evaluate the expression if the current depth is less than "this.minDepth".
         if (this.minDepth > 0) {
 
-            Object depthValue = properties.get("depth");
+            Object depthValue = properties.get("depth").produce();
             assert depthValue instanceof Integer;
 
             int currentDepth = (Integer) depthValue;
@@ -1716,6 +1683,112 @@ class Find {
             if (currentDepth < this.minDepth) return;
         }
 
-        this.expression.evaluate(properties);
+        this.expression.evaluate(Find.toMapping(properties));
+    }
+
+    private static long
+    checksum(final Mapping<String, Object> properties, Checksum cs) {
+
+        InputStream is = Mappings.getNonNull(properties, "inputStream", InputStream.class);
+        try {
+            ChecksumAction.updateAll(cs, is);
+        } catch (IOException ioe) {
+            throw ExceptionUtil.wrap("Running '-checksum' on '" + properties + "'", ioe, RuntimeException.class);
+        } finally {
+            try { is.close(); } catch (Exception e) {}
+        }
+        return cs.getValue();
+    }
+
+    private static Mapping<String, Object>
+    toMapping(Map<String, Producer<Object>> map) {
+
+        return new Mapping<String, Object>() {
+
+            @Nullable Map<String, Object> lazyMap;
+
+            @Override public boolean
+            containsKey(@Nullable Object key) {
+
+                // We want undefined variables to default to NULL.
+                //return "_keys".equals(key) || map.containsKey(key);
+                return true;
+            }
+
+            @Override @Nullable public Object
+            get(@Nullable Object key) {
+
+                if ("_map".equals(key))    return this.getLazyMap();
+                if ("_keys".equals(key))   return this.getLazyMap().keySet();
+                if ("_values".equals(key)) return this.getLazyMap().values();
+
+                Producer<Object> valueProducer = map.get(key);
+                if (valueProducer == null) return null;
+                return valueProducer.produce();
+            }
+
+            private Map<String, Object>
+            getLazyMap() {
+                Map<String, Object> result = this.lazyMap;
+                return result != null ? result : (result = Find.lazyMap(map));
+            }
+        };
+    }
+
+    private static Map<String, Object>
+    lazyMap(Map<String, Producer<Object>> map) {
+        Map<String, Function<Object, Object>> functionMap = new HashMap<>();
+        for (Entry<String, Producer<Object>> e : map.entrySet()) {
+            functionMap.put(e.getKey(), in -> e.getValue().produce());
+        }
+        return MapUtil.lazyMap(functionMap, null);
+    }
+
+//    /**
+//     * Puts one {@link Producer} into the <var>destination</var> for each element of the <var>valueGetters</var> map.
+//     */
+//    private static <T> void
+//    putAllPropertiesOf(
+//        T                                source,
+//        Map<String, Function<T, Object>> valueGetters,
+//        Map<String, Producer<Object>>    destination
+//    ) {
+//        for (Entry<String, Function<T, Object>> e : valueGetters.entrySet()) {
+//            String              key         = e.getKey();
+//            Function<T, Object> valueGetter = e.getValue();
+//
+//            destination.put(key, new Producer<Object>() {
+//
+//                @Override @Nullable public Object
+//                produce() throws NoException { return valueGetter.call(source); }
+//            });
+//        }
+//    }
+
+    /**
+     * @return {@code null} iff the <var>target</var> {@link HashMap} no non-static zero-parameter method with that
+     *         <var>methodName</var>
+     */
+    @Nullable private static Producer<Object>
+    methodPropertyGetter(Object target, String methodName) {
+
+        Method method;
+        try {
+            method = target.getClass().getMethod(methodName);
+        } catch (NoSuchMethodException e) {
+            return null;
+        } catch (Exception e) {
+            throw ExceptionUtil.wrap(methodName, e, RuntimeException.class);
+        }
+
+        if (Modifier.isStatic(method.getModifiers()) || method.getParameterCount() > 0) return null;
+
+        return () -> {
+            try {
+                return method.invoke(target);
+            } catch (Exception e) {
+                throw ExceptionUtil.wrap(methodName, e, RuntimeException.class);
+            }
+        };
     }
 }
