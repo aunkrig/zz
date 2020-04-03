@@ -28,6 +28,7 @@ package de.unkrig.zz.find;
 
 import org.apache.tools.ant.ProjectComponent;
 
+import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.zz.find.AntTask.ExpressionElement;
 
 /**
@@ -36,6 +37,8 @@ import de.unkrig.zz.find.AntTask.ExpressionElement;
 public abstract
 class AbstractElementWithOperands
 extends ProjectComponent {
+
+    static { AssertionUtil.enableAssertionsForThisClass(); }
 
     /**
      * The subtasks of this element will be executed for each directory, file and archive entry.
