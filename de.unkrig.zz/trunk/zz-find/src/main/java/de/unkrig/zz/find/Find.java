@@ -1471,7 +1471,7 @@ class Find {
                             // Notice that we don't define an "inputStream" property, because otherwise we couldn't
                             // process the CONTENTS of the compressed resource.
                             Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                            properties2.put("type",              ProducerUtil.constantProducer("compressed-" + properties.get("type")));
+                            properties2.put("type",              ProducerUtil.constantProducer("compressed-" + properties.get("type").produce()));
                             properties2.put("path",              ProducerUtil.constantProducer(path));
                             properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
                             properties2.put("depth",             ProducerUtil.constantProducer(currentDepth));
