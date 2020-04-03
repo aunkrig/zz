@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
@@ -75,6 +76,8 @@ import de.unkrig.zz.find.Find.WritabilityTest;
  */
 public
 class Parser {
+
+    static { AssertionUtil.enableAssertionsForThisClass(); }
 
     /**
      * The token types known to this scanner.
