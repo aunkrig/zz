@@ -40,6 +40,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
@@ -82,7 +83,7 @@ class Diff extends DocumentDiff {
 
     static { AssertionUtil.enableAssertionsForThisClass(); }
 
-    private static final ExecutorService PARALLEL_EXECUTOR_SERVICE = new ScheduledThreadPoolExecutor(
+    private static final ThreadPoolExecutor PARALLEL_EXECUTOR_SERVICE = new ScheduledThreadPoolExecutor(
         Runtime.getRuntime().availableProcessors() * 3,
         ThreadUtil.DAEMON_THREAD_FACTORY
     );
@@ -203,7 +204,7 @@ class Diff extends DocumentDiff {
     execute(URL resource1, URL resource2) throws IOException, InterruptedException {
 
         SquadExecutor<NodeWithPath> squadExecutor = new SquadExecutor<NodeWithPath>(
-            this.sequential ? ConcurrentUtil.SEQUENTIAL_EXECUTOR_SERVICE : Diff.PARALLEL_EXECUTOR_SERVICE
+            this.sequential || Diff.PARALLEL_EXECUTOR_SERVICE.getQueue().size() > 0 ? ConcurrentUtil.SEQUENTIAL_EXECUTOR_SERVICE : Diff.PARALLEL_EXECUTOR_SERVICE
         );
 
         ResourceProcessor<NodeWithPath> rp = this.resourceProcessor(squadExecutor);
