@@ -48,6 +48,7 @@ import org.apache.tools.ant.types.ResourceCollection;
 import org.apache.tools.ant.types.resources.FileProvider;
 import org.apache.tools.ant.types.resources.FileResource;
 
+import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.Consumer;
 import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
 import de.unkrig.commons.lang.protocol.Mapping;
@@ -108,6 +109,8 @@ import de.unkrig.zz.find.Find.WritabilityTest;
  */
 public
 class AntTask extends AbstractElementWithOperands {
+
+    static { AssertionUtil.enableAssertionsForThisClass(); }
 
     private final Find                     find                = new Find();
     private final AndElement               root                = new AndElement();
