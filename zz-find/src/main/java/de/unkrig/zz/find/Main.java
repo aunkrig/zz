@@ -300,13 +300,15 @@ class Main {
      *     The "type" of the current subject; the actual types are:
      *     <dl>
      *       <dt>{@code directory}</dt>                                <dd>A directory</dd>
-     *       <dt>{@code file}</dt>                                     <dd>A (non-archive, not-compressed) file</dd>
+     *       <dt>{@code normal-file}</dt>                              <dd>A plain file</dd>
+     *       <dt>{@code normal-contents}</dt>                          <dd>Plain content in an archive or a compressed file</dd>
+     *       <dt>{@code normal-xxx-resource} (e.g. xxx="http")</dt>    <dd>Plain content addressed by a URL</dd>
      *       <dt>{@code archive-file}</dt>                             <dd>An archive file</dd>
+     *       <dt>{@code archive-contents}</dt>                         <dd>A nested archive</dd>
      *       <dt>{@code archive-xxx-resource} (e.g. xxx="http")</dt>   <dd>An archive file</dd>
      *       <dt>{@code compressed-file}</dt>                          <dd>A compressed file</dd>
-     *       <dt>{@code compressed-xxx-resource} (e.g. xxx="http")</dt><dd>A compressed file</dd>
-     *       <dt>{@code archive}</dt>                                  <dd>A nested archive</dd>
-     *       <dt>{@code normal-contents}</dt>                          <dd>Normal (non-archive, not-compressed) content</dd>
+     *       <dt>{@code compressed-contents}</dt>                      <dd>Nested compressed content</dd>
+     *       <dt>{@code compressed-xxx-resource} (e.g. xxx="http")</dt><dd>Compressed content addressed by a URL</dd>
      *       <dt>{@code directory-entry}</dt>                          <dd>A "directory entry" in an archive.</dd>
      *     </dl>
      *   </dd>
