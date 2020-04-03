@@ -294,13 +294,13 @@ class Grep {
     // BEGIN SEARCH RESULT GETTERS
 
     /**
-     * Whether any of the invocations of {@link #grep()} yielded any matches.
+     * Whether any of processors yielded any matches.
      */
     public boolean
     getLinesSelected() { return this.totalMatchCount > 0; }
 
     /**
-     * @return The number of matches yielded by all invocations of {@link #grep()}
+     * @return The number of matches yielded by all processors
      */
     public int
     getTotalMatchCount() { return this.totalMatchCount; }
