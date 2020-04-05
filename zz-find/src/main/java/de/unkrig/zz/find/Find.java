@@ -1343,14 +1343,14 @@ class Find {
 
         Find.LOGGER.log(Level.FINER, "Processing \"{0}\" (path is \"{1}\")", new Object[] { resource, path });
 
-        // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
-        // handle directories, only normal files!)
         Map<String, Producer<Object>> resourceProperties = new HashMap<String, Producer<Object>>();
-        String name = null;
         {
             File file = ResourceProcessings.isFile(resource);
             if (file != null) {
                 if (file.isDirectory()) {
+
+                    // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
+                    // handle directories, only normal files!)
                     this.findInDirectory(path, file, currentDepth);
                     return;
                 }
@@ -1486,14 +1486,9 @@ class Find {
                             properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
                             properties2.put("depth",             ProducerUtil.constantProducer(currentDepth));
 
-                            Producer<Object> filePropertyValueGetter = properties.get("file");
-                            if (filePropertyValueGetter != null) properties2.put("file", filePropertyValueGetter);
-
-                            Producer<Object> lastModifiedPropertyValueGetter = properties.get("lastModified");
-                            if (lastModifiedPropertyValueGetter != null) properties2.put("lastModified", lastModifiedPropertyValueGetter);
-
-                            Producer<Object> lastModifiedDatePropertyValueGetter = properties.get("lastModifiedDate");
-                            if (lastModifiedDatePropertyValueGetter != null) properties2.put("lastModifiedDate", lastModifiedDatePropertyValueGetter);
+                            Find.copyOptionalProperty(properties, "file",             properties2);
+                            Find.copyOptionalProperty(properties, "lastModified",     properties2);
+                            Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
 
                             Find.this.evaluateExpression(properties2);
                         }
@@ -1514,12 +1509,8 @@ class Find {
                                 properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
                                 properties2.put("name",              ProducerUtil.constantProducer(name + "%"));
                                 properties2.put("size",              ProducerUtil.constantProducer(-1L));
-
-                                Producer<Object> lastModifiedPropertyValueGetter = properties.get("lastModified");
-                                if (lastModifiedPropertyValueGetter != null) properties2.put("lastModified", lastModifiedPropertyValueGetter);
-
-                                Producer<Object> lastModifiedDatePropertyValueGetter = properties.get("lastModifiedDate");
-                                if (lastModifiedDatePropertyValueGetter != null) properties2.put("lastModifiedDate", lastModifiedDatePropertyValueGetter);
+                                Find.copyOptionalProperty(properties, "lastModified",     properties2);
+                                Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
 
                                 Find.this.findInStream(
                                     path + '%',
@@ -1563,15 +1554,9 @@ class Find {
                             properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
                             properties2.put("name",                   properties.get("name"));
                             properties2.put(Find.PRUNE_PROPERTY_NAME, ProducerUtil.constantProducer(prune));
-
-                            Producer<Object> filePropertyValueGetter = properties.get("file");
-                            if (filePropertyValueGetter != null) properties2.put("file", filePropertyValueGetter);
-
-                            Producer<Object> lastModifiedPropertyValueGetter = properties.get("lastModified");
-                            if (lastModifiedPropertyValueGetter != null) properties2.put("lastModified", lastModifiedPropertyValueGetter);
-
-                            Producer<Object> lastModifiedDatePropertyValueGetter = properties.get("lastModifiedDate");
-                            if (lastModifiedDatePropertyValueGetter != null) properties2.put("lastModifiedDate", lastModifiedDatePropertyValueGetter);
+                            Find.copyOptionalProperty(properties, "file",             properties2);
+                            Find.copyOptionalProperty(properties, "lastModified",     properties2);
+                            Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
 
                             Find.this.evaluateExpression(properties2);
                         }
@@ -1803,5 +1788,15 @@ class Find {
                 throw ExceptionUtil.wrap(methodName, e, RuntimeException.class);
             }
         };
+    }
+
+    private static void
+    copyOptionalProperty(
+        Map<String, Producer<Object>> source,
+        String                        propertyName,
+        Map<String, Producer<Object>> destination
+    ) {
+        Producer<Object> valueGetter = source.get(propertyName);
+        if (valueGetter != null) destination.put(propertyName, valueGetter);
     }
 }
