@@ -75,7 +75,6 @@ import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
 import de.unkrig.commons.lang.protocol.Function;
 import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.Mappings;
-import de.unkrig.commons.lang.protocol.NoException;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.Producer;
@@ -764,13 +763,22 @@ class Find {
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
 
+            String type = Mappings.getNonNull(properties, "type", String.class);
+            File   file = Mappings.get(properties, "file", File.class);
+            Long   size = Mappings.get(properties, "size", Long.class);
+
+            boolean isDirectory  = "directory".equals(type) || type.startsWith("archive-");
+            boolean isReadable   = file != null ? file.canRead()    : true;
+            boolean isWritable   = file != null ? file.canWrite()   : false;
+            boolean isExecutable = file != null ? file.canExecute() : false;
+
             Printers.info(String.format(
                 "%c%c%c%c %10d %tF %<tT %s",
-                Mappings.getNonNull(properties, "isDirectory",      boolean.class) ? 'd' : '-',
-                Mappings.getNonNull(properties, "isReadable",       boolean.class) ? 'r' : '-',
-                Mappings.getNonNull(properties, "isWritable",       boolean.class) ? 'w' : '-',
-                Mappings.getNonNull(properties, "isExecutable",     boolean.class) ? 'x' : '-',
-                Mappings.getNonNull(properties, "size",             Long.class),
+                isDirectory  ? 'd' : '-',
+                isReadable   ? 'r' : '-',
+                isWritable   ? 'w' : '-',
+                isExecutable ? 'x' : '-',
+                size != null ? size : 0L,
                 Mappings.getNonNull(properties, "lastModifiedDate", Date.class),
                 Mappings.getNonNull(properties, "path",             String.class)
             ));
@@ -1196,10 +1204,6 @@ class Find {
         if (this.maxDepth < 0) return;
 
         final Map<String, Producer<Object>> properties = new HashMap<String, Producer<Object>>();
-        properties.put("isDirectory",      ProducerUtil.constantProducer(false));
-        properties.put("isExecutable",     ProducerUtil.constantProducer(false));
-        properties.put("isReadable",       ProducerUtil.constantProducer(true));
-        properties.put("isWritable",       ProducerUtil.constantProducer(false));
         properties.put("lastModifiedDate", ProducerUtil.constantProducer(new Date()));
         properties.put("path",             ProducerUtil.constantProducer("-"));
         properties.put("size",             ProducerUtil.constantProducer(-1L));
@@ -1255,6 +1259,8 @@ class Find {
                     properties2.put("path",                   ProducerUtil.constantProducer(directoryPath));
                     properties2.put("file",                   ProducerUtil.constantProducer(directory));
                     properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
+                    properties2.put("lastModified",           () -> directory.lastModified());
+                    properties2.put("lastModifiedDate",       () -> new Date(directory.lastModified()));
                     properties2.put(Find.PRUNE_PROPERTY_NAME, ProducerUtil.constantProducer(prune)); // <= The "-prune" action will potentially change this value
 
                     Find.this.evaluateExpression(properties2);
@@ -1339,7 +1345,8 @@ class Find {
 
         // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
         // handle directories, only normal files!)
-        String type, name = null;
+        Map<String, Producer<Object>> resourceProperties = new HashMap<String, Producer<Object>>();
+        String name = null;
         {
             File file = ResourceProcessings.isFile(resource);
             if (file != null) {
@@ -1347,10 +1354,15 @@ class Find {
                     this.findInDirectory(path, file, currentDepth);
                     return;
                 }
-                type = "file";
-                name = file.getName();
+                resourceProperties.put("type",             ProducerUtil.constantProducer("file"));
+                resourceProperties.put("name",             ProducerUtil.constantProducer(file.getName()));
+                resourceProperties.put("file",             ProducerUtil.constantProducer(file));
+                resourceProperties.put("lastModified",     () -> file.lastModified());
+                resourceProperties.put("lastModifiedDate", () -> new Date(file.lastModified()));
             } else {
-                type = resource.getProtocol() + "-resource";
+                resourceProperties.put("type", ProducerUtil.constantProducer(resource.getProtocol() + "-resource"));
+                String up = resource.getPath();
+                resourceProperties.put("name", ProducerUtil.constantProducer(up.substring(up.lastIndexOf('/') + 1)));
             }
         }
 
@@ -1360,11 +1372,8 @@ class Find {
         {
 //            Mapping<String, Object> resourceProperties = Find.resourceProperties(path, resource);
 
-            Map<String, Producer<Object>> resourceProperties = new HashMap<String, Producer<Object>>();
-            if (name != null) resourceProperties.put("name",  ProducerUtil.constantProducer(name));
             resourceProperties.put("url",  ProducerUtil.constantProducer(resource));
             resourceProperties.put("path", ProducerUtil.constantProducer(path));
-            resourceProperties.put("type", ProducerUtil.constantProducer(type));
             resourceProperties.put("crc",  () -> {
                 final CRC32 cs = new java.util.zip.CRC32();
                 try (InputStream is = resource.openConnection().getInputStream()) {
@@ -1472,9 +1481,19 @@ class Find {
                             // process the CONTENTS of the compressed resource.
                             Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
                             properties2.put("type",              ProducerUtil.constantProducer("compressed-" + properties.get("type").produce()));
+                            properties2.put("name",              properties.get("name"));
                             properties2.put("path",              ProducerUtil.constantProducer(path));
                             properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
                             properties2.put("depth",             ProducerUtil.constantProducer(currentDepth));
+
+                            Producer<Object> filePropertyValueGetter = properties.get("file");
+                            if (filePropertyValueGetter != null) properties2.put("file", filePropertyValueGetter);
+
+                            Producer<Object> lastModifiedPropertyValueGetter = properties.get("lastModified");
+                            if (lastModifiedPropertyValueGetter != null) properties2.put("lastModified", lastModifiedPropertyValueGetter);
+
+                            Producer<Object> lastModifiedDatePropertyValueGetter = properties.get("lastModifiedDate");
+                            if (lastModifiedDatePropertyValueGetter != null) properties2.put("lastModifiedDate", lastModifiedDatePropertyValueGetter);
 
                             Find.this.evaluateExpression(properties2);
                         }
@@ -1491,10 +1510,16 @@ class Find {
                                 Object name = vg.produce();
                                 assert name != null;
 
-                                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>(properties);
+                                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
                                 properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
                                 properties2.put("name",              ProducerUtil.constantProducer(name + "%"));
                                 properties2.put("size",              ProducerUtil.constantProducer(-1L));
+
+                                Producer<Object> lastModifiedPropertyValueGetter = properties.get("lastModified");
+                                if (lastModifiedPropertyValueGetter != null) properties2.put("lastModified", lastModifiedPropertyValueGetter);
+
+                                Producer<Object> lastModifiedDatePropertyValueGetter = properties.get("lastModifiedDate");
+                                if (lastModifiedDatePropertyValueGetter != null) properties2.put("lastModifiedDate", lastModifiedDatePropertyValueGetter);
 
                                 Find.this.findInStream(
                                     path + '%',
@@ -1529,15 +1554,25 @@ class Find {
 
                         @Override public void
                         run() {
+
                             // Evaluate the FIND expression for the archive resource.
                             Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
                             properties2.put("type",                   ProducerUtil.constantProducer("archive-" + properties.get("type").produce()));
                             properties2.put("path",                   ProducerUtil.constantProducer(path));
                             properties2.put("archiveFormat",          ProducerUtil.constantProducer(archiveFormat));
                             properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
-                            properties2.put(Find.PRUNE_PROPERTY_NAME, new Producer<Object>() {
-                                @Override @Nullable public Object produce() throws NoException { return prune[0]; }
-                            });
+                            properties2.put("name",                   properties.get("name"));
+                            properties2.put(Find.PRUNE_PROPERTY_NAME, ProducerUtil.constantProducer(prune));
+
+                            Producer<Object> filePropertyValueGetter = properties.get("file");
+                            if (filePropertyValueGetter != null) properties2.put("file", filePropertyValueGetter);
+
+                            Producer<Object> lastModifiedPropertyValueGetter = properties.get("lastModified");
+                            if (lastModifiedPropertyValueGetter != null) properties2.put("lastModified", lastModifiedPropertyValueGetter);
+
+                            Producer<Object> lastModifiedDatePropertyValueGetter = properties.get("lastModifiedDate");
+                            if (lastModifiedDatePropertyValueGetter != null) properties2.put("lastModifiedDate", lastModifiedDatePropertyValueGetter);
+
                             Find.this.evaluateExpression(properties2);
                         }
                     },
@@ -1566,7 +1601,6 @@ class Find {
                                 properties2.put("lastModified",     ProducerUtil.constantProducer(ae.getLastModifiedDate().getTime()));
                                 properties2.put("name",             ProducerUtil.constantProducer(ae.getName()));
                                 properties2.put("size",             ProducerUtil.constantProducer(ae.getSize()));
-                                properties2.put("isDirectory",      ProducerUtil.constantProducer(ae.isDirectory()));
                                 properties2.put("crc",              crcGetter);
 
 //                                Find.putAllPropertiesOf(ae, Find.PROPERTIES_OF_ARCHIVE_ENTRY, properties2);
@@ -1743,27 +1777,6 @@ class Find {
         }
         return MapUtil.lazyMap(functionMap, null);
     }
-
-//    /**
-//     * Puts one {@link Producer} into the <var>destination</var> for each element of the <var>valueGetters</var> map.
-//     */
-//    private static <T> void
-//    putAllPropertiesOf(
-//        T                                source,
-//        Map<String, Function<T, Object>> valueGetters,
-//        Map<String, Producer<Object>>    destination
-//    ) {
-//        for (Entry<String, Function<T, Object>> e : valueGetters.entrySet()) {
-//            String              key         = e.getKey();
-//            Function<T, Object> valueGetter = e.getValue();
-//
-//            destination.put(key, new Producer<Object>() {
-//
-//                @Override @Nullable public Object
-//                produce() throws NoException { return valueGetter.call(source); }
-//            });
-//        }
-//    }
 
     /**
      * @return {@code null} iff the <var>target</var> {@link HashMap} no non-static zero-parameter method with that
