@@ -276,10 +276,58 @@ class Main {
      *
      * <h3>Properties of files and archive entries</h3>
      * <p>
-     *   Various tests and actions (e.g. "{@code -echo}") have access to a set of "properties" of the current file
-     *   or archive entry.
+     *   Various tests and actions (e.g. "{@code -echo}") have access to a set of "variabales" related to the current
+     *   file or archive entry.
      * </p>
      * <dl>
+     *   <dt>{@code "archiveFormat"}:</dt>
+     *   <dd>
+     *     For types "archive-contents", "archive-file" and "archive-xxx-resource": The format.
+     *     <br />
+     *     For types "normal-contents", "compressed-contents" and "directory-entry": The format of the immediately
+     *     enclosing archive.
+     *     <br />
+     *     For all other types: Empty.
+     *   </dd>
+     *   <dt>{@code "compressionFormat"}:</dt>
+     *   <dd>
+     *     For types "compressed-contents", "compressed-file" and "compressed-xxx-resource": The format.
+     *     <br />
+     *     For type "normal-contents", "compressed-contents" and "directory-entry": The format of the immediately
+     *     enclosing compressed contents.
+     *     <br />
+     *     For all other types: Empty.
+     *   </dd>
+     *   <dt>{@code "crc"}:</dt>
+     *   <dd>
+     *     For types "normal-contents" and "normal-file": The CRC32 checksum of the contents.
+     *     <br />
+     *     For all other types: Empty.
+     *   </dd>
+     *   <dt>{@code "depth"}:</dt>
+     *   <dd>
+     *     Zero for the files/directories specified on the command line, +1 for files/directories in a subdirectory,
+     *     +1 for compressed content, and +1 for the entries of archive files.
+     *   </dd>
+     *   <dt>{@code "file"}:</dt>
+     *   <dd>
+     *     For types "archive-file", "compressed-file", "directory" and "normal-file":
+     *     The {@code java.util.File} object related to the current file or directory entry. It has the following
+     *     properties, which can be addressed like {@code file.name}: canExecute, canRead, canWrite, exists,
+     *     absoluteFile, absolutePath, canonicalFile, canonicalPath, name, parent, parentFile, path, isDirectory,
+     *     isFile, isHidden, lastModified, length, toURI.
+     *   </dd>
+     *   <dt>{@code lastModified} (milliseconds since 1970) and {@code "lastModifiedDate"} ({@link Date} object):</dt>
+     *   <dd>
+     *     For types "archive-file", "compressed-file", "directory" and "normal-file":
+     *     The date and time of the last modification of the file.
+     *     <br />
+     *     For types "archive-xxx-resource", "compressed-xxx-resource" and "normal-xxx-resource":
+     *     The the modification time of the addressed resource.
+     *     <br />
+     *     For types "archive-contents", "compressed-contents", "directory-entry" and "normal-contents":
+     *     The the modification time stored in the archive entry.
+     *   </dd>
      *   <dt>{@code "name"}:</dt>
      *   <dd>
      *     The last component of a directory or file name, or the name of an archive entry (which may contain
@@ -290,10 +338,12 @@ class Main {
      *     The path to the resources as it was found, starting with the <var>file-or-dir</var> on the command line.
      *     "!" indicates an archive, "%" a compressed file.
      *   </dd>
-     *   <dt>{@code "depth"}:</dt>
+     *
+     *   <dt>{@code "size"}:</dt>
      *   <dd>
-     *     Zero for the files/directories specified on the command line, +1 for files/directories in a subdirectory,
-     *     +1 for compressed content, and +1 for the entries of archive files.
+     *     The size, in bytes, for types "archive", "archive-file", "archive-xxx-resource", "compressed-contents",
+     *     "compressed-file", "compressed-xxx-resource", "file" or "normal-contents", -1 for type "directory-entry",
+     *     and 0 for type "directory".
      *   </dd>
      *   <dt>{@code "type"}:</dt>
      *   <dd>
@@ -305,75 +355,17 @@ class Main {
      *       <dt>{@code normal-xxx-resource} (e.g. xxx="http")</dt>    <dd>Plain content addressed by a URL</dd>
      *       <dt>{@code archive-file}</dt>                             <dd>An archive file</dd>
      *       <dt>{@code archive-contents}</dt>                         <dd>A nested archive</dd>
-     *       <dt>{@code archive-xxx-resource} (e.g. xxx="http")</dt>   <dd>An archive file</dd>
+     *       <dt>{@code archive-xxx-resource} (e.g. xxx="http")</dt>   <dd>An archive addressed by a URL</dd>
      *       <dt>{@code compressed-file}</dt>                          <dd>A compressed file</dd>
      *       <dt>{@code compressed-contents}</dt>                      <dd>Nested compressed content</dd>
      *       <dt>{@code compressed-xxx-resource} (e.g. xxx="http")</dt><dd>Compressed content addressed by a URL</dd>
      *       <dt>{@code directory-entry}</dt>                          <dd>A "directory entry" in an archive.</dd>
      *     </dl>
      *   </dd>
-     *   <dt>{@code "absolutePath"}:</dt>
+     *   <dt>{@code "url"}:</dt>
      *   <dd>
-     *     The absolute path of the file or directory, typically by resolving relative paths against the current user
-     *     directory. For all other types: That of the enclosing file.
-     *   </dd>
-     *   <dt>{@code "canonicalPath"}:</dt>
-     *   <dd>
-     *     The absolute path of the file or directory, typically by resolving relative paths against the current user
-     *     directory and resolving all "." and ".." infixes. For all other types: That of the enclosing file.
-     *   </dd>
-     *   <dt>{@code "lastModifiedDate"}:</dt>
-     *   <dd>
-     *     The date and time of the last modification of the file, directory or archive entry, in the format "{@code
-     *     dow mon dd hh:mm:ss zzz yyyy}".
-     *   </dd>
-     *   <dt>{@code "size"}:</dt>
-     *   <dd>
-     *     The size, in bytes, for types "archive", "archive-file", "archive-xxx-resource", "compressed-contents",
-     *     "compressed-file", "compressed-xxx-resource", "file" or "normal-contents", -1 for type "directory-entry",
-     *     and 0 for type "directory".
-     *   </dd>
-     *   <dt>{@code "isDirectory"}:</dt>
-     *   <dd>
-     *     Whether the type is "directory" or "directory-entry".
-     *   </dd>
-     *   <dt>{@code "isFile"}:</dt>
-     *   <dd>
-     *     Whether the type is "archive", "archive-file", "compressed-contents", "compressed-file", "directory-entry",
-     *     "file" or "normal-contents".
-     *   </dd>
-     *   <dt>{@code "isHidden"}:</dt>
-     *   <dd>
-     *     Whether the file or directory is "hidden" in the file system; {@code false} for all other types.
-     *   </dd>
-     *   <dt>{@code "isReadable"}:</dt>
-     *   <dd>
-     *     Whether the file or directory is "readable" in the file system; {@code false} for all other types.
-     *   </dd>
-     *   <dt>{@code "isWritable"}:</dt>
-     *   <dd>
-     *     Whether the file or directory is "writable" in the file system; {@code false} for all other types.
-     *   </dd>
-     *   <dt>{@code "isExecutable"}:</dt>
-     *   <dd>
-     *     Whether the file or directory is "executable" in the file system; {@code false} for all other types.
-     *   </dd>
-     *   <dt>{@code "archiveFormat"}:</dt>
-     *   <dd>
-     *     For types "archive", "archive-file" and "archive-xxx-resource": The format.
-     *     <br />
-     *     For types "normal-contents", "compressed-contents" and "directory-entry": The format of the immediately
-     *     enclosing archive.
-     *     <br />
-     *     For all other types: Empty.
-     *   </dd>
-     *   <dt>{@code "compressionFormat"}:</dt>
-     *   <dd>
-     *     For types "compressed-contents", "compressed-file" and "compressed-xxx-resource": The format.
-     *     <br />
-     *     For type "normal-contents": The format of the immediately enclosing compressed contents.
-     *     <br />
-     *     For all other types: Empty.
+     *     For types "normal-xxx-resource", "archive-xxx-resource" and "compressed-xxx-resource":
+     *     The URL that addresses the resource.
      *   </dd>
      * </dl>
      * <p>
