@@ -40,12 +40,15 @@ import de.unkrig.commons.file.FileUtil;
 public
 class AntTaskTest extends BuildFileTest {
 
-//    private static final File FILES = new File("target/test-classes/files");
     private static final File FILES = new File("files");
 
     @Override public void
     setUp() throws IOException {
-        this.configureProject("target/test-classes/find_test.ant");
+
+        // The BASEDIR defaults to the build script's directory, which is not what we want.
+        System.setProperty("basedir", System.getProperty("user.dir"));
+
+        this.configureProject("src/test/resources/find_test.ant");
 
         if (AntTaskTest.FILES.exists()) FileUtil.deleteRecursively(AntTaskTest.FILES);
         new Files(new Object[] {
