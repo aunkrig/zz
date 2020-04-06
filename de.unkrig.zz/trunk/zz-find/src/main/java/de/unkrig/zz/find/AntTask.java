@@ -980,14 +980,14 @@ class AntTask extends AbstractElementWithOperands {
 
         this.find.setExpression(this.root.toExpression());
 
-        final boolean[] hadExceptions = new boolean[1];
+        final List<Throwable> exceptions = new ArrayList<Throwable>();
         ConsumerWhichThrows<IOException, IOException>
         exceptionHandler = new ConsumerWhichThrows<IOException, IOException>() {
 
             @Override public void
             consume(IOException ioe) {
                 AntTask.this.getProject().log(null, ioe, Project.MSG_ERR);
-                hadExceptions[0] = true;
+                exceptions.add(ioe);
             }
         };
         this.find.setExceptionHandler(exceptionHandler);
@@ -1001,13 +1001,14 @@ class AntTask extends AbstractElementWithOperands {
                     this.execute3(resource);
                 } catch (IOException ioe) {
                     AntTask.this.getProject().log(null, ioe, Project.MSG_ERR);
-                    hadExceptions[0] = true;
+                    exceptions.add(ioe);
                 }
             }
         }
 
-        if (hadExceptions[0]) {
-            throw new BuildException("One or more files had i/o exceptions");
+        if (!exceptions.isEmpty()) {
+            Throwable firstException = exceptions.get(0);
+            throw new BuildException(exceptions.size() + " resources had i/o exceptions; first exception is: " + firstException, firstException);
         }
     }
 
