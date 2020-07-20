@@ -510,9 +510,7 @@ class FindTest extends TestCase {
         List<String> lines = new ArrayList<String>();
         AbstractPrinter.getContextPrinter().redirectInfo(
             ConsumerUtil.addToCollection(lines)
-        ).run(new RunnableWhichThrows<IOException>() {
-            @Override public void run() throws IOException { find.findInFile(FindTest.FILES); }
-        });
+        ).run((RunnableWhichThrows<IOException>) () -> find.findInFile(FindTest.FILES));
 
         return lines;
     }
