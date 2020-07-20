@@ -369,46 +369,6 @@ class Main {
      *     The URL that addresses the resource.
      *   </dd>
      * </dl>
-     * <p>
-     *   Some archive entries have additional properties:
-     * </p>
-     * <dl>
-     *   <dt>Archive format "ar":</dt>
-     *   <dd>
-     *     "groupId", "mode", "userId"
-     *   </dd>
-     *   <dt>Archive format "arj":</dt>
-     *   <dd>
-     *     "hostOs", "method", "mode", "unixMode", "isHostOsUnix"
-     *   </dd>
-     *   <dt>Archive format "cpio":</dt>
-     *   <dd>
-     *     "alignmentBoundary", "chksum", "dataPadCount", "device", "format", "gID", "headerPadCount", "headerSize",
-     *     "inode", "mode", "numberOfLinks", "remoteDevice", "uID", "isBlockDevice", "isNetwork", "isPipe",
-     *     "isRegularFile", "isSocket", "isSymbolicLink"
-     *   </dd>
-     *   <dt>Archive format "dump":</dt>
-     *   <dd>
-     *     "accessTime", "creationTime", "entrySize", "generation", "groupId", "headerCount", "headerHoles",
-     *     "headerType", "ino", "mode", "nlink", "offset", "originalName", "permissions", "simpleName", userId",
-     *     "volume", "isBlkDev", "isChrDev", isDeleted", "isFifo", isSocket"
-     *   </dd>
-     *   <dt>Archive format "7z":</dt>
-     *   <dd>
-     *     "accessDate", "crcValue", "creationDate", hasAccessDate", "hasCrc", hasCreationDate", "hasLastModifiedDate",
-     *     "hasWindowsAttributes", "windowsAttributes", "isAntiItem"
-     *   </dd>
-     *   <dt>Archive format "tar":</dt>
-     *   <dd>
-     *     "devMajor", "devMinor", "groupId", "groupName", "linkName", "mode", "modTime", "realSize", "userId",
-     *     "userName", "isBlockDevice", "isCharacterDevice", "isExtended", "isFIFO", isGlobalPaxHeader",
-     *     "isGNULongLinkEntry", "isGNULongNameEntry", "isGNUSparse", "isLink", "isPaxHeader", "isSymbolicLink"
-     *   </dd>
-     *   <dt>Archive format "zip":</dt>
-     *   <dd>
-     *     "externalAttributes", "internalAttributes", "method", "platform", "unixMode", "isUnixSymlink"
-     *   </dd>
-     * </dl>
      *
      * <h2>Example <var>glob</var>s</h2>
      *
@@ -502,7 +462,8 @@ class Main {
 
             @Override public void
             consume(IOException ioe) {
-                Printers.error(ioe.toString());
+//                Printers.error(ioe.toString());
+                Printers.error(null, ioe);
                 hadExceptions[0] = true;
             }
         };
