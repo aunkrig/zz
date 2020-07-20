@@ -37,7 +37,6 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Formatter;
@@ -92,7 +91,40 @@ import de.unkrig.commons.util.collections.MapUtil;
 import de.unkrig.jdisasm.Disassembler;
 
 /**
- * The central API for the ZZFIND functionality.
+ * The public API for the ZZFIND functionality.
+ * <p>
+ *   {@link #Find()} creates a default configuration.
+ * </p>
+ * <p>
+ *   These setters change the configuration:
+ * </p>
+ * <ul>
+ *   <li>{@link #setDescendantsFirst(boolean)}</li>
+ *   <li>{@link #setExceptionHandler(ConsumerWhichThrows)}</li>
+ *   <li>{@link #setExpression(Expression)}</li>
+ *   <li>{@link #setLookIntoFormat(Predicate)}</li>
+ *   <li>{@link #setMinDepth(int)}</li>
+ *   <li>{@link #setMaxDepth(int)}</li>
+ * </ul>
+ * <p>
+ *   These methods execute a search and honor the current configuration:
+ * </p>
+ * <ul>
+ *   <li>{@link #findInFile(File)}</li>
+ *   <li>{@link #findInResource(String, URL)}</li>
+ *   <li>{@link #findInStream(InputStream)}</li>
+ * </ul>
+ * <p>
+ *   By convention, expressions produce output (if any) with {@link Printers#info(String)}, so invokers of the {@code
+ *   find...()} methods can catch that output like
+ * <p>
+ * <pre>
+ *     List&lt;String> lines = new ArrayList&lt;>();
+ *
+ *     AbstractPrinter.getContextPrinter().redirectInfo(
+ *         ConsumerUtil.addToCollection(lines)
+ *     ).run((RunnableWhichThrows&lt;IOException>) () -> find.findInFile(myFile));
+ * </pre>
  */
 public
 class Find {
@@ -207,117 +239,12 @@ class Find {
 
         // SUPPRESS CHECKSTYLE LineLength:27
         /**
-         * Evaluates to {@code true} or {@code false}, depending on the <var>properties</var>:
-         * <dl>
-         *   <dt>String name</dt>
-         *   <dd>
-         *     The name of the file, directory or archive entry. For archive entries, the name is relative to the
-         *     archive, i.e. it may contain slashes ("{@code /}").
-         *   </dd>
-         *   <dt>String path</dt>
-         *   <dd>
-         *     The path of the file, directory or archive entry.
-         *   </dd>
-         *   <dt>String type</dt>
-         *   <dd>
-         *     The type of the file, directory or archive entry:
-         *     <dl>
-         *       <dt>"{@code directory}"</dt>                                <dd>A directory on the file system</dd>
-         *       <dt>"{@code file}"</dt>                                     <dd>A file on the file system</dd>
-         *       <dt>"{@code archive-file}"</dt>                             <dd>An archive file on the file system</dd>
-         *       <dt>"{@code archive-xxx-resource}" (e.g. xxx="http")</dt>   <dd>A resource designated by a URL</dd>
-         *       <dt>"{@code compressed-file}"</dt>                          <dd>A compressed file on the file system</dd>
-         *       <dt>"{@code compressed-xxx-resource}" (e.g. xxx="http")</dt><dd>A compressed resource</dd>
-         *       <dt>"{@code directory-entry}"</dt>                          <dd>An archive entry which denotes a directory</dd>
-         *       <dt>"{@code archive}"</dt>                                  <dd>An archive nested inside an archive or compressed file</dd>
-         *       <dt>"{@code compressed-contents}"</dt>                      <dd>Nested compressed contents</dd>
-         *       <dt>"{@code normal-contents}"</dt>                          <dd>(Non-compressed, non-archive) contents in an archive or in a compressed file</dd>
-         *     </dl>
-         *   </dd>
-         * </dl>
+         * Evaluates to {@code true} or {@code false}, depending on the <var>properties</var>. The available properties
+         * depend on the type of the current file or resource. E.g. files provide a "file" variable, and HTTP resources
+         * a "url" variable.
          * <p>
-         *   The following properties apply to the current file or directory, or, iff the current
-         *   document is the contents of a compressed file, or the contents of an archive entry, to the enclosing
-         *   compressed resp. archive file:
+         *   For other variables, see the JAVADOC of {@link Main#main(String[])}.
          * </p>
-         * <dl>
-         *   <dt>String absolutePath</dt>
-         *   <dd>
-         *     The absolute path of the file or directory; see {@link File#getAbsolutePath()}.
-         *   </dd>
-         *   <dt>String canonicalPath</dt>
-         *   <dd>
-         *     The "canonical path" of the file or directory; see {@link File#getCanonicalPath()}.
-         *   </dd>
-         *   <dt>Date lastModifiedDate</dt>
-         *   <dd>
-         *     The "modification time" of the file or directory.
-         *     Notice that the comparison operators (e.g. "{@code ==}") silently convert dates into strings with
-         *     format "{@code EEE MMM dd HH:mm:ss zzz yyyy}" (see {@link SimpleDateFormat}).
-         *   </dd>
-         *   <dt>long size</dt>
-         *   <dd>
-         *     The size of the file (zero for directories).
-         *   </dd>
-         *   <dt>long freeSpace</dt>
-         *   <dd>
-         *     The number of unallocated bytes in the partition (see {@link File#getFreeSpace()}.
-         *   </dd>
-         *   <dt>long totalSpace</dt>
-         *   <dd>
-         *     The size of the partition (see {@link File#getTotalSpace()}.
-         *   </dd>
-         *   <dt>long usableSpace</dt>
-         *   <dd>
-         *     The number of bytes available to this virtual machine on the partition (see {@link
-         *     File#getUsableSpace()}.
-         *   </dd>
-         *   <dt>boolean isDirectory</dt>
-         *   <dd>
-         *     {@code true} for a directory, otherwise {@code false}.
-         *   </dd>
-         *   <dt>boolean isFile</dt>
-         *   <dd>
-         *     {@code false} for a directory, otherwise {@code true}.
-         *   </dd>
-         *   <dt>boolean isHidden</dt>
-         *   <dd>
-         *     Whether the file or directory is a hidden file (see {@link File#isHidden()}).
-         *   </dd>
-         *   <dt>boolean isReadable</dt>
-         *   <dd>
-         *     Whether the application can read the file or directory (see {@link File#canRead()}.
-         *   </dd>
-         *   <dt>boolean isWritable</dt>
-         *   <dd>
-         *     Whether the application can modify the file or directory (see {@link File#canWrite()}.
-         *   <dd>
-         *   </dd>
-         *   <dt>boolean isExecutable</dt>
-         *   <dd>
-         *     Whether the application can execute the file (see {@link File#canExecute()}).
-         *   </dd>
-         * </dl>
-         * <p>
-         *   The following properties are available iff the current file is an archive file, or the current document
-         *   exists within the contents of an archive:
-         * </p>
-         * <dl>
-         *   <dt>String archiveFormat</dt>
-         *   <dd>
-         *     The format of the immediately enclosing archive.
-         *   </dd>
-         * </dl>
-         * <p>
-         *   The following properties are available iff the current file is a compressed file, or the current
-         *   document exists within compressed contents:
-         * </p>
-         * <dl>
-         *   <dt>String compressionFormat</dt>
-         *   <dd>
-         *     The format of the immediately enclosing compressed document.
-         *   </dd>
-         * </dl>
          */
         @Override boolean evaluate(Mapping<String, Object> properties);
     }
