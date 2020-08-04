@@ -33,12 +33,12 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Matcher;
@@ -296,6 +296,7 @@ class Diff extends DocumentDiff {
             node1 = dcp.process(
                 "",      // path
                 stream1, // inputStream
+                null,    // lastModifiedDate
                 -1L,     // size
                 -1L,     // crc32
                 opener   // opener
@@ -364,6 +365,7 @@ class Diff extends DocumentDiff {
             process(
                 final String                                                            path,
                 InputStream                                                             inputStream,
+                @Nullable Date                                                          lastModifiedDate,
                 long                                                                    size,
                 long                                                                    crc32,
                 final ProducerWhichThrows<? extends InputStream, ? extends IOException> opener

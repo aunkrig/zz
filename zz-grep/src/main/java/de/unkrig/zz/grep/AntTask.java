@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -349,9 +350,13 @@ class AntTask extends Task {
                     // Grep non-file resource.
                     InputStream is = resource.getInputStream();
                     try {
+                        long lastModified     = resource.getLastModified();
+                        Date lastModifiedDate = lastModified == 0 ? null : new Date(lastModified);
+
                         contentsProcessor.process(
                             path,                                                 // path
                             is,                                                   // inputStream
+                            lastModifiedDate,                                     // lastModifiedDate
                             resource.getSize(),                                   // size
                             -1L,                                                  // crc32
                             new ProducerWhichThrows<InputStream, IOException>() { // opener

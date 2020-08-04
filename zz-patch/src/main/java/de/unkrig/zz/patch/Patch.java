@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -247,6 +248,12 @@ class Patch {
 
             @Override public String
             getName() { return name; }
+
+            @Override @Nullable public Date
+            getLastModifiedDate() {
+                long lastModified = contents.lastModified();
+                return lastModified == 0 ? null : new Date(lastModified);
+            }
 
             @Override public InputStream
             open() throws FileNotFoundException { return new FileInputStream(contents); }

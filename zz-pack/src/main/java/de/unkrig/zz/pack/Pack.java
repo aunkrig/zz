@@ -27,11 +27,15 @@
 package de.unkrig.zz.pack;
 
 import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.Collator;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.regex.Pattern;
 
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
@@ -45,6 +49,7 @@ import de.unkrig.commons.file.fileprocessing.FileProcessings;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
+import de.unkrig.commons.file.org.apache.commons.compress.archivers.zip.ZipArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.io.IoUtil;
@@ -95,23 +100,56 @@ class Pack {
     setCompressionFormat(@Nullable CompressionFormat value) { this.compressionFormat = value; }
 
     /**
-     * Sets the output stream to write to; mandatory.
+     * Sets the output stream to write to; mandatory, and alternative to {@link #setArchiveFile(File)}. Works only
+     * for archive formats that support streaming.
      */
     public Closeable
     setOutputStream(OutputStream os)
     throws StreamingNotSupportedException, ArchiveException, IOException, CompressorException {
+
+        ArchiveFormat af = this.archiveFormat;
+        if (af == null) {
+            this.archiveFormat = (af = ZipArchiveFormat.get());
+        }
 
         {
             @Nullable final CompressionFormat cf  = Pack.this.compressionFormat;
             if (cf != null) os = cf.compressorOutputStream(os);
         }
 
-        ArchiveFormat af = Pack.this.archiveFormat;
-        if (af == null) throw new ArchiveException("Archive format not specified");
-
         this.archiveOutputStream = af.archiveOutputStream(os);
 
         return this.archiveOutputStream;
+    }
+
+    /**
+     * Sets the output file to write to; mandatory, and alternative to {@link #setOutputStream(OutputStream)}.
+     */
+    public Closeable
+    setArchiveFile(File archiveFile)
+    throws StreamingNotSupportedException, ArchiveException, IOException, CompressorException {
+
+        ArchiveFormat af = this.archiveFormat;
+        if (af == null) {
+            af = ArchiveFormatFactory.forFileName(archiveFile.getName());
+            if (af == null) {
+                throw new ArchiveException("Could not determine format from archive file name \"" + archiveFile + "\"");
+            }
+            this.archiveFormat = af;
+        }
+
+        @Nullable final CompressionFormat cf  = Pack.this.compressionFormat;
+        if (cf != null) {
+            return (
+                this.archiveOutputStream = af.archiveOutputStream(
+                    cf.compressorOutputStream(
+                        new FileOutputStream(archiveFile)
+                    )
+                )
+            );
+        } else {
+            return (this.archiveOutputStream = af.create(archiveFile));
+        }
     }
 
     /**
@@ -159,27 +197,47 @@ class Pack {
 
             @Override @Nullable public Void
             process(
-                String                                                            name,
+                String                                                            path,
                 final InputStream                                                 is,
+                Date                                                              lastModifiedDate,
                 long                                                              size,
                 long                                                              crc32,
                 ProducerWhichThrows<? extends InputStream, ? extends IOException> opener
             ) throws IOException {
 
-                if (!Pack.this.pathPredicate.evaluate(name)) return null;
+                if (!Pack.this.pathPredicate.evaluate(path)) return null;
 
-                AssertionUtil.notNull(Pack.this.archiveFormat).writeEntry(
+                // Compose a nice archive entry name from the "path", which may contain "!", "%" and the system
+                // dependent file separator (e.g. backslash on MS WINDOWS).
+                String name = path;
+                name = name.replace(File.separatorChar, '/');
+                name = name.replace('!', '/');
+                name = Pack.REGEX_PERCENT.matcher(name).replaceAll("");
+
+                ArchiveFormat af = Pack.this.archiveFormat;
+                assert af != null;
+
+                af.writeEntry(
                     AssertionUtil.notNull(Pack.this.archiveOutputStream),
                     name,
+                    lastModifiedDate,
                     IoUtil.copyFrom(is)
                 );
                 return null;
             }
         };
     }
+    private static final Pattern REGEX_PERCENT = Pattern.compile("%");
 
     /**
-     * @return A {@link FileProcessor} which executes the search and prints results to STDOUT
+     * @return A {@link FileProcessor} which executes the search and copies files, compressed contents and archive
+     *         entries to the archive file
+     * @see    #setLookIntoFormat(Predicate)
+     * @see    #setPathPredicate(Predicate)
+     * @see    #setExceptionHandler(ExceptionHandler)
+     * @see    #setDirectoryMemberNameComparator(Comparator)
+     * @see    #setOutputStream(OutputStream)
+     * @see    #setArchiveFile(File)
      */
     public FileProcessor<Void>
     fileProcessor(boolean lookIntoDirectories) {
