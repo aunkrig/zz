@@ -35,6 +35,7 @@ import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.net.URLConnection;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -700,14 +701,14 @@ class Find {
             boolean isExecutable = file != null ? file.canExecute() : false;
 
             Printers.info(String.format(
-                "%c%c%c%c %10d %tF %<tT %s",
+                "%c%c%c%c %10d %-10tF %<-8tT %s",
                 isDirectory  ? 'd' : '-',
                 isReadable   ? 'r' : '-',
                 isWritable   ? 'w' : '-',
                 isExecutable ? 'x' : '-',
                 size != null ? size : 0L,
-                Mappings.getNonNull(properties, "lastModifiedDate", Date.class),
-                Mappings.getNonNull(properties, "path",             String.class)
+                Mappings.get(properties, "lastModifiedDate", Date.class),
+                Mappings.getNonNull(properties, "path", String.class)
             ));
 
             return true;
@@ -1135,7 +1136,7 @@ class Find {
         properties.put("path",             ProducerUtil.constantProducer("-"));
         properties.put("size",             ProducerUtil.constantProducer(-1L));
 
-        this.findInStream("-", System.in, properties, 0);
+        this.findInStream("-", System.in, null, properties, 0);
     }
 
     /**
@@ -1327,12 +1328,16 @@ class Find {
                 normalContentsHandler
             );
         } else {
-            InputStream is = resource.openStream();
+            URLConnection conn             = resource.openConnection();
+            InputStream   is               = conn.getInputStream();
+            long          lastModified     = conn.getLastModified();
+            Date          lastModifiedDate = lastModified == 0 ? null : new Date(lastModified);
             try {
 
                 CompressUtil.processStream(
                     path,                 // path
                     is,                   // inputStream
+                    lastModifiedDate,     // lastModifiedDate
                     this.lookIntoFormat,  // lookIntoFormat
                     archiveHandler,       // archiveHandler
                     compressorHandler,    // compressorHandler
@@ -1349,6 +1354,7 @@ class Find {
     findInStream(
         final String                  path,
         InputStream                   inputStream,
+        @Nullable Date                lastModifiedDate,
         Map<String, Producer<Object>> streamProperties,
         final int                     currentDepth
     ) throws IOException {
@@ -1361,6 +1367,7 @@ class Find {
             CompressUtil.processStream(
                 path,                                                            // path
                 inputStream,                                                     // inputStream
+                lastModifiedDate,                                                // lastModifiedDate
                 Find.this.lookIntoFormat,                                        // lookIntoArchive
                 this.archiveHandler(path, streamProperties, currentDepth),       // archiveHandler
                 this.compressorHandler(path, streamProperties, currentDepth),    // compressorHandler
@@ -1442,6 +1449,7 @@ class Find {
                                 Find.this.findInStream(
                                     path + '%',
                                     compressorInputStream,
+                                    null, // lastModifiedDate
                                     properties2,
                                     currentDepth + 1
                                 );
@@ -1508,9 +1516,22 @@ class Find {
                                 Producer<Object> crcGetter = Find.methodPropertyGetter(ae, "getCrc");
                                 if (crcGetter == null) crcGetter = ProducerUtil.constantProducer(-1);
 
+                                Date lastModifiedDate;
+                                long lastModified;
+                                try {
+                                    lastModifiedDate = ae.getLastModifiedDate();
+                                    lastModified     = lastModifiedDate.getTime();
+                                } catch (UnsupportedOperationException uoe) {
+
+                                    // Some ArchiveEntry implementations (e.g. SevenZArchiveEntry) throw UOE when "a
+                                    // last modified date is not set".
+                                    lastModifiedDate = null;
+                                    lastModified     = 0;
+                                }
+
                                 Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                                properties2.put("lastModifiedDate", ProducerUtil.constantProducer(ae.getLastModifiedDate())); // SUPPRESS CHECKSTYLE LineLength:1
-                                properties2.put("lastModified",     ProducerUtil.constantProducer(ae.getLastModifiedDate().getTime()));
+                                properties2.put("lastModifiedDate", ProducerUtil.constantProducer(lastModifiedDate));
+                                properties2.put("lastModified",     ProducerUtil.constantProducer(lastModified));
                                 properties2.put("name",             ProducerUtil.constantProducer(ae.getName()));
                                 properties2.put("size",             ProducerUtil.constantProducer(ae.getSize()));
                                 properties2.put("crc",              crcGetter);
@@ -1536,6 +1557,7 @@ class Find {
                                         Find.this.findInStream(
                                             entryPath,
                                             archiveInputStream,
+                                            lastModifiedDate,
                                             properties2,
                                             currentDepth + 1
                                         );
@@ -1565,15 +1587,16 @@ class Find {
         return new NormalContentsHandler<Void>() {
 
             @Override @Nullable public Void
-            handleNormalContents(final InputStream inputStream) {
+            handleNormalContents(final InputStream inputStream, @Nullable Date lastModifiedDate) {
 
                 // Evaluate the FIND expression for the nested normal contents.
                 Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>(properties);
-                properties2.put("path",        ProducerUtil.constantProducer(path));
-                properties2.put("type",        () -> "normal-" + properties.get("type").produce());
-                properties2.put("inputStream", ProducerUtil.constantProducer(inputStream));
-                properties2.put("depth",       ProducerUtil.constantProducer(currentDepth));
-                properties2.put("crc",         () -> {
+                properties2.put("path",             ProducerUtil.constantProducer(path));
+                properties2.put("type",             () -> "normal-" + properties.get("type").produce());
+                properties2.put("lastModifiedDate", () -> lastModifiedDate);
+                properties2.put("inputStream",      ProducerUtil.constantProducer(inputStream));
+                properties2.put("depth",            ProducerUtil.constantProducer(currentDepth));
+                properties2.put("crc",              () -> {
                     final CRC32 cs = new java.util.zip.CRC32();
                     try {
                         ChecksumAction.updateAll(cs, inputStream);
