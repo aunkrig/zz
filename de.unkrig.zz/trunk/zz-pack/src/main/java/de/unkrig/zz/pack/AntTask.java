@@ -28,11 +28,10 @@ package de.unkrig.zz.pack;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -50,7 +49,6 @@ import de.unkrig.commons.file.contentsprocessing.ContentsProcessor;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
-import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.pattern.Glob;
@@ -169,18 +167,8 @@ class AntTask extends Task {
         File archiveFile = this.archiveFile;
         if (archiveFile == null) throw new BuildException("Attribute 'archiveFile=\"...\"' missing");
 
-        OutputStream os = new FileOutputStream(
-            AssertionUtil.notNull(this.archiveFile, "Attribute 'archiveFile=\"...\"' missing")
-        );
-        Closeable c = os;
-        try {
-            c = this.pack.setOutputStream(os);
-
+        try (Closeable c = this.pack.setArchiveFile(archiveFile)) {
             this.execute3();
-
-            c.close();
-        } finally {
-            try { c.close(); } catch (Exception e) {}
         }
     }
 
@@ -226,9 +214,13 @@ class AntTask extends Task {
                     // Pack non-file resource.
                     InputStream is = resource.getInputStream();
                     try {
+                        long lastModified     = resource.getLastModified();
+                        Date lastModifiedDate = lastModified == 0 ? null : new Date(lastModified);
+
                         contentsProcessor.process(
                             resourceName,                                         // path
                             is,                                                   // inputStream
+                            lastModifiedDate,                                     // lastModifiedDate
                             resource.getSize(),                                   // size
                             -1L,                                                  // crc32
                             new ProducerWhichThrows<InputStream, IOException>() { // opener

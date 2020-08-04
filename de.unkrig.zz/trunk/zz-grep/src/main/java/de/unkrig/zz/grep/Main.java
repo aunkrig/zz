@@ -224,6 +224,7 @@ class Main {
             this.grep.contentsProcessor().process(
                 "(standard input)",                                   // path
                 System.in,                                            // inputStream
+                null,                                                 // lastModifiedDate
                 -1L,                                                  // size
                 -1L,                                                  // crc32
                 new ProducerWhichThrows<InputStream, IOException>() { // opener

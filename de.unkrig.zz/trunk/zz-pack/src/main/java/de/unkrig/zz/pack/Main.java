@@ -28,9 +28,7 @@ package de.unkrig.zz.pack;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -39,7 +37,6 @@ import org.apache.commons.compress.compressors.CompressorException;
 import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
-import de.unkrig.commons.file.org.apache.commons.compress.archivers.zip.ZipArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.text.LevelFilteredPrinter;
 import de.unkrig.commons.text.Printers;
@@ -60,10 +57,6 @@ class Main {
 
     private final Pack pack = new Pack();
     {
-
-        // Use "ZIP" as the default archive format.
-        this.pack.setArchiveFormat(ZipArchiveFormat.get());
-
         this.pack.setExceptionHandler(new ExceptionHandler<IOException>() {
             @Override public void handle(String path, IOException ioe)     { Printers.error(path, ioe); }
             @Override public void handle(String path, RuntimeException re) { Printers.error(path, re);  }
@@ -173,17 +166,11 @@ class Main {
 
         FileProcessor<Void> fp = this.pack.fileProcessor(true);
 
-        OutputStream os = new FileOutputStream(archiveFile);
-        Closeable    c  = os;
-        try {
-            c = this.pack.setOutputStream(os);
+        try (Closeable c = this.pack.setArchiveFile(archiveFile)) {
             for (int i = 1; i < args.length; i++) {
                 File file = new File(args[i]);
                 fp.process(file.getPath(), file);
             }
-            c.close();
-        } finally {
-            try { c.close(); } catch (Exception e) {}
         }
     }
 
@@ -202,7 +189,7 @@ class Main {
     }
 
     /**
-     * The archive format to use (one of ${archive.formats}; defaults to "zip").
+     * The archive format to use (one of ${archive.formats}; defaults is determined from the archive file name).
      */
     @CommandLineOption public void
     setArchiveFormat(String format) throws ArchiveException {
