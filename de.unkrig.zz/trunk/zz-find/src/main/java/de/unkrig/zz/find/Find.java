@@ -27,6 +27,7 @@
 package de.unkrig.zz.find;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -682,8 +683,8 @@ class Find {
     }
 
     /**
-     * Prints the file type ('d' or '-'), readability ('r' or '-'), writability ('w' or '-'), size, modification time
-     * and path to the given {@link Writer} and evaluates to {@code true}.
+     * Prints the file type ('d', 'a', 'D' or '-'), readability ('r' or '-'), writability ('w' or '-'), size,
+     * modification time and path to the given {@link Writer} and evaluates to {@code true}.
      */
     public static
     class LsAction implements Action {
@@ -695,14 +696,19 @@ class Find {
             File   file = Mappings.get(properties, "file", File.class);
             Long   size = Mappings.get(properties, "size", Long.class);
 
-            boolean isDirectory  = "directory".equals(type) || type.startsWith("archive-");
+            char c1 = (
+                "directory".equals(type)       ? 'd' :
+                type.startsWith("archive-")    ? 'a' :
+                "directory-entry".equals(type) ? 'D' :
+                '-'
+            );
             boolean isReadable   = file != null ? file.canRead()    : true;
             boolean isWritable   = file != null ? file.canWrite()   : false;
             boolean isExecutable = file != null ? file.canExecute() : false;
 
             Printers.info(String.format(
                 "%c%c%c%c %10d %-10tF %<-8tT %s",
-                isDirectory  ? 'd' : '-',
+                c1,
                 isReadable   ? 'r' : '-',
                 isWritable   ? 'w' : '-',
                 isExecutable ? 'x' : '-',
@@ -1132,9 +1138,8 @@ class Find {
         if (this.maxDepth < 0) return;
 
         final Map<String, Producer<Object>> properties = new HashMap<String, Producer<Object>>();
-        properties.put("lastModifiedDate", ProducerUtil.constantProducer(new Date()));
-        properties.put("path",             ProducerUtil.constantProducer("-"));
-        properties.put("size",             ProducerUtil.constantProducer(-1L));
+        properties.put("path", Find.cp("-"));
+        properties.put("size", Find.cp(-1L));
 
         this.findInStream("-", System.in, null, properties, 0);
     }
@@ -1182,14 +1187,18 @@ class Find {
 
                     // Evaluate the FIND expression for the directory.
                     Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                    properties2.put("type",                   ProducerUtil.constantProducer("directory"));
-                    properties2.put("name",                   ProducerUtil.constantProducer(directory.getName()));
-                    properties2.put("path",                   ProducerUtil.constantProducer(directoryPath));
-                    properties2.put("file",                   ProducerUtil.constantProducer(directory));
-                    properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
+                    properties2.put("type",       Find.cp("directory"));
+                    properties2.put("name",       Find.cp(directory.getName()));
+                    properties2.put("path",       Find.cp(directoryPath));
+                    properties2.put("file",       Find.cp(directory));
+                    properties2.put("depth",      Find.cp(currentDepth));
+                    properties2.put("readable",   () -> directory.canRead());
+                    properties2.put("writable",   () -> directory.canWrite());
+                    properties2.put("executable", () -> directory.canExecute());
+
                     properties2.put("lastModified",           () -> directory.lastModified());
                     properties2.put("lastModifiedDate",       () -> new Date(directory.lastModified()));
-                    properties2.put(Find.PRUNE_PROPERTY_NAME, ProducerUtil.constantProducer(prune)); // <= The "-prune" action will potentially change this value
+                    properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune)); // <= The "-prune" action will potentially change this value
 
                     Find.this.evaluateExpression(properties2);
                 }
@@ -1275,6 +1284,7 @@ class Find {
         {
             File file = ResourceProcessings.isFile(resource);
             if (file != null) {
+
                 if (file.isDirectory()) {
 
                     // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
@@ -1282,15 +1292,59 @@ class Find {
                     this.findInDirectory(path, file, currentDepth);
                     return;
                 }
-                resourceProperties.put("type",             ProducerUtil.constantProducer("file"));
-                resourceProperties.put("name",             ProducerUtil.constantProducer(file.getName()));
-                resourceProperties.put("file",             ProducerUtil.constantProducer(file));
+                resourceProperties.put("type",             Find.cp("file"));
+                resourceProperties.put("name",             Find.cp(file.getName()));
+                resourceProperties.put("size",             () -> file.length());
+                resourceProperties.put("readable",         () -> file.canRead());
+                resourceProperties.put("writable",         () -> file.canWrite());
+                resourceProperties.put("executable",       () -> file.canExecute());
+                resourceProperties.put("crc",              () -> {
+                    final CRC32 cs = new java.util.zip.CRC32();
+                    try (InputStream is = new FileInputStream(file)) {
+                        ChecksumAction.updateAll(cs, is);
+                    } catch (IOException ioe) {
+                        throw ExceptionUtil.wrap(
+                            "Computing CRC of file \"" + resource + "\"",
+                            ioe,
+                            RuntimeException.class
+                        );
+                    }
+                    return (int) cs.getValue();
+                });
+                resourceProperties.put("file",             Find.cp(file));
                 resourceProperties.put("lastModified",     () -> file.lastModified());
                 resourceProperties.put("lastModifiedDate", () -> new Date(file.lastModified()));
             } else {
-                resourceProperties.put("type", ProducerUtil.constantProducer(resource.getProtocol() + "-resource"));
+                resourceProperties.put("type",             Find.cp(resource.getProtocol() + "-resource"));
                 String up = resource.getPath();
-                resourceProperties.put("name", ProducerUtil.constantProducer(up.substring(up.lastIndexOf('/') + 1)));
+                resourceProperties.put("name",             Find.cp(up.substring(up.lastIndexOf('/') + 1)));
+                resourceProperties.put("size",             () -> {
+                    try {
+                        return resource.openConnection().getContentLengthLong();
+                    } catch (IOException ioe) {
+                        throw ExceptionUtil.wrap(
+                            "Querying size of resource \"" + resource + "\"",
+                            ioe,
+                            RuntimeException.class
+                        );
+                    }
+                });
+                resourceProperties.put("readable",         Find.cp(true));
+                resourceProperties.put("writable",         Find.cp(false));
+                resourceProperties.put("executable",       Find.cp(false));
+                resourceProperties.put("crc",              () -> {
+                    final CRC32 cs = new java.util.zip.CRC32();
+                    try (InputStream is = resource.openConnection().getInputStream()) {
+                        ChecksumAction.updateAll(cs, is);
+                    } catch (IOException ioe) {
+                        throw ExceptionUtil.wrap(
+                            "Computing CRC of resource \"" + resource + "\"",
+                            ioe,
+                            RuntimeException.class
+                        );
+                    }
+                    return (int) cs.getValue();
+                });
             }
         }
 
@@ -1300,17 +1354,8 @@ class Find {
         {
 //            Mapping<String, Object> resourceProperties = Find.resourceProperties(path, resource);
 
-            resourceProperties.put("url",  ProducerUtil.constantProducer(resource));
-            resourceProperties.put("path", ProducerUtil.constantProducer(path));
-            resourceProperties.put("crc",  () -> {
-                final CRC32 cs = new java.util.zip.CRC32();
-                try (InputStream is = resource.openConnection().getInputStream()) {
-                    ChecksumAction.updateAll(cs, is);
-                } catch (IOException ioe) {
-                    throw ExceptionUtil.wrap("Computing CRC of \"" + resource + "\"", ioe, RuntimeException.class);
-                }
-                return (int) cs.getValue();
-            });
+            resourceProperties.put("url",  Find.cp(resource));
+            resourceProperties.put("path", Find.cp(path));
 
             archiveHandler        = this.archiveHandler(path, resourceProperties, currentDepth);
             compressorHandler     = this.compressorHandler(path, resourceProperties, currentDepth);
@@ -1360,8 +1405,8 @@ class Find {
     ) throws IOException {
 
         streamProperties = new HashMap<String, Producer<Object>>(streamProperties);
-        streamProperties.put("type", ProducerUtil.constantProducer("contents"));
-        streamProperties.put("path", ProducerUtil.constantProducer(path));
+        streamProperties.put("type", Find.cp("contents"));
+        streamProperties.put("path", Find.cp(path));
 
         try {
             CompressUtil.processStream(
@@ -1414,11 +1459,14 @@ class Find {
                             // Notice that we don't define an "inputStream" property, because otherwise we couldn't
                             // process the CONTENTS of the compressed resource.
                             Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                            properties2.put("type",              ProducerUtil.constantProducer("compressed-" + properties.get("type").produce()));
+                            properties2.put("type",              Find.cp("compressed-" + properties.get("type").produce()));
                             properties2.put("name",              properties.get("name"));
-                            properties2.put("path",              ProducerUtil.constantProducer(path));
-                            properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
-                            properties2.put("depth",             ProducerUtil.constantProducer(currentDepth));
+                            properties2.put("readable",          Find.cp(true));
+                            properties2.put("writable",          Find.cp(false));
+                            properties2.put("executable",        Find.cp(false));
+                            properties2.put("path",              Find.cp(path));
+                            properties2.put("compressionFormat", Find.cp(compressionFormat));
+                            properties2.put("depth",             Find.cp(currentDepth));
 
                             Find.copyOptionalProperty(properties, "file",             properties2);
                             Find.copyOptionalProperty(properties, "lastModified",     properties2);
@@ -1440,16 +1488,29 @@ class Find {
                                 assert name != null;
 
                                 Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                                properties2.put("compressionFormat", ProducerUtil.constantProducer(compressionFormat));
-                                properties2.put("name",              ProducerUtil.constantProducer(name + "%"));
-                                properties2.put("size",              ProducerUtil.constantProducer(-1L));
+                                properties2.put("compressionFormat", Find.cp(compressionFormat));
+                                properties2.put("name",              Find.cp(name + "%"));
+                                properties2.put("size",              Find.cp(-1L));
+                                Find.copyProperty(properties, "readable",   properties2);
+                                Find.copyProperty(properties, "writable",   properties2);
+                                Find.copyProperty(properties, "executable", properties2);
                                 Find.copyOptionalProperty(properties, "lastModified",     properties2);
                                 Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
+
+                                // "Inherit" lastModifiedDate from compression container.
+                                Date lastModifiedDate = null;
+                                {
+                                    Producer<Object> p = properties.get("lastModifiedDate");
+                                    if (p != null) {
+                                        Object o = p.produce();
+                                        if (o instanceof Date) lastModifiedDate = (Date) o;
+                                    }
+                                }
 
                                 Find.this.findInStream(
                                     path + '%',
                                     compressorInputStream,
-                                    null, // lastModifiedDate
+                                    lastModifiedDate,
                                     properties2,
                                     currentDepth + 1
                                 );
@@ -1483,12 +1544,16 @@ class Find {
 
                             // Evaluate the FIND expression for the archive resource.
                             Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                            properties2.put("type",                   ProducerUtil.constantProducer("archive-" + properties.get("type").produce()));
-                            properties2.put("path",                   ProducerUtil.constantProducer(path));
-                            properties2.put("archiveFormat",          ProducerUtil.constantProducer(archiveFormat));
-                            properties2.put("depth",                  ProducerUtil.constantProducer(currentDepth));
+                            properties2.put("type",                   Find.cp("archive-" + properties.get("type").produce()));
+                            properties2.put("path",                   Find.cp(path));
+                            properties2.put("archiveFormat",          Find.cp(archiveFormat));
+                            properties2.put("depth",                  Find.cp(currentDepth));
                             properties2.put("name",                   properties.get("name"));
-                            properties2.put(Find.PRUNE_PROPERTY_NAME, ProducerUtil.constantProducer(prune));
+                            properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune));
+                            Find.copyProperty(properties, "size",       properties2);
+                            Find.copyProperty(properties, "readable",   properties2);
+                            Find.copyProperty(properties, "writable",   properties2);
+                            Find.copyProperty(properties, "executable", properties2);
                             Find.copyOptionalProperty(properties, "file",             properties2);
                             Find.copyOptionalProperty(properties, "lastModified",     properties2);
                             Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
@@ -1514,7 +1579,7 @@ class Find {
                                 String entryPath = path + '!' + entryName;
 
                                 Producer<Object> crcGetter = Find.methodPropertyGetter(ae, "getCrc");
-                                if (crcGetter == null) crcGetter = ProducerUtil.constantProducer(-1);
+                                if (crcGetter == null) crcGetter = Find.cp(-1);
 
                                 Date lastModifiedDate;
                                 long lastModified;
@@ -1530,28 +1595,34 @@ class Find {
                                 }
 
                                 Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                                properties2.put("lastModifiedDate", ProducerUtil.constantProducer(lastModifiedDate));
-                                properties2.put("lastModified",     ProducerUtil.constantProducer(lastModified));
-                                properties2.put("name",             ProducerUtil.constantProducer(ae.getName()));
-                                properties2.put("size",             ProducerUtil.constantProducer(ae.getSize()));
+                                properties2.put("lastModifiedDate", Find.cp(lastModifiedDate));
+                                properties2.put("lastModified",     Find.cp(lastModified));
+                                properties2.put("name",             Find.cp(ae.getName()));
+                                properties2.put("size",             Find.cp(ae.getSize()));
+                                properties2.put("readable",         Find.cp(true));
+                                properties2.put("writable",         Find.cp(false));
+                                properties2.put("executable",       Find.cp(false));
                                 properties2.put("crc",              crcGetter);
 
 //                                Find.putAllPropertiesOf(ae, Find.PROPERTIES_OF_ARCHIVE_ENTRY, properties2);
                                 if (ae.isDirectory()) {
 
                                     // Evaluate the FIND expression for the directory entry.
-                                    properties2.put("path",          ProducerUtil.constantProducer(entryPath));
-                                    properties2.put("name",          ProducerUtil.constantProducer(entryName));
-                                    properties2.put("archiveFormat", ProducerUtil.constantProducer(archiveFormat));
-                                    properties2.put("type",          ProducerUtil.constantProducer("directory-entry"));
-                                    properties2.put("depth",         ProducerUtil.constantProducer(currentDepth + 1));
+                                    properties2.put("path",          Find.cp(entryPath));
+                                    properties2.put("name",          Find.cp(entryName));
+                                    properties2.put("archiveFormat", Find.cp(archiveFormat));
+                                    properties2.put("type",          Find.cp("directory-entry"));
+                                    properties2.put("depth",         Find.cp(currentDepth + 1));
+
+                                    // Archive formate are inconsistent withe the "size" of a directory entry --
+                                    // sometimes it computes to 0, sometimes to -1. We always want 0.
+                                    properties2.put("size", Find.cp(0L));
 
                                     Find.this.evaluateExpression(properties2);
                                 } else {
 
                                     // Evaluate the FIND expression for the non-directory entry.
-//                                    properties2.putAll(properties);
-                                    properties2.put("archiveFormat", ProducerUtil.constantProducer(archiveFormat));
+                                    properties2.put("archiveFormat", Find.cp(archiveFormat));
 
                                     try {
                                         Find.this.findInStream(
@@ -1591,11 +1662,14 @@ class Find {
 
                 // Evaluate the FIND expression for the nested normal contents.
                 Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>(properties);
-                properties2.put("path",             ProducerUtil.constantProducer(path));
+                properties2.put("path",             Find.cp(path));
                 properties2.put("type",             () -> "normal-" + properties.get("type").produce());
                 properties2.put("lastModifiedDate", () -> lastModifiedDate);
-                properties2.put("inputStream",      ProducerUtil.constantProducer(inputStream));
-                properties2.put("depth",            ProducerUtil.constantProducer(currentDepth));
+                Find.copyProperty(properties, "readable",   properties2);
+                Find.copyProperty(properties, "writable",   properties2);
+                Find.copyProperty(properties, "executable", properties2);
+                properties2.put("inputStream",      Find.cp(inputStream));
+                properties2.put("depth",            Find.cp(currentDepth));
                 properties2.put("crc",              () -> {
                     final CRC32 cs = new java.util.zip.CRC32();
                     try {
@@ -1740,13 +1814,30 @@ class Find {
         };
     }
 
-    private static void
-    copyOptionalProperty(
-        Map<String, Producer<Object>> source,
-        String                        propertyName,
-        Map<String, Producer<Object>> destination
+    private static <T> void
+    copyProperty(
+        Map<String, ? extends T> source,
+        String                   propertyName,
+        Map<String, ? super T>   destination
     ) {
-        Producer<Object> valueGetter = source.get(propertyName);
-        if (valueGetter != null) destination.put(propertyName, valueGetter);
+        T value = source.get(propertyName);
+        assert value != null;
+        destination.put(propertyName, value);
     }
+
+    private static <T> void
+    copyOptionalProperty(
+        Map<String, ? extends T> source,
+        String                   propertyName,
+        Map<String, ? super T>   destination
+    ) {
+        T value = source.get(propertyName);
+        if (value != null) destination.put(propertyName, value);
+    }
+
+    /**
+     * Shorthand for {@link ProducerUtil#constantProducer(Object)}.
+     */
+    private static <T> Producer<T>
+    cp(T constantValue) { return ProducerUtil.constantProducer(constantValue); }
 }
