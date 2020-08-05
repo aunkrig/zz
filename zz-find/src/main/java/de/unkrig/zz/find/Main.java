@@ -196,8 +196,8 @@ class Main {
      *     Example:
      *     <blockquote>
      *       {@code -printf}                         <br />
-     *       {@code "%c%c%c%c %10d %6$tF %6$tT %7$s"}<br />
-     *       {@code "directory  ? 'd' : '-'"}        <br />
+     *       {@code '%c%c%c%c %10d %6$tF %6$tT %7$s'}<br />
+     *       {@code "type == 'directory' ? 'd' : type =* 'archive-*' ? 'a' : type == 'directory-entry' ? 'D' : '-'" "readable ? 'r' : '-'"}<br />
      *       {@code "readable   ? 'r' : '-'"}        <br />
      *       {@code "writable   ? 'w' : '-'"}        <br />
      *       {@code "executable ? 'x' : '-'"}        <br />
@@ -210,7 +210,9 @@ class Main {
      *   </dd>
      *   <dt>{@code -ls}</dt>
      *   <dd>
-     *     Print file type, readability, writability, executability, size, modification time and path, and return true.
+     *     Print file type (one of "daD-"), readability, writability, executability, size, modification time and path,
+     *     and return true. The size is zero for directories and directory entries, and -1 if unknown (e.g. for
+     *     archive streams).
      *   </dd>
      *   <dt>{@code -exec} <var>word</var>{@code ... ;}</dt>
      *   <dd>
