@@ -535,7 +535,7 @@ class PatchTest {
 
                 // Update file 'dir1/dir2/file.zip!dir3/dir4/file2' from 'dir1/dir2/file1':
                 "-update", prefix + "/dir1/dir2/file.zip!dir3/dir4/file2=" + prefix + "/dir1/dir2/file1",
-                "-debug",
+//                "-debug",
 
                 PatchTest.UNPATCHED.getPath(),
                 PatchTest.PATCHED.getPath()
