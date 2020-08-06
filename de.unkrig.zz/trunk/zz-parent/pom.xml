@@ -41,7 +41,13 @@
 		<pluginManagement>
 			<plugins>
 
-				<!-- Creates an all-inclusive JAR file. -->
+				<!--
+					Creates an all-inclusive JAR file. That .jar file can be used...
+					* ... as an ANTLIB:
+						<taskdef resource="de/unkrig/zz/zz-diff.xml" classpath="path/to/zz-diff-x.y.z-jar-with-dependencies.jar" />
+					* ... to run the command line tool with a single .jar file on the classpath:
+						java -cp path/to/zz-diff-x.y.z-jar-with-dependencies.jar de.unkrig.zz.diff.Main
+				-->
 				<plugin>
 					<artifactId>maven-assembly-plugin</artifactId>
 					<version>2.6</version>
@@ -49,7 +55,6 @@
 						<descriptorRefs>
 							<descriptorRef>jar-with-dependencies</descriptorRef>
 						</descriptorRefs>
-						<descriptor>../zz-parent/antlib-assembly-descriptor.xml</descriptor>
 						<archive>
 							<manifest>
 								<mainClass>${jar-with-dependencies.mainClass}</mainClass>
