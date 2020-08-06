@@ -63,6 +63,7 @@
 							<version>false</version>
 							<includeDependencySources>true</includeDependencySources>
 							<overview>src/main/antdoc/overview.html</overview>
+							<detectOfflineLinks>false</detectOfflineLinks>
 
 							<doclet>de.unkrig.doclet.ant.AntDoclet</doclet>
 							<docletArtifacts>
