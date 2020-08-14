@@ -40,7 +40,7 @@ import de.unkrig.commons.file.FileUtil;
 public
 class AntTaskTest extends BuildFileTest {
 
-    private static final File FILES = new File("files");
+    private static final File FILES = new File("files").getAbsoluteFile();
 
     @Override public void
     setUp() throws IOException {
@@ -79,9 +79,14 @@ class AntTaskTest extends BuildFileTest {
     @Test public void
     test1() {
 
+
+        // junit.framework.ComparisonFailure: expected:<
+        // [                         files\dir1\dir2\file.zip!/dir1/dir2/file1]files\dir1\dir2\file...> but was:<
+        // [C:\workspaces\zz\zz-find\files\dir1\dir2\file.zip!/dir1/dir2/file1C:\workspaces\zz\zz-find\]files\dir1\dir2\file...>
+
         this.expectLog("find1", (
-            new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getAbsolutePath() + "!/dir1/dir2/file1"
-            + new File(AntTaskTest.FILES, "dir1/dir2/file1").getAbsolutePath()
+            new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getPath() + "!/dir1/dir2/file1"
+            + new File(AntTaskTest.FILES, "dir1/dir2/file1").getPath()
         ));
     }
 
@@ -92,9 +97,9 @@ class AntTaskTest extends BuildFileTest {
     test2() {
 
         this.expectLog("find2", (
-            new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getAbsolutePath() + "!/dir1/dir2/file1"
-            + new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getAbsolutePath() + "!dir3/dir4/file.zip!/dir5/dir6/file1" // SUPPRESS CHECKSTYLE LineLength
-            + new File(AntTaskTest.FILES, "dir1/dir2/file1").getAbsolutePath()
+            new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getPath() + "!/dir1/dir2/file1"
+            + new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getPath() + "!dir3/dir4/file.zip!/dir5/dir6/file1" // SUPPRESS CHECKSTYLE LineLength
+            + new File(AntTaskTest.FILES, "dir1/dir2/file1").getPath()
         ));
     }
 }
