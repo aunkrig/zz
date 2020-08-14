@@ -560,20 +560,30 @@ class Find {
         /**
          * Iff <var>factor</var> is {@link #DAYS}:
          * <dl>
-         *   <dt>Age 0:00:00.000 ... 23:59:59.999:</dt><dd>Value 0</dd>
-         *   <dt>Age 24:00:00.000 ... 47:59:59.999:</dt><dd>Value 1</dd>
-         *   <dt>Age 48:00:00.000 ... 71:59:59.999:</dt><dd>Value 2</dd>
-         *   <dd>etc.</dd>
+         *   <dt>Age 0:00:00.000 ... 23:59:59.999:</dt>
+         *   <dd>Value 0</dd>
+         *
+         *   <dt>Age 24:00:00.000 ... 47:59:59.999:</dt>
+         *   <dd>Value 1</dd>
+         *
+         *   <dt>Age 48:00:00.000 ... 71:59:59.999:</dt>
+         *   <dd>Value 2</dd>
          * </dl>
+         * etc.
          * <p>
          *   Iff <var>factor</var> is {@link #MINUTES}:
          * </p>
          * <dl>
-         *   <dt>Age 0:00:00.000 ... 0:00:59.999:</dt><dd>Value 0</dd>
-         *   <dt>Age 0:01:00.000 ... 00:01:59.999:</dt><dd>Value 1</dd>
-         *   <dt>Age 0:02:00.000 ... 00:02:59.999:</dt><dd>Value 2</dd>
-         *   <dd>etc.</dd>
+         *   <dt>Age 0:00:00.000 ... 0:00:59.999:</dt>
+         *   <dd>Value 0</dd>
+         *
+         *   <dt>Age 0:01:00.000 ... 00:01:59.999:</dt>
+         *   <dd>Value 1</dd>
+         *
+         *   <dt>Age 0:02:00.000 ... 00:02:59.999:</dt>
+         *   <dd>Value 2</dd>
          * </dl>
+         * etc.
          */
         public
         ModificationTimeTest(final Predicate<? super Long> predicate, final long factor) {
@@ -622,6 +632,7 @@ class Find {
 
         private final de.unkrig.commons.text.expression.Expression message;
 
+        public
         EchoAction(String message) { this.message = Find.parseExt(message); }
 
         @Override public boolean

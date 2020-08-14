@@ -100,73 +100,110 @@ class Main {
      *   <dd>
      *     Name matches "<var>glob</var>" (see below).
      *   </dd>
+     *
      *   <dt>{@code -path} <var>glob</var></dt>
      *   <dd>
      *     The full path (e.g. "{@code dir/file.zip!dir/file.zip!dir/file}" or "{@code dir/file}") matches
      *     "<var>glob</var>" (see below).
      *   </dd>
+     *
      *   <dt>{@code -type} <var>glob</var></dt>
      *   <dd>
      *     Whether the type matches the <var>glob</var>. See the "type" property, described below.
      *     If you are unsure about types, run {@code zzfind} with <code>-echo "${type} ${path}"</code> first.
      *   </dd>
+     *
      *   <dt>{@code -readable}</dt>
      *   <dd>
      *     Whether this file is readable.
      *   </dd>
+     *
      *   <dt>{@code -writable}</dt>
      *   <dd>
      *     Whether this file is writable.
      *   </dd>
+     *
      *   <dt>{@code -executable}</dt>
      *   <dd>
      *     Whether this file is executable.
      *   </dd>
-     *   <dt>{@code -size} <var>N</var></dt>
-     *   <dt>{@code -size -}<var>N</var></dt>
-     *   <dt>{@code -size +}<var>N</var></dt>
+     *
+     *   <dt>
+     *     {@code -size} <var>N</var>
+     *     <br />
+     *     {@code -size -}<var>N</var>
+     *     <br />
+     *     {@code -size +}<var>N</var>
+     *   </dt>
      *   <dd>
      *     Whether the size is exactly/less than/more than <var>N</var> (e.g. "{@code 100}", "{@code -1K}",
      *     "{@code +10M}").
      *   </dd>
-     *   <dt>{@code -mtime} <var>N</var></dt>
-     *   <dt>{@code -mtime +}<var>N</var></dt>
-     *   <dt>{@code -mtime -}<var>N</var></dt>
+     *
+     *   <dt>
+     *     {@code -mtime} <var>N</var>
+     *     <br />
+     *     {@code -mtime +}<var>N</var>
+     *     <br />
+     *     {@code -mtime -}<var>N</var>
+     *   </dt>
      *   <dd>
      *     Whether this file/archive entry was last modified (exactly/more than/less than) <var>N</var> days ago
      *     (N=0: 0...24h, N=1: 24...48h, ...).
      *   </dd>
-     *   <dt>{@code -mmin} <var>N</var></dt>
-     *   <dt>{@code -mmin +}<var>N</var></dt>
-     *   <dt>{@code -mmin -}<var>N</var></dt>
+     *
+     *   <dt>
+     *     {@code -mmin} <var>N</var>
+     *     <br />
+     *     {@code -mmin +}<var>N</var>
+     *     <br />
+     *     {@code -mmin -}<var>N</var>
+     *   </dt>
      *   <dd>
      *     Whether this file/archive entry was last modified (exactly/more than/less than) <var>N</var> minutes ago
      *     (N=0: 0...59sec, N=1: 60...119sec, ...).
      *   </dd>
-     *   <dt><var>exp1</var> {@code -a} <var>exp2</var></dt>
-     *   <dt><var>exp1</var> {@code -and} <var>exp2</var></dt>
-     *   <dt><var>exp1</var> {@code '&&'} <var>exp2</var></dt>
-     *   <dt><var>exp1</var> <var>exp2</var></dt>
+     *
+     *   <dt>
+     *     <var>exp1</var> {@code -a} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code -and} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code '&&'} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> <var>exp2</var>
+     *   </dt>
      *   <dd>
      *     Whether both <var>exp1</var> and <var>exp2</var> are true. <var>exp2</var> is not evaluated if
      *     <var>exp1</var> is false.
      *   </dd>
-     *   <dt><var>exp1</var> {@code -o} <var>exp2</var></dt>
-     *   <dt><var>exp1</var> {@code -or} <var>exp2</var></dt>
-     *   <dt><var>exp1</var> {@code '||'} <var>exp2</var></dt>
+     *
+     *   <dt>
+     *     <var>exp1</var> {@code -o} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code -or} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code '||'} <var>exp2</var>
+     *   </dt>
      *   <dd>
      *     Whether <var>exp1</var> or <var>exp2</var> is true. <var>exp2</var> is not evaluated if <var>exp1</var>
      *     is true.
      *   </dd>
+     *
      *   <dt><var>exp1</var> {@code ,} <var>exp2</var></dt>
      *   <dd>
      *     Evaluates both expressions and returns the result of <var>exp2</var>.
      *   </dd>
-     *   <dt>{@code -not} <var>exp</var></dt>
-     *   <dt>{@code !} <var>exp</var></dt>
+     *
+     *   <dt>
+     *     {@code -not} <var>exp</var>
+     *     <br />
+     *     {@code !} <var>exp</var>
+     *   </dt>
      *   <dd>
      *     Whether <var>exp</var> is false.
      *   </dd>
+     *
      *   <dt>{@code (} <var>exp</var> {@code )}</dt>
      *   <dd>
      *     Whether <var>exp</var> is true.
