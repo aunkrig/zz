@@ -7,6 +7,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<artifactId>zz-pack</artifactId>
+	
+	<name>zz-pack</name>
 
 	<parent>
 		<groupId>de.unkrig.zz</groupId>

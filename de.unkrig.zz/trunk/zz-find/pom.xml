@@ -8,6 +8,8 @@
 
 	<artifactId>zz-find</artifactId>
 
+	<name>zz-find</name>
+
 	<parent>
 		<groupId>de.unkrig.zz</groupId>
 		<artifactId>zz-parent</artifactId>
