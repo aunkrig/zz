@@ -602,18 +602,30 @@ class AntTask extends AbstractElementWithOperands {
      * <dl>
      *   <dt>{@code directory}</dt>
      *   <dd>A directory</dd>
+     *
      *   <dt>{@code file}</dt>
      *   <dd>A (non-archive, not-compressed) file</dd>
-     *   <dt>{@code archive-file}</dt>
-     *   <dt>{@code archive-xxx-resource} (e.g. xxx="http")</dt>
+     *
+     *   <dt>
+     *     {@code archive-file}
+     *     <br />
+     *     {@code archive-xxx-resource} (e.g. xxx="http")
+     *   </dt>
      *   <dd>An archive file</dd>
-     *   <dt>{@code compressed-file}</dt>
-     *   <dt>{@code compressed-xxx-resource} (e.g. xxx="http")</dt>
+     *
+     *   <dt>
+     *     {@code compressed-file}
+     *     <br />
+     *     {@code compressed-xxx-resource} (e.g. xxx="http")
+     *   </dt>
      *   <dd>A compressed file</dd>
+     *
      *   <dt>{@code archive}</dt>
      *   <dd>A nested archive</dd>
+     *
      *   <dt>{@code normal-contents}</dt>
      *   <dd>Normal (non-archive, not-compressed) content</dd>
+     *
      *   <dt>{@code directory-entry}</dt>
      *   <dd>A 'directory entry' in an archive.</dd>
      * </dl>
