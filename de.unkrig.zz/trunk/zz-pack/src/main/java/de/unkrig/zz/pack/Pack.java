@@ -199,7 +199,7 @@ class Pack {
             process(
                 String                                                            path,
                 final InputStream                                                 is,
-                Date                                                              lastModifiedDate,
+                @Nullable Date                                                    lastModifiedDate,
                 long                                                              size,
                 long                                                              crc32,
                 ProducerWhichThrows<? extends InputStream, ? extends IOException> opener
