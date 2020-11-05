@@ -9,8 +9,9 @@
     <booleanAttribute key="org.eclipse.jdt.launching.ATTR_USE_START_ON_FIRST_THREAD" value="true"/>
     <stringAttribute key="org.eclipse.jdt.launching.CLASSPATH_PROVIDER" value="org.eclipse.m2e.launchconfig.classpathProvider"/>
     <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="de.unkrig.zz.find.Main"/>
-    <stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="plugins dropins&#13;&#10;&#13;&#10;-name &quot;***svn*&quot; -prune&#13;&#10;-o&#13;&#10;-name &quot;***CustomAuthenticator\.class&quot;"/>
+    <stringAttribute key="org.eclipse.jdt.launching.MODULE_NAME" value="zz-find"/>
+    <stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="coyo-i18n-25.10.1-RELEASE.tar&#13;&#10;-path &quot;coyo-i18n-25.10.1-RELEASE.tar!c20b7cda6c659728e3ec47aa23411183e88600f96965daee9f87d97a2c019362/layer.tar!home/coyo/src/auth**&quot;&#13;&#10;-copy &quot;coyo-i18n-25.10.1-RELEASE-unpacked/$[{name}&quot;"/>
     <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="zz-find"/>
     <stringAttribute key="org.eclipse.jdt.launching.SOURCE_PATH_PROVIDER" value="org.eclipse.m2e.launchconfig.sourcepathProvider"/>
-    <stringAttribute key="org.eclipse.jdt.launching.WORKING_DIRECTORY" value="c:/dev/eclipse/eclipse47sr1"/>
+    <stringAttribute key="org.eclipse.jdt.launching.WORKING_DIRECTORY" value="C:/dev/workspaces/wilma/coyo-i18n"/>
 </launchConfiguration>

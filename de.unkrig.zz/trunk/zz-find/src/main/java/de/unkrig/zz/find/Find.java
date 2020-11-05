@@ -793,8 +793,14 @@ class Find {
 
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
+            InputStream is = Mappings.get(properties, "inputStream", InputStream.class);
+            if (is == null) {
+                throw new RuntimeException(
+                    "\"-cat\" is only possible on \"normal-*\"-type contents "
+                    + "(and not on directories, dir-type archive entries, compressed content etc.)"
+                );
+            }
             try {
-                InputStream is = Mappings.getNonNull(properties, "inputStream", InputStream.class);
                 IoUtil.copy(is, this.out);
             } catch (IOException ioe) {
                 throw ExceptionUtil.wrap("Running '-cat' on '" + properties + "'", ioe, RuntimeException.class);
@@ -823,14 +829,26 @@ class Find {
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
 
-            File tofile = new File(Find.evaluateExpression(this.tofile, properties));
+            String pathname = Find.evaluateExpression(this.tofile, properties);
+            assert pathname != null;
+
+            File tofile = new File(pathname);
             assert tofile != null;
+
+            tofile = Find.fixFile(tofile);
 
             try {
 
                 if (this.mkdirs) IoUtil.createMissingParentDirectoriesFor(tofile);
 
-                InputStream  in  = Mappings.getNonNull(properties, "inputStream", InputStream.class);
+                InputStream in = Mappings.get(properties, "inputStream", InputStream.class);
+                if (in == null) {
+                    throw new RuntimeException(
+                        "\"-copy\" is only possible on \"normal-*\"-type contents "
+                        + "(and not on directories, dir-type archive entries, compressed content etc.)"
+                    );
+                }
+
                 OutputStream out = new FileOutputStream(tofile);
                 try {
                     IoUtil.copy(in, out);
@@ -840,7 +858,7 @@ class Find {
                 }
             } catch (IOException ioe) {
                 throw ExceptionUtil.wrap(
-                    "Copying \"" + properties + "\" to \"" + tofile + "\"",
+                    "Copying to \"" + tofile + "\"",
                     ioe,
                     RuntimeException.class
                 );
@@ -872,7 +890,14 @@ class Find {
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
 
-            final InputStream in = Mappings.getNonNull(properties, "inputStream", InputStream.class);
+            final InputStream in = Mappings.get(properties, "inputStream", InputStream.class);
+            if (in == null) {
+                throw new RuntimeException(
+                    "\"-pipe\" is only possible on \"normal-*\"-type contents "
+                    + "(and not on directories, dir-type archive entries, compressed content etc.)"
+                );
+            }
+
 
             List<String> command2 = new ArrayList<String>();
             for (de.unkrig.commons.text.expression.Expression word : this.command) {
@@ -939,7 +964,13 @@ class Find {
             disassembler.setShowVariableNames(!this.hideVars);
             disassembler.setSymbolicLabels(this.symbolicLabels);
 
-            final InputStream in = Mappings.getNonNull(properties, "inputStream", InputStream.class);
+            final InputStream in = Mappings.get(properties, "inputStream", InputStream.class);
+            if (in == null) {
+                throw new RuntimeException(
+                    "\"-disassemble\" is only possible on \"normal-*\"-type contents "
+                    + "(and not on directories, dir-type archive entries, compressed content etc.)"
+                );
+            }
 
             File toFile = this.toFile;
 
@@ -997,7 +1028,13 @@ class Find {
                 );
             }
 
-            InputStream is = Mappings.getNonNull(properties, "inputStream", InputStream.class);
+            InputStream is = Mappings.get(properties, "inputStream", InputStream.class);
+            if (is == null) {
+                throw new RuntimeException(
+                    "\"-digest\" is only possible on \"normal-*\"-type contents "
+                    + "(and not on directories, dir-type archive entries, compressed content etc.)"
+                );
+            }
 
             try {
                 DigestAction.updateAll(md, is);
@@ -1148,12 +1185,36 @@ class Find {
 
         if (this.maxDepth < 0) return;
 
-        final Map<String, Producer<Object>> properties = new HashMap<String, Producer<Object>>();
+        final Map<String, Producer<? extends Object>> properties = new HashMap<String, Producer<? extends Object>>();
         properties.put("path", Find.cp("-"));
         properties.put("size", Find.cp(-1L));
 
         this.findInStream("-", System.in, null, properties, 0);
     }
+
+    public static File
+    fixFile(File f) {
+
+        String pn      = f.getPath();
+        String fixedPn = Find.fixPathname(pn);
+
+        return fixedPn.contentEquals(pn) ? f : new File(fixedPn);
+    }
+
+    private static String
+    fixPathname(String pn) {
+
+        // Some file systems do not tolerate specific characters in path names, e.g. MS WINDOWS doesn't accept colons.
+        // That would cause an exception in the "-copy" action. In most cases, we rather want to replace the forbidden
+        // character with some string; this can be configured through this system property:
+
+        if (Find.REPLACE_COLON_WITH != null) {
+            pn = pn.replace(":", Find.REPLACE_COLON_WITH);
+        }
+
+        return pn;
+    }
+    @Nullable private static final String REPLACE_COLON_WITH = System.getProperty("Find.replaceColonWith");
 
     /**
      * Executes the search in the <var>resource</var> (which may be a normal file, a directory, or any other resource).
@@ -1197,7 +1258,7 @@ class Find {
                 run() {
 
                     // Evaluate the FIND expression for the directory.
-                    Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                    Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
                     properties2.put("type",       Find.cp("directory"));
                     properties2.put("name",       Find.cp(directory.getName()));
                     properties2.put("path",       Find.cp(directoryPath));
@@ -1234,6 +1295,10 @@ class Find {
                         }
 
                         for (String memberName : memberNames) {
+
+                            // JRE11+MS WINDOWS replace colons (#003A) in member names with #F03A, for whatever reason.
+                            memberName = memberName.replace((char) 0xf031, ':');
+
                             String memberPath = directoryPath + File.separatorChar + memberName;
 
                             try {
@@ -1291,7 +1356,7 @@ class Find {
 
         Find.LOGGER.log(Level.FINER, "Processing \"{0}\" (path is \"{1}\")", new Object[] { resource, path });
 
-        Map<String, Producer<Object>> resourceProperties = new HashMap<String, Producer<Object>>();
+        Map<String, Producer<? extends Object>> resourceProperties = new HashMap<String, Producer<? extends Object>>();
         {
             File file = ResourceProcessings.isFile(resource);
             if (file != null) {
@@ -1408,14 +1473,14 @@ class Find {
 
     private void
     findInStream(
-        final String                  path,
-        InputStream                   inputStream,
-        @Nullable Date                lastModifiedDate,
-        Map<String, Producer<Object>> streamProperties,
-        final int                     currentDepth
+        final String                            path,
+        InputStream                             inputStream,
+        @Nullable Date                          lastModifiedDate,
+        Map<String, Producer<? extends Object>> streamProperties,
+        final int                               currentDepth
     ) throws IOException {
 
-        streamProperties = new HashMap<String, Producer<Object>>(streamProperties);
+        streamProperties = new HashMap<String, Producer<? extends Object>>(streamProperties);
         streamProperties.put("type", Find.cp("contents"));
         streamProperties.put("path", Find.cp(path));
 
@@ -1449,7 +1514,11 @@ class Find {
     }
 
     private CompressorHandler<Void>
-    compressorHandler(final String path, final Map<String, Producer<Object>> properties, final int currentDepth) {
+    compressorHandler(
+        final String                                  path,
+        final Map<String, Producer<? extends Object>> properties,
+        final int                                     currentDepth
+    ) {
 
         return new CompressorHandler<Void>() {
 
@@ -1466,10 +1535,7 @@ class Find {
                         @Override public void
                         run() {
 
-                            // Evaluate the FIND expression for the compressed resource.
-                            // Notice that we don't define an "inputStream" property, because otherwise we couldn't
-                            // process the CONTENTS of the compressed resource.
-                            Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                            Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
                             properties2.put("type",              Find.cp("compressed-" + properties.get("type").produce()));
                             properties2.put("name",              properties.get("name"));
                             properties2.put("readable",          Find.cp(true));
@@ -1478,7 +1544,9 @@ class Find {
                             properties2.put("path",              Find.cp(path));
                             properties2.put("compressionFormat", Find.cp(compressionFormat));
                             properties2.put("depth",             Find.cp(currentDepth));
-
+                            // We define "no input stream", because otherwise we couldn't process the CONTENTS of the
+                            // compressed resource.
+                            properties2.put("inputStream",       Find.cp(null));
                             Find.copyOptionalProperty(properties, "file",             properties2);
                             Find.copyOptionalProperty(properties, "lastModified",     properties2);
                             Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
@@ -1493,12 +1561,12 @@ class Find {
 
                             // Process the compressed resource's contents.
                             if (currentDepth < Find.this.maxDepth) {
-                                Producer<Object> vg = properties.get("name");
+                                Producer<? extends Object> vg = properties.get("name");
                                 assert vg != null;
                                 Object name = vg.produce();
                                 assert name != null;
 
-                                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                                Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
                                 properties2.put("compressionFormat", Find.cp(compressionFormat));
                                 properties2.put("name",              Find.cp(name + "%"));
                                 properties2.put("size",              Find.cp(-1L));
@@ -1511,7 +1579,7 @@ class Find {
                                 // "Inherit" lastModifiedDate from compression container.
                                 Date lastModifiedDate = null;
                                 {
-                                    Producer<Object> p = properties.get("lastModifiedDate");
+                                    Producer<? extends Object> p = properties.get("lastModifiedDate");
                                     if (p != null) {
                                         Object o = p.produce();
                                         if (o instanceof Date) lastModifiedDate = (Date) o;
@@ -1536,7 +1604,11 @@ class Find {
     }
 
     private ArchiveHandler<Void>
-    archiveHandler(final String path, final Map<String, Producer<Object>> properties, final int currentDepth) {
+    archiveHandler(
+        final String                                  path,
+        final Map<String, Producer<? extends Object>> properties,
+        final int                                     currentDepth
+    ) {
 
         return new ArchiveHandler<Void>() {
 
@@ -1554,7 +1626,7 @@ class Find {
                         run() {
 
                             // Evaluate the FIND expression for the archive resource.
-                            Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
+                            Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
                             properties2.put("type",                   Find.cp("archive-" + properties.get("type").produce()));
                             properties2.put("path",                   Find.cp(path));
                             properties2.put("archiveFormat",          Find.cp(archiveFormat));
@@ -1585,73 +1657,86 @@ class Find {
                                 ae != null;
                                 ae = archiveInputStream.getNextEntry()
                             ) {
-
-                                String entryName = ArchiveFormatFactory.normalizeEntryName(ae.getName());
-                                String entryPath = path + '!' + entryName;
-
-                                Producer<Object> crcGetter = Find.methodPropertyGetter(ae, "getCrc");
-                                if (crcGetter == null) crcGetter = Find.cp(-1);
-
-                                Date lastModifiedDate;
-                                long lastModified;
                                 try {
-                                    lastModifiedDate = ae.getLastModifiedDate();
-                                    lastModified     = lastModifiedDate.getTime();
-                                } catch (UnsupportedOperationException uoe) {
-
-                                    // Some ArchiveEntry implementations (e.g. SevenZArchiveEntry) throw UOE when "a
-                                    // last modified date is not set".
-                                    lastModifiedDate = null;
-                                    lastModified     = 0;
+                                    this.processEntry(archiveInputStream, archiveFormat, ae);
+                                } catch (RuntimeException re) {
+                                    throw ExceptionUtil.wrap("Processing archive entry \"" + ae.getName() + "\"", re);
                                 }
+                            }
+                        }
 
-                                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>();
-                                properties2.put("lastModifiedDate", Find.cp(lastModifiedDate));
-                                properties2.put("lastModified",     Find.cp(lastModified));
-                                properties2.put("name",             Find.cp(ae.getName()));
-                                properties2.put("size",             Find.cp(ae.getSize()));
-                                properties2.put("readable",         Find.cp(true));
-                                properties2.put("writable",         Find.cp(false));
-                                properties2.put("executable",       Find.cp(false));
-                                properties2.put("crc",              crcGetter);
+                        private void
+                        processEntry(
+                            final ArchiveInputStream archiveInputStream,
+                            final ArchiveFormat      archiveFormat,
+                            ArchiveEntry             ae
+                        ) throws IOException {
+                            String entryName = ArchiveFormatFactory.normalizeEntryName(ae.getName());
+                            String entryPath = path + '!' + entryName;
+
+                            Producer<Object> crcGetter = Find.methodPropertyGetter(ae, "getCrc");
+                            if (crcGetter == null) crcGetter = Find.cp(-1);
+
+                            Date lastModifiedDate;
+                            long lastModified;
+                            try {
+                                lastModifiedDate = ae.getLastModifiedDate();
+                                lastModified     = lastModifiedDate.getTime();
+                            } catch (UnsupportedOperationException uoe) {
+
+                                // Some ArchiveEntry implementations (e.g. SevenZArchiveEntry) throw UOE when "a
+                                // last modified date is not set".
+                                lastModifiedDate = null;
+                                lastModified     = 0;
+                            }
+
+                            Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
+                            properties2.put("lastModifiedDate", Find.cp(lastModifiedDate));
+                            properties2.put("lastModified",     Find.cp(lastModified));
+                            properties2.put("name",             Find.cp(ae.getName()));
+                            properties2.put("size",             Find.cp(ae.getSize()));
+                            properties2.put("readable",         Find.cp(true));
+                            properties2.put("writable",         Find.cp(false));
+                            properties2.put("executable",       Find.cp(false));
+                            properties2.put("crc",              crcGetter);
 
 //                                Find.putAllPropertiesOf(ae, Find.PROPERTIES_OF_ARCHIVE_ENTRY, properties2);
-                                if (ae.isDirectory()) {
+                            if (ae.isDirectory()) {
 
-                                    // Evaluate the FIND expression for the directory entry.
-                                    properties2.put("path",          Find.cp(entryPath));
-                                    properties2.put("name",          Find.cp(entryName));
-                                    properties2.put("archiveFormat", Find.cp(archiveFormat));
-                                    properties2.put("type",          Find.cp("directory-entry"));
-                                    properties2.put("depth",         Find.cp(currentDepth + 1));
+                                // Evaluate the FIND expression for the directory entry.
+                                properties2.put("path",          Find.cp(entryPath));
+                                properties2.put("name",          Find.cp(entryName));
+                                properties2.put("archiveFormat", Find.cp(archiveFormat));
+                                properties2.put("type",          Find.cp("directory-entry"));
+                                properties2.put("depth",         Find.cp(currentDepth + 1));
+                                properties2.put("inputStream",   Find.cp(null));
 
-                                    // Archive formate are inconsistent withe the "size" of a directory entry --
-                                    // sometimes it computes to 0, sometimes to -1. We always want 0.
-                                    properties2.put("size", Find.cp(0L));
+                                // Archive formate are inconsistent withe the "size" of a directory entry --
+                                // sometimes it computes to 0, sometimes to -1. We always want 0.
+                                properties2.put("size", Find.cp(0L));
 
-                                    Find.this.evaluateExpression(properties2);
-                                } else {
+                                Find.this.evaluateExpression(properties2);
+                            } else {
 
-                                    // Evaluate the FIND expression for the non-directory entry.
-                                    properties2.put("archiveFormat", Find.cp(archiveFormat));
+                                // Evaluate the FIND expression for the non-directory entry.
+                                properties2.put("archiveFormat", Find.cp(archiveFormat));
 
-                                    try {
-                                        Find.this.findInStream(
-                                            entryPath,
-                                            archiveInputStream,
-                                            lastModifiedDate,
-                                            properties2,
-                                            currentDepth + 1
-                                        );
-                                    } catch (IOException ioe) {
-                                        Find.this.exceptionHandler.consume(ExceptionUtil.wrap((
-                                            "Continue with next "
-                                            + archiveFormat
-                                            + " archive entry after entry \""
-                                            + entryPath
-                                            + "\""
-                                        ), ioe));
-                                    }
+                                try {
+                                    Find.this.findInStream(
+                                        entryPath,
+                                        archiveInputStream,
+                                        lastModifiedDate,
+                                        properties2,
+                                        currentDepth + 1
+                                    );
+                                } catch (IOException ioe) {
+                                    Find.this.exceptionHandler.consume(ExceptionUtil.wrap((
+                                        "Continue with next "
+                                        + archiveFormat
+                                        + " archive entry after entry \""
+                                        + entryPath
+                                        + "\""
+                                    ), ioe));
                                 }
                             }
                         }
@@ -1664,7 +1749,7 @@ class Find {
     }
 
     private NormalContentsHandler<Void>
-    normalContentsHandler(final String path, final Map<String, Producer<Object>> properties, final int currentDepth) {
+    normalContentsHandler(final String path, final Map<String, Producer<? extends Object>> properties, final int currentDepth) {
 
         return new NormalContentsHandler<Void>() {
 
@@ -1672,7 +1757,7 @@ class Find {
             handleNormalContents(final InputStream inputStream, @Nullable Date lastModifiedDate) {
 
                 // Evaluate the FIND expression for the nested normal contents.
-                Map<String, Producer<Object>> properties2 = new HashMap<String, Producer<Object>>(properties);
+                Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>(properties);
                 properties2.put("path",             Find.cp(path));
                 properties2.put("type",             () -> "normal-" + properties.get("type").produce());
                 properties2.put("lastModifiedDate", () -> lastModifiedDate);
@@ -1696,7 +1781,7 @@ class Find {
                     // Check if the "size" property inherited from the ArchiveEntry has a reasonable
                     // value (ZipArchiveEntries have size -1 iff the archive was created in "streaming
                     // mode").
-                    Producer<Object> sizeValueProducer = properties.get("size");
+                    Producer<? extends Object> sizeValueProducer = properties.get("size");
                     if (sizeValueProducer != null) {
                         Long size = (Long) sizeValueProducer.produce();
                         assert size != null;
@@ -1724,7 +1809,7 @@ class Find {
     }
 
     private void
-    evaluateExpression(Map<String, Producer<Object>> properties) {
+    evaluateExpression(Map<String, Producer<? extends Object>> properties) {
 
         // Do not evaluate the expression if the current depth is less than "this.minDepth".
         if (this.minDepth > 0) {
@@ -1743,7 +1828,14 @@ class Find {
     private static long
     checksum(final Mapping<String, Object> properties, Checksum cs) {
 
-        InputStream is = Mappings.getNonNull(properties, "inputStream", InputStream.class);
+        InputStream is = Mappings.get(properties, "inputStream", InputStream.class);
+        if (is == null) {
+            throw new RuntimeException(
+                "\"-checksum\" is only possible on \"normal-*\"-type contents "
+                + "(and not on directories, dir-type archive entries, compressed content etc.)"
+            );
+        }
+
         try {
             ChecksumAction.updateAll(cs, is);
         } catch (IOException ioe) {
@@ -1755,7 +1847,7 @@ class Find {
     }
 
     private static Mapping<String, Object>
-    toMapping(Map<String, Producer<Object>> map) {
+    toMapping(Map<String, Producer<? extends Object>> map) {
 
         return new Mapping<String, Object>() {
 
@@ -1776,7 +1868,7 @@ class Find {
                 if ("_keys".equals(key))   return this.getLazyMap().keySet();
                 if ("_values".equals(key)) return this.getLazyMap().values();
 
-                Producer<Object> valueProducer = map.get(key);
+                Producer<? extends Object> valueProducer = map.get(key);
                 if (valueProducer == null) return null;
                 return valueProducer.produce();
             }
@@ -1790,11 +1882,14 @@ class Find {
     }
 
     private static Map<String, Object>
-    lazyMap(Map<String, Producer<Object>> map) {
+    lazyMap(Map<String, Producer<? extends Object>> map) {
+
         Map<String, Function<Object, Object>> functionMap = new HashMap<>();
-        for (Entry<String, Producer<Object>> e : map.entrySet()) {
+
+        for (Entry<String, Producer<? extends Object>> e : map.entrySet()) {
             functionMap.put(e.getKey(), in -> e.getValue().produce());
         }
+
         return MapUtil.lazyMap(functionMap, null);
     }
 
@@ -1850,5 +1945,5 @@ class Find {
      * Shorthand for {@link ProducerUtil#constantProducer(Object)}.
      */
     private static <T> Producer<T>
-    cp(T constantValue) { return ProducerUtil.constantProducer(constantValue); }
+    cp(@Nullable T constantValue) { return ProducerUtil.constantProducer(constantValue); }
 }

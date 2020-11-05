@@ -36,6 +36,7 @@ import java.util.Date;
 import java.util.List;
 
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
+import de.unkrig.commons.file.org.apache.commons.compress.archivers.sevenz.SevenZArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.file.resourceprocessing.ResourceProcessings;
 import de.unkrig.commons.lang.AssertionUtil;
@@ -266,12 +267,14 @@ class Main {
      *   <dd>
      *     Print file contents and return true.
      *   </dd>
-     *   <dt>{@code -copy} <var>tofile</var></dt>
+     *   <dt>{@code -copy [ --mkdirs | -p ] } <var>tofile</var></dt>
      *   <dd>
      *     Copy file contents to the named file.
      *     All occurrences of "<code>${<i>property-name</i>}</code>" in the <var>tofile</var> are replaced with
      *     the value of the property. For the list of supported properties, see section "Properties of files and
      *     archive entries", below.
+     *     <br />
+     *     {@code --mkdirs} (or {@code -p}) silently create any missing directory.
      *   </dd>
      *   <dt>
      *     {@code -disassemble} [ {@code -verbose} ] [ {@code -sourceDirectory} <var>dir</var> ] [ {@code -hideLines} ]
@@ -595,6 +598,15 @@ class Main {
      */
     @CommandLineOption public void
     setMaxDepth(int levels) { this.find.setMaxDepth(levels); }
+
+    /**
+     * Password to decrypt password-protected 7ZIP input files.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    set7zInputFilePassword(String value) {
+        System.setProperty(SevenZArchiveFormat.SYSTEM_PROPERTY_SEVEN_Z_INPUT_FILE_PASSWORD, value);
+    }
 
     /**
      * Suppress all messages except errors.
