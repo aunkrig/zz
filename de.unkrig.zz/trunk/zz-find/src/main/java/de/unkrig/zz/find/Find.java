@@ -28,6 +28,7 @@ package de.unkrig.zz.find;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -1259,15 +1260,15 @@ class Find {
 
                     // Evaluate the FIND expression for the directory.
                     Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
-                    properties2.put("type",       Find.cp("directory"));
-                    properties2.put("name",       Find.cp(directory.getName()));
-                    properties2.put("path",       Find.cp(directoryPath));
-                    properties2.put("file",       Find.cp(directory));
-                    properties2.put("depth",      Find.cp(currentDepth));
-                    properties2.put("readable",   () -> directory.canRead());
-                    properties2.put("writable",   () -> directory.canWrite());
-                    properties2.put("executable", () -> directory.canExecute());
-
+                    properties2.put("type",                   Find.cp("directory"));
+                    properties2.put("name",                   Find.cp(directory.getName()));
+                    properties2.put("path",                   Find.cp(directoryPath));
+                    properties2.put("file",                   Find.cp(directory));
+                    properties2.put("depth",                  Find.cp(currentDepth));
+                    properties2.put("inputStream",            Find.cp(null));
+                    properties2.put("readable",               () -> directory.canRead());
+                    properties2.put("writable",               () -> directory.canWrite());
+                    properties2.put("executable",             () -> directory.canExecute());
                     properties2.put("lastModified",           () -> directory.lastModified());
                     properties2.put("lastModifiedDate",       () -> new Date(directory.lastModified()));
                     properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune)); // <= The "-prune" action will potentially change this value
@@ -1374,6 +1375,17 @@ class Find {
                 resourceProperties.put("readable",         () -> file.canRead());
                 resourceProperties.put("writable",         () -> file.canWrite());
                 resourceProperties.put("executable",       () -> file.canExecute());
+                resourceProperties.put("inputStream",      () -> {
+                    try {
+                        return new FileInputStream(file);
+                    } catch (FileNotFoundException fnfe) {
+                        throw ExceptionUtil.wrap(
+                            "Reading file \"" + resource + "\"",
+                            fnfe,
+                            RuntimeException.class
+                        );
+                    }
+                });
                 resourceProperties.put("crc",              () -> {
                     final CRC32 cs = new java.util.zip.CRC32();
                     try (InputStream is = new FileInputStream(file)) {
@@ -1631,12 +1643,13 @@ class Find {
                             properties2.put("path",                   Find.cp(path));
                             properties2.put("archiveFormat",          Find.cp(archiveFormat));
                             properties2.put("depth",                  Find.cp(currentDepth));
+                            properties2.put("inputStream",            Find.cp(null));
                             properties2.put("name",                   properties.get("name"));
                             properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune));
-                            Find.copyProperty(properties, "size",       properties2);
-                            Find.copyProperty(properties, "readable",   properties2);
-                            Find.copyProperty(properties, "writable",   properties2);
-                            Find.copyProperty(properties, "executable", properties2);
+                            Find.copyProperty(properties, "size",        properties2);
+                            Find.copyProperty(properties, "readable",    properties2);
+                            Find.copyProperty(properties, "writable",    properties2);
+                            Find.copyProperty(properties, "executable",  properties2);
                             Find.copyOptionalProperty(properties, "file",             properties2);
                             Find.copyOptionalProperty(properties, "lastModified",     properties2);
                             Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
@@ -1927,7 +1940,7 @@ class Find {
         Map<String, ? super T>   destination
     ) {
         T value = source.get(propertyName);
-        assert value != null;
+        assert value != null || source.containsKey(propertyName) : propertyName;
         destination.put(propertyName, value);
     }
 
