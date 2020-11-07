@@ -36,6 +36,8 @@ import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
+import de.unkrig.commons.lang.protocol.Relation;
+import de.unkrig.commons.lang.protocol.Relations;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.parser.AbstractParser;
 import de.unkrig.commons.text.parser.ParseException;
@@ -347,19 +349,19 @@ class Parser {
     public static Predicate<Long>
     parseNumericArgument(String text) {
 
-        final Mode mode;
-        final long n;
+        final Relation<Long> relation;
+        final long           rhs;
 
         if (text.startsWith("+")) {
-            mode = Mode.MORE_THAN;
+            relation = Relations.greaterThan();
             text = text.substring(1);
         } else
         if (text.startsWith("-")) {
-            mode = Mode.LESS_THAN;
+            relation = Relations.lessThan();
             text = text.substring(1);
         } else
         {
-            mode = Mode.EXACTLY;
+            relation = Relations.equalTo();
         }
 
         long multiplier;
@@ -379,34 +381,8 @@ class Parser {
             multiplier = 1L;
         }
 
-        n = multiplier * Long.parseLong(text);
+        rhs = multiplier * Long.parseLong(text);
 
-        return new Predicate<Long>() {
-
-            @Override public boolean
-            evaluate(Long subject) {
-                switch (mode) {
-                case EXACTLY:
-                    return subject == n;
-                case LESS_THAN:
-                    return subject < n;
-                case MORE_THAN:
-                    return subject > n;
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-
-            @Override public String
-            toString() {
-                return (
-                    mode == Mode.MORE_THAN ? "> " :
-                    mode == Mode.LESS_THAN ? "< " :
-                    mode == Mode.EXACTLY ? "== " :
-                    "??? "
-                ) + n;
-            }
-        };
+        return Relations.compareWithConstant(relation, rhs);
     }
-    private enum Mode { MORE_THAN, LESS_THAN, EXACTLY }
 }
