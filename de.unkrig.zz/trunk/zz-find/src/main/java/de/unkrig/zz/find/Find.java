@@ -1704,14 +1704,15 @@ class Find {
                             }
 
                             Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
-                            properties2.put("lastModifiedDate", Find.cp(lastModifiedDate));
-                            properties2.put("lastModified",     Find.cp(lastModified));
-                            properties2.put("name",             Find.cp(ae.getName()));
-                            properties2.put("size",             Find.cp(ae.getSize()));
-                            properties2.put("readable",         Find.cp(true));
-                            properties2.put("writable",         Find.cp(false));
-                            properties2.put("executable",       Find.cp(false));
-                            properties2.put("crc",              crcGetter);
+                            properties2.put("lastModifiedDate",  Find.cp(lastModifiedDate));
+                            properties2.put("lastModified",      Find.cp(lastModified));
+                            properties2.put("name",              Find.cp(ae.getName()));
+                            properties2.put("size",              Find.cp(ae.getSize()));
+                            properties2.put("readable",          Find.cp(true));
+                            properties2.put("writable",          Find.cp(false));
+                            properties2.put("executable",        Find.cp(false));
+                            properties2.put("crc",               crcGetter);
+                            properties2.put("compressionMethod", Find.cp(archiveFormat.getCompressionMethod(ae)));
 
 //                                Find.putAllPropertiesOf(ae, Find.PROPERTIES_OF_ARCHIVE_ENTRY, properties2);
                             if (ae.isDirectory()) {
