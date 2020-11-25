@@ -341,6 +341,11 @@ class Main {
      *     <br />
      *     For all other types: Empty.
      *   </dd>
+     *   <dt>{@code "compressionMethod"}:</dt>
+     *   <dd>
+     *     For archive entries: The compression method that was used.
+     *     Only some of the archive formats provide this information, namely \"zip\" and \"7z\".
+     *   </dd>
      *   <dt>{@code "crc"}:</dt>
      *   <dd>
      *     For types "normal-contents" and "normal-file": The CRC32 checksum of the contents.
