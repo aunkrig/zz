@@ -1650,9 +1650,10 @@ class Find {
                             Find.copyProperty(properties, "readable",    properties2);
                             Find.copyProperty(properties, "writable",    properties2);
                             Find.copyProperty(properties, "executable",  properties2);
-                            Find.copyOptionalProperty(properties, "file",             properties2);
-                            Find.copyOptionalProperty(properties, "lastModified",     properties2);
-                            Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
+                            Find.copyOptionalProperty(properties, "file",              properties2);
+                            Find.copyOptionalProperty(properties, "lastModified",      properties2);
+                            Find.copyOptionalProperty(properties, "lastModifiedDate",  properties2);
+                            Find.copyOptionalProperty(properties, "compressionMethod", properties2);
 
                             Find.this.evaluateExpression(properties2);
                         }
