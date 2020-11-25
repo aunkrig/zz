@@ -21,7 +21,7 @@
 		<dependency>
 			<groupId>de.unkrig.commons</groupId>
 			<artifactId>commons-file</artifactId>
-			<version>1.2.15</version>
+			<version>1.2.16-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.ant</groupId>
@@ -32,7 +32,7 @@
 		<dependency>
 			<groupId>de.unkrig.jdisasm</groupId>
 			<artifactId>jdisasm</artifactId>
-			<version>1.0.6</version>
+			<version>1.0.7-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 
