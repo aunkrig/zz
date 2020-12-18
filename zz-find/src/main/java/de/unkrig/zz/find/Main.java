@@ -283,6 +283,13 @@ class Main {
      *   <dd>
      *     Disassembles a Java class file.
      *   </dd>
+     *   <dt>
+     *     {@code -java-class-file} <var>expr</var>
+     *   </dt>
+     *   <dd>
+     *     Parses the Java class file, evaluates the given expression (where parameter "cf" represents the
+     *     {@code de.unkrig.jdisasm.ClassFile}) and prints the result on stdout
+     *   </dd>
      *   <dt>{@code -digest} <var>algorithm</var></dt>
      *   <dd>
      *     Calculate a "message digest" of the contents, print it and return true.

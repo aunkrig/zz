@@ -57,6 +57,7 @@ import de.unkrig.zz.find.Find.EchoAction;
 import de.unkrig.zz.find.Find.ExecAction;
 import de.unkrig.zz.find.Find.ExecutabilityTest;
 import de.unkrig.zz.find.Find.Expression;
+import de.unkrig.zz.find.Find.JavaClassFileAction;
 import de.unkrig.zz.find.Find.LsAction;
 import de.unkrig.zz.find.Find.ModificationTimeTest;
 import de.unkrig.zz.find.Find.NameTest;
@@ -223,12 +224,12 @@ class Parser {
         switch (this.parser.read(
 
             // SUPPRESS CHECKSTYLE Wrap:6
-            "(",            "!",         "-not",      "-name",       "-path",
-            "-type",        "-readable", "-writable", "-executable", "-size",
-            "-mtime",       "-mmin",     "-print",    "-echo",       "-printf",
-            "-ls",          "-exec",     "-pipe",     "-cat",        "-copy",
-            "-disassemble", "-digest",   "-checksum", "-true",       "-false",
-            "-prune",       "-delete"
+            "(",            "!",                "-not",      "-name",       "-path",
+            "-type",        "-readable",        "-writable", "-executable", "-size",
+            "-mtime",       "-mmin",            "-print",    "-echo",       "-printf",
+            "-ls",          "-exec",            "-pipe",     "-cat",        "-copy",
+            "-disassemble", "-java-class-file", "-digest",   "-checksum",   "-true",
+            "-false",       "-prune",           "-delete"
         )) {
         case 0:  // '('
             final Expression result = this.parseComma();
@@ -311,10 +312,13 @@ class Parser {
                 this.parser.peekRead("-symbolicLabels"), // symbolicLabels
                 null                                     // file
             );
-        case 21: // "-digest"
+        case 21: // "-java-class-file"
+            this.hadAction = true;
+            return new JavaClassFileAction(this.parser.read().text);
+        case 22: // "-digest"
             this.hadAction = true;
             return new DigestAction(this.parser.read().text);
-        case 22: // "-checksum"
+        case 23: // "-checksum"
             this.hadAction = true;
             ChecksumType cst;
             try {
@@ -328,13 +332,13 @@ class Parser {
                 );
             }
             return new ChecksumAction(cst);
-        case 23: // "-true"
+        case 24: // "-true"
             return Test.TRUE;
-        case 24: // "-false"
+        case 25: // "-false"
             return Test.FALSE;
-        case 25: // "-prune"
+        case 26: // "-prune"
             return new PruneAction();
-        case 26: // "-delete"
+        case 27: // "-delete"
             return new DeleteAction();
         default:
             throw new IllegalStateException();
