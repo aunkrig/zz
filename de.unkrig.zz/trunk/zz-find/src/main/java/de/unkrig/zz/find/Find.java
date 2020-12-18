@@ -26,6 +26,7 @@
 
 package de.unkrig.zz.find;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -91,6 +92,7 @@ import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.commons.util.collections.MapUtil;
+import de.unkrig.jdisasm.ClassFile;
 import de.unkrig.jdisasm.Disassembler;
 
 /**
@@ -1004,6 +1006,44 @@ class Find {
     }
 
     /**
+     * Disassembles a Java class file.
+     */
+    public static
+    class JavaClassFileAction implements Action {
+
+        private final de.unkrig.commons.text.expression.Expression expression;
+
+        JavaClassFileAction(String expression) {
+            this.expression = Find.parse(expression);
+        }
+
+        @Override public boolean
+        evaluate(Mapping<String, Object> properties) {
+
+            final InputStream in = Mappings.get(properties, "inputStream", InputStream.class);
+            if (in == null) {
+                throw new RuntimeException(
+                    "\"-java-class-file\" is only possible on \"normal-*\"-type contents "
+                    + "(and not on directories, dir-type archive entries, compressed content etc.)"
+                );
+            }
+
+            ClassFile cf;
+            try {
+                cf = new ClassFile(new DataInputStream(in));
+            } catch (IOException ioe) {
+                return false;
+            }
+            System.out.println(Find.evaluateExpression(this.expression, Mappings.override(properties, "cf", cf)));
+
+            return true;
+        }
+
+        @Override public String
+        toString() { return "(Java class file)"; }
+    }
+
+    /**
      * Calculates a "message digest" of an input stream's content and prints it to {@link Printers#info(String)}.
      */
     public static
@@ -1321,6 +1361,18 @@ class Find {
                 }
             }
         );
+    }
+
+    public static de.unkrig.commons.text.expression.Expression
+    parse(String spec) {
+
+        ExpressionEvaluator ee = new ExpressionEvaluator(PredicateUtil.<String>always());
+
+        try {
+            return ee.parse(spec);
+        } catch (ParseException pe) {
+            throw ExceptionUtil.wrap("Parsing \"" + spec + "\"", pe, IllegalArgumentException.class);
+        }
     }
 
     public static de.unkrig.commons.text.expression.Expression
