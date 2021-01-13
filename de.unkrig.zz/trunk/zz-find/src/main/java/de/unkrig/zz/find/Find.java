@@ -1611,6 +1611,7 @@ class Find {
                             // We define "no input stream", because otherwise we couldn't process the CONTENTS of the
                             // compressed resource.
                             properties2.put("inputStream",       Find.cp(null));
+                            Find.copyOptionalProperty(properties, "archiveEntry",     properties2);
                             Find.copyOptionalProperty(properties, "file",             properties2);
                             Find.copyOptionalProperty(properties, "lastModified",     properties2);
                             Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
@@ -1702,6 +1703,7 @@ class Find {
                             Find.copyProperty(properties, "readable",    properties2);
                             Find.copyProperty(properties, "writable",    properties2);
                             Find.copyProperty(properties, "executable",  properties2);
+                            Find.copyOptionalProperty(properties, "archiveEntry",      properties2);
                             Find.copyOptionalProperty(properties, "file",              properties2);
                             Find.copyOptionalProperty(properties, "lastModified",      properties2);
                             Find.copyOptionalProperty(properties, "lastModifiedDate",  properties2);
@@ -1757,6 +1759,7 @@ class Find {
                             }
 
                             Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
+                            properties2.put("archiveEntry",      Find.cp(ae));
                             properties2.put("lastModifiedDate",  Find.cp(lastModifiedDate));
                             properties2.put("lastModified",      Find.cp(lastModified));
                             properties2.put("name",              Find.cp(ae.getName()));
@@ -1831,6 +1834,7 @@ class Find {
                 Find.copyProperty(properties, "readable",   properties2);
                 Find.copyProperty(properties, "writable",   properties2);
                 Find.copyProperty(properties, "executable", properties2);
+                Find.copyOptionalProperty(properties, "archiveEntry", properties2);
                 properties2.put("inputStream",      Find.cp(inputStream));
                 properties2.put("depth",            Find.cp(currentDepth));
                 properties2.put("crc",              () -> {
@@ -1961,7 +1965,7 @@ class Find {
     }
 
     /**
-     * @return {@code null} iff the <var>target</var> {@link HashMap} no non-static zero-parameter method with that
+     * @return {@code null} iff the <var>target</var> has no non-static zero-parameter method with that
      *         <var>methodName</var>
      */
     @Nullable private static Producer<Object>
