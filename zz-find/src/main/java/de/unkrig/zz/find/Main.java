@@ -351,7 +351,7 @@ class Main {
      *   <dt>{@code "compressionMethod"}:</dt>
      *   <dd>
      *     For archive entries: The compression method that was used.
-     *     Only some of the archive formats provide this information, namely \"zip\" and \"7z\".
+     *     Only some of the archive formats provide this information, namely "zip" and "7z".
      *   </dd>
      *   <dt>{@code "crc"}:</dt>
      *   <dd>
@@ -372,7 +372,8 @@ class Main {
      *     absoluteFile, absolutePath, canonicalFile, canonicalPath, name, parent, parentFile, path, isDirectory,
      *     isFile, isHidden, lastModified, length, toURI.
      *   </dd>
-     *   <dt>{@code lastModified} (milliseconds since 1970) and {@code "lastModifiedDate"} ({@link Date} object):</dt>
+     *   <dt>{@code "lastModified"} (milliseconds since 1970),</dt>
+     *   <dt>{@code "lastModifiedDate"} ({@link Date} object):</dt>
      *   <dd>
      *     For types "archive-file", "compressed-file", "directory" and "normal-file":
      *     The date and time of the last modification of the file.
