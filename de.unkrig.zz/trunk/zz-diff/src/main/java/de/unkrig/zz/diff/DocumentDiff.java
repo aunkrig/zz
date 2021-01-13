@@ -53,6 +53,7 @@ import org.incava.util.diff.Difference;
 
 import de.unkrig.commons.io.ByteFilterInputStream;
 import de.unkrig.commons.lang.AssertionUtil;
+import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.AbstractPrinter;
@@ -767,6 +768,10 @@ class DocumentDiff {
     readAllLines(InputStream inputStream, Iterable<Pattern> equivalentLines, String path) throws IOException {
         try {
             return this.readAllLines2(inputStream, equivalentLines, path);
+        } catch (IOException ioe) {
+            throw ExceptionUtil.wrap(path, ioe);
+        } catch (RuntimeException re) {
+            throw ExceptionUtil.wrap(path, re);
         } finally {
             try { inputStream.close(); } catch (IOException ioe) {}
         }
