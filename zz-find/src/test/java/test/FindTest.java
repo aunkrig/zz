@@ -498,7 +498,7 @@ class FindTest extends TestCase {
     private static List<String>
     find(final Find find, String[] expression) throws ParseException, IOException {
 
-        Parser parser = new Parser(ProducerUtil.fromElements(expression), System.out);
+        Parser parser = new Parser(ProducerUtil.fromElements(expression));
         find.setExpression(parser.parse());
 
         return FindTest.find(find);
