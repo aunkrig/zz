@@ -27,9 +27,7 @@
 package de.unkrig.zz.find;
 
 import java.io.File;
-import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import de.unkrig.commons.lang.AssertionUtil;
@@ -47,7 +45,6 @@ import de.unkrig.commons.text.scanner.ScanException;
 import de.unkrig.zz.find.Find.AndTest;
 import de.unkrig.zz.find.Find.CatAction;
 import de.unkrig.zz.find.Find.ChecksumAction;
-import de.unkrig.zz.find.Find.ChecksumAction.ChecksumType;
 import de.unkrig.zz.find.Find.CommaTest;
 import de.unkrig.zz.find.Find.CopyAction;
 import de.unkrig.zz.find.Find.DeleteAction;
@@ -90,16 +87,14 @@ class Parser {
     enum TokenType { LITERAL }
 
     private final AbstractParser<TokenType> parser;
-    private final OutputStream              outOS;
 
     private boolean hadAction;
 
     /**
      * @param producer The source of tokens to parse
-     * @param out      Where the {@link CatAction} writes its output
      */
     public <EX extends Throwable>
-    Parser(final ProducerWhichThrows<String, ? extends EX> producer, OutputStream out) {
+    Parser(final ProducerWhichThrows<String, ? extends EX> producer) {
 
         this.parser = new AbstractParser<TokenType>(new ProducerWhichThrows<Token<TokenType>, ScanException>() {
 
@@ -120,8 +115,6 @@ class Parser {
                 return new Token<TokenType>(TokenType.LITERAL, text);
             }
         });
-
-        this.outOS = out;
     }
 
     /**
@@ -232,9 +225,11 @@ class Parser {
             "-false",       "-prune",           "-delete"
         )) {
         case 0:  // '('
-            final Expression result = this.parseComma();
-            this.parser.read(")");
-            return result;
+            {
+                final Expression result = this.parseComma();
+                this.parser.read(")");
+                return result;
+            }
         case 1:  // '!'
         case 2:  // '-not'
             return new NotExpression(this.parsePrimary());
@@ -293,25 +288,31 @@ class Parser {
             }
         case 18: // '-cat'
             this.hadAction = true;
-            return new CatAction(this.outOS);
+            return new CatAction(System.out);
         case 19: // '-copy'
             this.hadAction = true;
             boolean mkdirs = this.parser.peekRead("-p", "--mkdirs") != -1;
             return new CopyAction(new File(this.parser.read().text), mkdirs);
         case 20: // "-disassemble"
             this.hadAction = true;
-            return new DisassembleAction(
-                this.parser.peekRead("-verbose"),        // verbose
-                (                                        // sourceDirectory
-                    this.parser.peekRead("-sourceDirectory")
-                    ? new File(this.parser.read().text)
-                    : null
-                ),
-                this.parser.peekRead("-hideLines"),      // hideLines
-                this.parser.peekRead("-hideVars"),       // hideVars
-                this.parser.peekRead("-symbolicLabels"), // symbolicLabels
-                null                                     // file
-            );
+            {
+                boolean verbose         = false;
+                File    sourceDirectory = null;
+                boolean hideLines       = false;
+                boolean hideVars        = false;
+                boolean symbolicLabels  = false;
+                File    toFile          = null;
+                for (;;) {
+                    if (this.parser.peekRead("-verbose"))         { verbose         = true;                              } else
+                    if (this.parser.peekRead("-sourceDirectory")) { sourceDirectory = new File(this.parser.read().text); } else
+                    if (this.parser.peekRead("-hideLines"))       { hideLines       = true;                              } else
+                    if (this.parser.peekRead("-hideVars"))        { hideVars        = true;                              } else
+                    if (this.parser.peekRead("-symbolicLabels"))  { symbolicLabels  = true;                              } else
+                    if (this.parser.peekRead("-toFile"))          { toFile          = new File(this.parser.read().text); } else
+                    break;
+                }
+                return new DisassembleAction(verbose, sourceDirectory, hideLines, hideVars, symbolicLabels, toFile);
+            }
         case 21: // "-java-class-file"
             this.hadAction = true;
             return new JavaClassFileAction(this.parser.read().text);
@@ -320,18 +321,7 @@ class Parser {
             return new DigestAction(this.parser.read().text);
         case 23: // "-checksum"
             this.hadAction = true;
-            ChecksumType cst;
-            try {
-                cst = ChecksumAction.ChecksumType.valueOf(this.parser.read().text);
-            } catch (IllegalArgumentException iae) {
-                throw new IllegalArgumentException(
-                    "Invalid checksum type \""
-                    + this.parser.read().text
-                    + "\"; allowed values are "
-                    + Arrays.toString(ChecksumAction.ChecksumType.values())
-                );
-            }
-            return new ChecksumAction(cst);
+            return new ChecksumAction(this.parser.readEnum(ChecksumAction.ChecksumType.values()));
         case 24: // "-true"
             return Test.TRUE;
         case 25: // "-false"
