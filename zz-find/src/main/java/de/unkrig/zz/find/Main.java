@@ -278,10 +278,10 @@ class Main {
      *   </dd>
      *   <dt>
      *     {@code -disassemble} [ {@code -verbose} ] [ {@code -sourceDirectory} <var>dir</var> ] [ {@code -hideLines} ]
-     *     [ {@code -hideVars} ] [ {@code -symbolicLabels} ]
+     *     [ {@code -hideVars} ] [ {@code -symbolicLabels} ] [ {@code -toFile} <var>file</var> ]
      *   </dt>
      *   <dd>
-     *     Disassembles a Java class file.
+     *     Disassembles a Java class file (by default to STDOUT).
      *   </dd>
      *   <dt>
      *     {@code -java-class-file} <var>expr</var>
@@ -504,7 +504,7 @@ class Main {
         // Parse the FIND expression.
         // Notice: Even ZERO tokens are a valid FIND expression.
         try {
-            Parser parser = new Parser(ProducerUtil.fromArray(args, i, args.length), System.out);
+            Parser parser = new Parser(ProducerUtil.fromArray(args, i, args.length));
             this.find.setExpression(parser.parse());
         } catch (Exception e) {
             Printers.error("Parsing predicates", e);
