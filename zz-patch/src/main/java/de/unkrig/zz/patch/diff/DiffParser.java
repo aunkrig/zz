@@ -193,10 +193,10 @@ class DiffParser {
 
     /** E.g. '--- kkk/foo2    2011-04-06 19:00:20.234375000 +0200' */
     private static final Pattern
-    UD_FILE1_HEADER = Pattern.compile("--- (.+?) +\\d\\d\\d\\d-\\d\\d-\\d\\d .*", Pattern.DOTALL);
+    UD_FILE1_HEADER = Pattern.compile("--- (.+?)[ \\t]+\\d\\d\\d\\d-\\d\\d-\\d\\d .*", Pattern.DOTALL);
     /** E.g. '+++ kkk2/foo2   2011-04-14 15:09:44.500000000 +0200' */
     private static final Pattern
-    UD_FILE2_HEADER = Pattern.compile("\\+\\+\\+ (.+?) +\\d\\d\\d\\d-\\d\\d-\\d\\d .*", Pattern.DOTALL);
+    UD_FILE2_HEADER = Pattern.compile("\\+\\+\\+ (.+?)[ \\t]+\\d\\d\\d\\d-\\d\\d-\\d\\d .*", Pattern.DOTALL);
     /** E.g. '@@ -12,9 +14,8 @@' */
     private static final Pattern
     UD_HUNK_HEADER = Pattern.compile("@@ -(\\d+),(\\d+) \\+(\\d+),(\\d+) @@\\s*");
@@ -292,7 +292,7 @@ class DiffParser {
 
             // UNIFIED DIFF?
 
-            if (ss.peek(DiffParser.UD_FILE1_HEADER)) {
+            if (ss.peekRead(DiffParser.UD_FILE1_HEADER)) {
 
                 // '--- kkk/foo2    2011-04-06 19:00:20.234375000 +0200'  <= UD_FILE1_HEADER
                 // '+++ kkk2/foo2   2011-04-14 15:09:44.500000000 +0200'  <= UD_FILE2_HEADER
@@ -317,7 +317,6 @@ class DiffParser {
                 // ' 17'
                 // ' 18'
                 // ...
-                ss.read(DiffParser.UD_FILE1_HEADER);
                 fileName1 = ss.group(1);
                 assert fileName1 != null;
 
