@@ -832,6 +832,15 @@ class Find {
         @Override public boolean
         evaluate(Mapping<String, Object> properties) {
 
+            InputStream in = Mappings.get(properties, "inputStream", InputStream.class);
+            if (in == null) {
+
+                // Entries that have no input stream (e.g. directories or directory archive entries) are silently
+                // ignored, because that is practical: Otherwise, you'd always have to put "-type normal*" right
+                // before the "-copy" action.
+                return true;
+            }
+
             String pathname = Find.evaluateExpression(this.tofile, properties);
             assert pathname != null;
 
@@ -844,20 +853,17 @@ class Find {
 
                 if (this.mkdirs) IoUtil.createMissingParentDirectoriesFor(tofile);
 
-                InputStream in = Mappings.get(properties, "inputStream", InputStream.class);
-                if (in == null) {
-                    throw new RuntimeException(
-                        "\"-copy\" is only possible on \"normal-*\"-type contents "
-                        + "(and not on directories, dir-type archive entries, compressed content etc.)"
-                    );
-                }
-
                 OutputStream out = new FileOutputStream(tofile);
                 try {
                     IoUtil.copy(in, out);
                     out.close();
                 } finally {
                     try { out.close(); } catch (IOException e) {}
+                }
+
+                Long lastModified = Mappings.get(properties, "lastModified", Long.class);
+                if (lastModified != null) {
+                    tofile.setLastModified(lastModified);
                 }
             } catch (IOException ioe) {
                 throw ExceptionUtil.wrap(
