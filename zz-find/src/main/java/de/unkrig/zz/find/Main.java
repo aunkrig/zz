@@ -91,8 +91,8 @@ class Main {
      * <h2>Expressions</h2>
      *
      * <p>
-     *   <var>Expression</var>s are either tests or actions (a test with side effects). Both evaluate to a boolean
-     *   value.
+     *   Expressions evaluate to a boolean value. An expression is either a test, or an action (a test with side
+     *   effects), or a combination of multiple subexpressions through operators.
      * </p>
      *
      * <h3>Tests</h3>
@@ -164,51 +164,6 @@ class Main {
      *     Whether this file/archive entry was last modified (exactly/more than/less than) <var>N</var> minutes ago
      *     (N=0: 0...59sec, N=1: 60...119sec, ...).
      *   </dd>
-     *
-     *   <dt>
-     *     <var>exp1</var> {@code -a} <var>exp2</var>
-     *     <br />
-     *     <var>exp1</var> {@code -and} <var>exp2</var>
-     *     <br />
-     *     <var>exp1</var> {@code '&&'} <var>exp2</var>
-     *     <br />
-     *     <var>exp1</var> <var>exp2</var>
-     *   </dt>
-     *   <dd>
-     *     Whether both <var>exp1</var> and <var>exp2</var> are true. <var>exp2</var> is not evaluated if
-     *     <var>exp1</var> is false.
-     *   </dd>
-     *
-     *   <dt>
-     *     <var>exp1</var> {@code -o} <var>exp2</var>
-     *     <br />
-     *     <var>exp1</var> {@code -or} <var>exp2</var>
-     *     <br />
-     *     <var>exp1</var> {@code '||'} <var>exp2</var>
-     *   </dt>
-     *   <dd>
-     *     Whether <var>exp1</var> or <var>exp2</var> is true. <var>exp2</var> is not evaluated if <var>exp1</var>
-     *     is true.
-     *   </dd>
-     *
-     *   <dt><var>exp1</var> {@code ,} <var>exp2</var></dt>
-     *   <dd>
-     *     Evaluates both expressions and returns the result of <var>exp2</var>.
-     *   </dd>
-     *
-     *   <dt>
-     *     {@code -not} <var>exp</var>
-     *     <br />
-     *     {@code !} <var>exp</var>
-     *   </dt>
-     *   <dd>
-     *     Whether <var>exp</var> is false.
-     *   </dd>
-     *
-     *   <dt>{@code (} <var>exp</var> {@code )}</dt>
-     *   <dd>
-     *     Whether <var>exp</var> is true.
-     *   </dd>
      * </dl>
      *
      * <h3>Actions</h3>
@@ -235,7 +190,7 @@ class Main {
      *     <blockquote>
      *       {@code -printf}                         <br />
      *       {@code '%c%c%c%c %10d %6$tF %6$tT %7$s'}<br />
-     *       {@code "type == 'directory' ? 'd' : type =* 'archive-*' ? 'a' : type == 'directory-entry' ? 'D' : '-'" "readable ? 'r' : '-'"}<br />
+     *       {@code "type == 'directory' ? 'd' : type =* 'archive-*' ? 'a' : type == 'directory-entry' ? 'D' : '-'"}<br />
      *       {@code "readable   ? 'r' : '-'"}        <br />
      *       {@code "writable   ? 'w' : '-'"}        <br />
      *       {@code "executable ? 'x' : '-'"}        <br />
@@ -320,9 +275,59 @@ class Main {
      *     otherwise the directory is first deleted, and then traversed, which cannot possibly work.
      *   </dd>
      * </dl>
+     *
      * <p>
      *   If no action is given, then "{@code -print}" is implicitly added.
      * </p>
+     *
+     * <h3>Operators</h3>
+     * <p>(In descending precedence.)</p>
+     * <dl>
+     *   <dt>{@code (} <var>exp</var> {@code )}</dt>
+     *   <dd>
+     *     Whether <var>exp</var> is true.
+     *   </dd>
+     *
+     *   <dt>
+     *     {@code -not} <var>exp</var>
+     *     <br />
+     *     {@code !} <var>exp</var>
+     *   </dt>
+     *   <dd>
+     *     Whether <var>exp</var> is false.
+     *   </dd>
+     *
+     *   <dt>
+     *     <var>exp1</var> {@code -a} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code -and} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code '&&'} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> <var>exp2</var>
+     *   </dt>
+     *   <dd>
+     *     Whether both <var>exp1</var> and <var>exp2</var> are true. <var>exp2</var> is not evaluated if
+     *     <var>exp1</var> is false.
+     *   </dd>
+     *
+     *   <dt>
+     *     <var>exp1</var> {@code -o} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code -or} <var>exp2</var>
+     *     <br />
+     *     <var>exp1</var> {@code '||'} <var>exp2</var>
+     *   </dt>
+     *   <dd>
+     *     Whether <var>exp1</var> or <var>exp2</var> is true. <var>exp2</var> is not evaluated if <var>exp1</var>
+     *     is true.
+     *   </dd>
+     *
+     *   <dt><var>exp1</var> {@code ,} <var>exp2</var></dt>
+     *   <dd>
+     *     Evaluates both expressions and returns the result of <var>exp2</var>.
+     *   </dd>
+     * </dl>
      *
      * <h3>Properties of files and archive entries</h3>
      * <p>
