@@ -39,6 +39,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -798,10 +799,16 @@ class Find {
         evaluate(Mapping<String, Object> properties) {
             InputStream is = Mappings.get(properties, "inputStream", InputStream.class);
             if (is == null) {
-                throw new RuntimeException(
-                    "\"-cat\" is only possible on \"normal-*\"-type contents "
-                    + "(and not on directories, dir-type archive entries, compressed content etc.)"
-                );
+
+                // Entries that have no input stream (e.g. directories or directory archive entries) are silently
+                // ignored, because that is practical: Otherwise, you'd always have to put "-type normal*" right
+                // before the "-cat" action.
+                try {
+                    this.out.write(("[Entry of type " + properties.get("type") + " has no content to cat]").getBytes(StandardCharsets.ISO_8859_1));
+                } catch (IOException ioe) {
+                    ;
+                }
+                return true;
             }
             try {
                 IoUtil.copy(is, this.out);
@@ -1997,6 +2004,9 @@ class Find {
         };
     }
 
+    /**
+     * Verifies that the named property exists, then copies the property's value.
+     */
     private static <T> void
     copyProperty(
         Map<String, ? extends T> source,
