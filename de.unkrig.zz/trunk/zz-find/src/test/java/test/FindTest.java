@@ -35,11 +35,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
 import de.unkrig.commons.file.FileUtil;
 import de.unkrig.commons.junit4.AssertRegex;
+import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
 import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.ProducerUtil;
@@ -49,6 +51,7 @@ import de.unkrig.commons.text.Printers;
 import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
+import de.unkrig.commons.text.pattern.PatternUtil;
 import de.unkrig.zz.find.Find;
 import de.unkrig.zz.find.Parser;
 import junit.framework.TestCase;
@@ -67,8 +70,8 @@ class FindTest extends TestCase {
         new Files(new Object[] {
             "dir1", new Object[] {
                 "dir2", new Object[] {
-                    "file1",    "",
-                    "file3.Z",  "123",
+                    "file1",   "",
+                    "file3.Z", "123",
                     "file.zip", new Object[] {
                         "/dir1/dir2/file1",  "XYZ",
                         "dir3/dir4/file2",   "",
@@ -97,10 +100,10 @@ class FindTest extends TestCase {
         Find find = new Find();
         find.setLookIntoFormat(Glob.compile("zip:", Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES));
 
-        FindTest.assertFindOutputEquals(
-            find,
-            new String[] { "-name", "file1" },
-            new File(FindTest.FILES, "dir1/dir2/file1").getPath()
+        FindTest.assertFindOutputMatches(
+            find,                              // find
+            new String[] { "-name", "file1" }, // expression
+            "@FILES/dir1/dir2/file1"           // expectedRegexes
         );
     }
 
@@ -110,11 +113,11 @@ class FindTest extends TestCase {
         Find find = new Find();
         find.setLookIntoFormat(Glob.compile("zip:**", Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES));
 
-        FindTest.assertFindOutputEquals(
-            find,
-            new String[] { "-name", "**file1" },
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!/dir1/dir2/file1",
-            new File(FindTest.FILES, "dir1/dir2/file1").getPath()
+        FindTest.assertFindOutputMatches(
+            find,                                         // find
+            new String[] { "-name", "**file1" },          // expression
+            "@FILES/dir1/dir2/file.zip!/dir1/dir2/file1", // expectedRegexes
+            "@FILES/dir1/dir2/file1"
         );
     }
 
@@ -124,94 +127,97 @@ class FindTest extends TestCase {
         Find find = new Find();
         find.setLookIntoFormat(Glob.compile("zip:***", Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES));
 
-        FindTest.assertFindOutputEquals(
-            find,
-            new String[] { "-name", "**file1" },
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!/dir1/dir2/file1",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip!/dir1/dir2/file1",
-            new File(FindTest.FILES, "dir1/dir2/file1").getPath()
+        FindTest.assertFindOutputMatches(
+            find,                                           // find
+            new String[] { "-name", "**file1" },            // expression
+            "@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1", // expectedRegexes...
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+            "@FILES/dir1/dir2/file1"
         );
     }
 
     @Test public void
     test4() throws Exception {
 
-        FindTest.assertFindOutputEquals(
-            new Find(),
-            new String[] { "-type", "directory" },
-            FindTest.FILES.getPath(),
-            new File(FindTest.FILES, "dir1").getPath(),
-            new File(FindTest.FILES, "dir1/dir2").getPath()
+        FindTest.assertFindOutputMatches(
+            new Find(),                            // find
+            new String[] { "-type", "directory" }, // expression
+            "@FILES",                              // expectedRegexes...
+            "@FILES/dir1",
+            "@FILES/dir1/dir2"
         );
     }
 
     @Test public void
     test5() throws Exception {
 
-        FindTest.assertFindOutputEquals(
-            new Find(),
-            new String[] { "-type", "archive-file" },
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath()
+        FindTest.assertFindOutputMatches(
+            new Find(),                               // find
+            new String[] { "-type", "archive-file" }, // expression
+            "@FILES/dir1/dir2/file\\.zip"              // expectedRegexes...
         );
     }
 
     @Test public void
     test6() throws Exception {
 
-        FindTest.assertFindOutputEquals(
+        FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-type", "compressed-file" },
-            new File(FindTest.FILES, "dir1/dir2/file3.Z").getPath()
+            "@FILES/dir1/dir2/file3\\.Z"
         );
     }
 
     @Test public void
     test7() throws Exception {
 
-        FindTest.assertFindOutputEquals(
+        FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-type", "normal-file" },
-            new File(FindTest.FILES, "dir1/dir2/file1").getPath()
+            "@FILES/dir1/dir2/file1"
         );
     }
 
     @Test public void
     test8() throws Exception {
 
-        FindTest.assertFindOutputEquals(
+        FindTest.assertFindOutputMatches(
             new Find(),
             new String[] { "-type", "archive-contents" },
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip"
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip"
         );
     }
 
     @Test public void
     test9() throws Exception {
 
-        FindTest.assertFindOutputEquals(
-            new Find(),
-            new String[] { "-type", "normal-contents" },
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!/dir1/dir2/file1",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!dir3/dir4/file2",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!dir3/dir4/file3.Z%",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip!/dir1/dir2/file1",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip!dir3/dir4/file2",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip!dir3/dir4/file3.Z%",
-            new File(FindTest.FILES, "dir1/dir2/file3.Z").getPath() + '%'
+        FindTest.assertFindOutputMatches(
+            new Find(),                                     // find
+            new String[] { "-type", "normal-contents" },    // expression
+            "@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1", // expectedRegexes...
+            "@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+            "@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
+            "@FILES/dir1/dir2/file3\\.Z%"
         );
     }
 
     @Test public void
     test10() throws Exception {
 
-        FindTest.assertFindOutputEquals(
-            new Find(),
-            new String[] { "-type", "directory-entry" },
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!dir3/dir4/dir5",
-            new File(FindTest.FILES, "dir1/dir2/file.zip").getPath() + "!file.zip!dir3/dir4/dir5"
+        FindTest.assertFindOutputMatches(
+            new Find(),                                  // find
+            new String[] { "-type", "directory-entry" }, // expression
+            "@FILES/dir1/dir2/file.zip!dir3/dir4/dir5",  // expectedRegexes...
+            "@FILES/dir1/dir2/file.zip!file\\.zip!dir3/dir4/dir5"
         );
     }
 
+    /**
+     * Tests the magical {@code _map} property, which is the map of <i>all</i> properties.
+     */
     @Test public void
     testExpressionVariables() throws Exception {
 
@@ -232,26 +238,27 @@ class FindTest extends TestCase {
             }
         });
 
-        AssertRegex.assertMatches(Arrays.asList(new String[] { // SUPPRESS CHECKSTYLE LineLength:18
-            "\\{\\$PRUNE=\\[Z@\\w+, depth=0, executable=true, file=\\S+\\\\zz-find\\\\files, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=files, path=files, readable=true, type=directory, writable=true}",
-            "\\{\\$PRUNE=\\[Z@\\w+, depth=1, executable=true, file=\\S+\\\\zz-find\\\\files\\\\dir1, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir1, path=files\\\\dir1, readable=true, type=directory, writable=true}",
-            "\\{\\$PRUNE=\\[Z@\\w+, depth=2, executable=true, file=\\S+\\\\zz-find\\\\files\\\\dir1\\\\dir2, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir2, path=files\\\\dir1\\\\dir2, readable=true, type=directory, writable=true}",
-            "\\{\\$PRUNE=\\[Z@\\w+, archiveFormat=zip, depth=3, executable=true, file=\\S+\\\\files\\\\dir1\\\\dir2\\\\file.zip, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=file\\.zip, path=files\\\\dir1\\\\dir2\\\\file.zip, readable=true, size=\\d{2,}, type=archive-file, writable=true}",
-            "\\{archiveEntry=/dir1/dir2/file1, archiveFormat=zip, compressionMethod=DEFLATED, crc=2099902701, depth=4, executable=false, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=/dir1/dir2/file1, path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1, readable=true, size=3, type=normal-contents, writable=false}",
-            "\\{archiveEntry=dir3/dir4/file2, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=4, executable=false, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file2, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2, readable=true, size=0, type=normal-contents, writable=false}",
-            "\\{archiveEntry=dir3/dir4/dir5/, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=4, executable=false, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/dir5, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5, readable=true, size=0, type=directory-entry, writable=false}",
-            "\\{archiveEntry=dir3/dir4/file3.Z, compressionFormat=gz, depth=4, executable=false, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file3\\.Z, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z, readable=true, type=compressed-contents, writable=false}",
-            "\\{compressionFormat=gz, crc=0, depth=5, executable=false, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file3.Z%, path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%, readable=true, size=3, type=normal-contents, writable=false}",
-            "\\{\\$PRUNE=\\[Z@\\w+, archiveEntry=file.zip, archiveFormat=zip, compressionMethod=DEFLATED, depth=4, executable=false, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=file.zip, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip, readable=true, size=\\d{2,}, type=archive-contents, writable=false}",
-            "\\{archiveEntry=/dir1/dir2/file1, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=5, executable=false, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=/dir1/dir2/file1, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1, readable=true, size=3, type=normal-contents, writable=false}",
-            "\\{archiveEntry=dir3/dir4/file2, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=5, executable=false, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file2, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2, readable=true, size=0, type=normal-contents, writable=false}",
-            "\\{archiveEntry=dir3/dir4/dir5/, archiveFormat=zip, compressionMethod=DEFLATED, crc=-1, depth=5, executable=false, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/dir5, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5, readable=true, size=0, type=directory-entry, writable=false}",
-            "\\{archiveEntry=dir3/dir4/file3.Z, compressionFormat=gz, depth=5, executable=false, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file3\\.Z, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z, readable=true, type=compressed-contents, writable=false}",
-            "\\{compressionFormat=gz, crc=0, depth=6, executable=false, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=dir3/dir4/file3.Z%, path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%, readable=true, size=3, type=normal-contents, writable=false}",
-            "\\{crc=0, depth=3, executable=true, file=\\S+\\\\files\\\\dir1\\\\dir2\\\\file1, inputStream=de.unkrig.commons.io.InputStreams\\$9@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=file1, path=files\\\\dir1\\\\dir2\\\\file1, readable=true, size=0, type=normal-file, url=file:\\S+/zz-find/files/dir1/dir2/file1, writable=true}",
-            "\\{compressionFormat=gz, depth=3, executable=false, file=\\S+\\\\files\\\\dir1\\\\dir2\\\\file3\\.Z, inputStream=null, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=file3\\.Z, path=files\\\\dir1\\\\dir2\\\\file3.Z, readable=true, type=compressed-file, writable=false}",
-            "\\{compressionFormat=gz, crc=0, depth=4, executable=true, inputStream=java.io.BufferedInputStream@\\w+, lastModified=-?\\d{7,}, lastModifiedDate=\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}, name=file3.Z%, path=files\\\\dir1\\\\dir2\\\\file3.Z%, readable=true, size=3, type=normal-contents, writable=true}"
-        }), FindTest.find(find));
+        FindTest.assertFindOutputMatches(
+            find,
+            "\\{\\$PRUNE=\\[Z@\\w+, depth=0, executable=true, file=@ABS_FILES, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=files, path=@FILES, readable=true, type=directory, writable=true}",
+            "\\{\\$PRUNE=\\[Z@\\w+, depth=1, executable=true, file=@ABS_FILES/dir1, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir1, path=@FILES/dir1, readable=true, type=directory, writable=true}",
+            "\\{\\$PRUNE=\\[Z@\\w+, depth=2, executable=true, file=@ABS_FILES/dir1/dir2, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir2, path=@FILES/dir1/dir2, readable=true, type=directory, writable=true}",
+            "\\{\\$PRUNE=\\[Z@\\w+, archiveFormat=zip, depth=3, executable=true, file=@ABS_FILES/dir1/dir2/file\\.zip, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=file\\.zip, path=@FILES/dir1/dir2/file\\.zip, readable=true, size=@ANY_INT, type=archive-file, writable=true}",
+            "\\{archiveEntry=/dir1/dir2/file1, archiveFormat=zip, compressionMethod=DEFLATED, crc=2099902701, depth=4, executable=false, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=/dir1/dir2/file1, path=@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1, readable=true, size=3, type=normal-contents, writable=false}",
+            "\\{archiveEntry=dir3/dir4/file2, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=4, executable=false, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/file2, path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2, readable=true, size=0, type=normal-contents, writable=false}",
+            "\\{archiveEntry=dir3/dir4/dir5/, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=4, executable=false, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/dir5, path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5, readable=true, size=0, type=directory-entry, writable=false}",
+            "\\{archiveEntry=dir3/dir4/file3\\.Z, compressionFormat=gz, depth=4, executable=false, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/file3\\.Z, path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z, readable=true, type=compressed-contents, writable=false}",
+            "\\{compressionFormat=gz, crc=0, depth=5, executable=false, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/file3\\.Z%, path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%, readable=true, size=3, type=normal-contents, writable=false}",
+            "\\{\\$PRUNE=\\[Z@\\w+, archiveEntry=file\\.zip, archiveFormat=zip, compressionMethod=DEFLATED, depth=4, executable=false, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=file\\.zip, path=@FILES/dir1/dir2/file\\.zip!file\\.zip, readable=true, size=@ANY_INT, type=archive-contents, writable=false}",
+            "\\{archiveEntry=/dir1/dir2/file1, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=5, executable=false, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=/dir1/dir2/file1, path=@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1, readable=true, size=3, type=normal-contents, writable=false}",
+            "\\{archiveEntry=dir3/dir4/file2, archiveFormat=zip, compressionMethod=DEFLATED, crc=0, depth=5, executable=false, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/file2, path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2, readable=true, size=0, type=normal-contents, writable=false}",
+            "\\{archiveEntry=dir3/dir4/dir5/, archiveFormat=zip, compressionMethod=DEFLATED, crc=-1, depth=5, executable=false, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/dir5, path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5, readable=true, size=0, type=directory-entry, writable=false}",
+            "\\{archiveEntry=dir3/dir4/file3\\.Z, compressionFormat=gz, depth=5, executable=false, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/file3\\.Z, path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z, readable=true, type=compressed-contents, writable=false}",
+            "\\{compressionFormat=gz, crc=0, depth=6, executable=false, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir3/dir4/file3\\.Z%, path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%, readable=true, size=3, type=normal-contents, writable=false}",
+            "\\{crc=0, depth=3, executable=true, file=@ABS_FILES/dir1/dir2/file1, inputStream=de\\.unkrig\\.commons\\.io\\.InputStreams\\$9@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=file1, path=@FILES/dir1/dir2/file1, readable=true, size=0, type=normal-file, url=file:\\S+/zz-find/files/dir1/dir2/file1, writable=true}",
+            "\\{compressionFormat=gz, depth=3, executable=false, file=@ABS_FILES/dir1/dir2/file3\\.Z, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=file3\\.Z, path=@FILES/dir1/dir2/file3\\.Z, readable=true, type=compressed-file, writable=false}",
+            "\\{compressionFormat=gz, crc=0, depth=4, executable=true, inputStream=java\\.io\\.BufferedInputStream@\\w+, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=file3\\.Z%, path=@FILES/dir1/dir2/file3\\.Z%, readable=true, size=3, type=normal-contents, writable=true}"
+        );
     }
 
     @Test public void
@@ -261,26 +268,26 @@ class FindTest extends TestCase {
         find.setDescendantsFirst(true);
 
         FindTest.assertFindOutputMatches(
-            find,
-            new String[] { "-echo", "path=${path}" },
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip",
-            "path=files\\\\dir1\\\\dir2\\\\file1",
-            "path=files\\\\dir1\\\\dir2\\\\file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file3.Z",
-            "path=files\\\\dir1\\\\dir2",
-            "path=files\\\\dir1",
-            "path=files"
+            find,                                                // find
+            new String[] { "-echo", "path=${path}" },            // expression
+            "path=@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1", // expectedRegexes...
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip",
+            "path=@FILES/dir1/dir2/file\\.zip",
+            "path=@FILES/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file3\\.Z",
+            "path=@FILES/dir1/dir2",
+            "path=@FILES/dir1",
+            "path=@FILES"
         );
     }
 
@@ -291,26 +298,26 @@ class FindTest extends TestCase {
         find.setMinDepth(2);
 
         FindTest.assertFindOutputMatches(
-            find,
-            new String[] { "-echo", "path=${path}" },
-//            "path=files",
-//            "path=files\\\\dir1",
-            "path=files\\\\dir1\\\\dir2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file1",
-            "path=files\\\\dir1\\\\dir2\\\\file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file3.Z%"
+            find,                                     // find
+            new String[] { "-echo", "path=${path}" }, // expression
+//            "path=@FILES",                          // expectedRegexes...
+//            "path=@FILES/dir1",
+            "path=@FILES/dir1/dir2",
+            "path=@FILES/dir1/dir2/file\\.zip",
+            "path=@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file3\\.Z",
+            "path=@FILES/dir1/dir2/file3\\.Z%"
         );
     }
 
@@ -321,26 +328,26 @@ class FindTest extends TestCase {
         find.setMinDepth(5);
 
         FindTest.assertFindOutputMatches(
-            find,
-            new String[] { "-echo", "path=${path}" },
-//            "path=files",
-//            "path=files\\\\dir1",
-//            "path=files\\\\dir1\\\\dir2",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%"
-//            "path=files\\\\dir1\\\\dir2\\\\file1",
-//            "path=files\\\\dir1\\\\dir2\\\\file3.Z",
-//            "path=files\\\\dir1\\\\dir2\\\\file3.Z%"
+            find,                                     // find
+            new String[] { "-echo", "path=${path}" }, // expression
+//            "path=@FILES",                          // expectedRegexes...
+//            "path=@FILES/dir1",
+//            "path=@FILES/dir1/dir2",
+//            "path=@FILES/dir1/dir2/file\\.zip",
+//            "path=@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%"
+//            "path=@FILES/dir1/dir2/file1",
+//            "path=@FILES/dir1/dir2/file3\\.Z",
+//            "path=@FILES/dir1/dir2/file3\\.Z%"
         );
     }
 
@@ -351,26 +358,26 @@ class FindTest extends TestCase {
         find.setMaxDepth(2);
 
         FindTest.assertFindOutputMatches(
-            find,
-            new String[] { "-echo", "path=${path}" },
-            "path=files",
-            "path=files\\\\dir1",
-            "path=files\\\\dir1\\\\dir2"
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%",
-//            "path=files\\\\dir1\\\\dir2\\\\file1",
-//            "path=files\\\\dir1\\\\dir2\\\\file3.Z",
-//            "path=files\\\\dir1\\\\dir2\\\\file3.Z%"
+            find,                                     // find
+            new String[] { "-echo", "path=${path}" }, // expression
+            "path=@FILES",                            // expectedRegexes...
+            "path=@FILES/dir1",
+            "path=@FILES/dir1/dir2"
+//            "path=@FILES/dir1/dir2/file\\.zip",
+//            "path=@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
+//            "path=@FILES/dir1/dir2/file1",
+//            "path=@FILES/dir1/dir2/file3\\.Z",
+//            "path=@FILES/dir1/dir2/file3\\.Z%"
         );
     }
 
@@ -381,26 +388,26 @@ class FindTest extends TestCase {
         find.setMaxDepth(4);
 
         FindTest.assertFindOutputMatches(
-            find,
-            new String[] { "-echo", "path=${path}" },
-            "path=files",
-            "path=files\\\\dir1",
-            "path=files\\\\dir1\\\\dir2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!/dir1/dir2/file1",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file2",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/dir5",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!/dir1/dir2/file1",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file2",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/dir5",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z",
-//            "path=files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%",
-            "path=files\\\\dir1\\\\dir2\\\\file1",
-            "path=files\\\\dir1\\\\dir2\\\\file3.Z",
-            "path=files\\\\dir1\\\\dir2\\\\file3.Z%"
+            find,                                     // find
+            new String[] { "-echo", "path=${path}" }, // expression
+            "path=@FILES",                            // expectedRegexes...
+            "path=@FILES/dir1",
+            "path=@FILES/dir1/dir2",
+            "path=@FILES/dir1/dir2/file\\.zip",
+            "path=@FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5",
+            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z",
+//            "path=@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
+//            "path=@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
+            "path=@FILES/dir1/dir2/file1",
+            "path=@FILES/dir1/dir2/file3\\.Z",
+            "path=@FILES/dir1/dir2/file3\\.Z%"
         );
     }
 
@@ -409,11 +416,11 @@ class FindTest extends TestCase {
 
         // SUPPRESS CHECKSTYLE LineLength|Wrap:6
         FindTest.assertFindOutputMatches(
-            new Find(),
-            new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" }, // SUPPRESS CHECKSTYLE LineLength:3
-            "files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",          "250cf8b51c773f3f8dc8b4be867a9a02", // The MD5 of "456"
-            "files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%", "68053af2923e00204c3ca7c6a3150cf7", // The MD5 of "789"
-            "files\\\\dir1\\\\dir2\\\\file3.Z%",                             "202cb962ac59075b964b07152d234b70"  // The MD5 of "123"
+            new Find(),                                                          // find
+            new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" }, // expression
+            "@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",            "250cf8b51c773f3f8dc8b4be867a9a02", // The MD5 of "456"
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%", "68053af2923e00204c3ca7c6a3150cf7", // The MD5 of "789"
+            "@FILES/dir1/dir2/file3\\.Z%",                                 "202cb962ac59075b964b07152d234b70"  // The MD5 of "123"
         );
     }
 
@@ -422,11 +429,11 @@ class FindTest extends TestCase {
 
         // SUPPRESS CHECKSTYLE Wrap:6
         FindTest.assertFindOutputMatches(
-            new Find(),
-            new String[] { "-name", "***file3.Z%", "-print", "-checksum", "CRC32" },
-            "files\\\\dir1\\\\dir2\\\\file.zip!dir3/dir4/file3.Z%",          "b1a8c371", // CRC32 of "456"
-            "files\\\\dir1\\\\dir2\\\\file.zip!file.zip!dir3/dir4/file3.Z%", "96ff1ef4", // CRC32 of "789"
-            "files\\\\dir1\\\\dir2\\\\file3.Z%",                             "884863d2"  // CRC32 of "123"
+            new Find(),                                                              // find
+            new String[] { "-name", "***file3.Z%", "-print", "-checksum", "CRC32" }, // expression
+            "@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",            "b1a8c371", // CRC32 of "456"
+            "@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%", "96ff1ef4", // CRC32 of "789"
+            "@FILES/dir1/dir2/file3\\.Z%",                                 "884863d2"  // CRC32 of "123"
         );
     }
 
@@ -434,9 +441,12 @@ class FindTest extends TestCase {
     testEcho() throws Exception {
 
         FindTest.assertFindOutputMatches(
-            new Find(),
-            new String[] { "-name", "files", "-echo", "${import java.util.regex.*; Pattern.compile(\"A\")}" },
-            "A"
+            new Find(),                                                        // find
+            new String[] {                                                     // expression
+                "-name", FindTest.FILES.getName(),
+                "-echo", "${import java.util.regex.*; Pattern.compile(\"A\")}"
+            },
+            "A"                                                                // expectedRegexes...
         );
     }
 
@@ -444,56 +454,117 @@ class FindTest extends TestCase {
     testLs() throws Exception {
 
         FindTest.assertFindOutputMatches(
-            new Find(),
-            new String[] { "-ls" },
-            "drwx          0 ....-..-.. ..:..:.. files",
-            "drwx          0 ....-..-.. ..:..:.. files\\\\dir1",
-            "drwx          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2",
-            "arwx        ... ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip",
-            "-r--          3 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!/dir1/dir2/file1",
-            "-r--          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!dir3/dir4/file2",
-            "Dr--          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!dir3/dir4/dir5",
-            "-r--          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!dir3/dir4/file3\\.Z",
-            "-r--          3 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!dir3/dir4/file3\\.Z%",
-            "ar--        ... ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!file\\.zip",
-            "-r--          3 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!file\\.zip!/dir1/dir2/file1",
-            "-r--          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!file\\.zip!dir3/dir4/file2",
-            "Dr--          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!file\\.zip!dir3/dir4/dir5",
-            "-r--          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
-            "-r--          3 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
-            "-rwx          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file1",
-            "-rwx          0 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file3\\.Z",
-            "-r--          3 ....-..-.. ..:..:.. files\\\\dir1\\\\dir2\\\\file3\\.Z%"
+            new Find(),                                   // find
+            new String[] { "-ls" },                       // expression
+            "drwx          0 ....-..-.. ..:..:.. @FILES", // expectedRegexes
+            "drwx          0 ....-..-.. ..:..:.. @FILES/dir1",
+            "drwx          0 ....-..-.. ..:..:.. @FILES/dir1/dir2",
+            "arwx        ... ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip",
+            "-r--          3 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!/dir1/dir2/file1",
+            "-r--          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!dir3/dir4/file2",
+            "Dr--          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!dir3/dir4/dir5",
+            "-r--          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z",
+            "-r--          3 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",
+            "ar--        ... ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!file\\.zip",
+            "-r--          3 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!file\\.zip!/dir1/dir2/file1",
+            "-r--          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file2",
+            "Dr--          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/dir5",
+            "-r--          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z",
+            "-r--          3 ....-..-.. ..:..:.. @FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%",
+            "-rwx          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file1",
+            "-rwx          0 ....-..-.. ..:..:.. @FILES/dir1/dir2/file3\\.Z",
+            "-r--          3 ....-..-.. ..:..:.. @FILES/dir1/dir2/file3\\.Z%"
         );
     }
 
     /**
-     * Executes a {@link Find} search with the given <var>expression</var> and asserts that the produced output equals
-     * {@code expected}.
-     */
-    private static void
-    assertFindOutputEquals(Find find, String[] expression, String... expected) throws Exception {
-
-        TestCase.assertEquals(Arrays.asList(expected), FindTest.find(find, expression));
-    }
-
-    /**
      * Executes a {@link Find} search with the given <var>expression</var> and asserts that the produced output matches
-     * the {@code expected} regexes.
+     * the <var>expectedRegexes</var>.
      *
-     * @param expression The FIND expression, e.g. <code>{ "-echo", "@{path}" }</code>
+     * @param expression The FIND expression, e.g. <code>{ "-echo", "${path}" }</code>
+     * @param expectedRegexes (Will be pre-cooked by {@link #cookRegex(String)})
      */
     private static void
-    assertFindOutputMatches(Find find, String[] expression, String... expected) throws Exception {
+    assertFindOutputMatches(Find find, String[] expression, String... expectedRegexes) throws Exception {
 
-        AssertRegex.assertMatches(Arrays.asList(expected), FindTest.find(find, expression));
+        AssertRegex.assertMatches(Arrays.asList(FindTest.cookRegexes(expectedRegexes)), FindTest.find(find, expression));
+    }
+
+    private static void
+    assertFindOutputMatches(Find find, String... expectedRegexes) throws Exception {
+
+        AssertRegex.assertMatches(Arrays.asList(FindTest.cookRegexes(expectedRegexes)), FindTest.find(find));
+    }
+
+    private static String[]
+    cookRegexes(String... regexes) {
+        String[] result = new String[regexes.length];
+        for (int i = 0; i < regexes.length; i++) result[i] = FindTest.cookRegex(regexes[i]);
+        return result;
     }
 
     /**
-     * Executes a {@link Find} search with the given <var>expression</var>.
+     * Cooks the <var>regex</var> in a {@link FindTest}-specific way. Sections that are replaced begin with a
+     * {@code "@"}, e.g. {@code "@ANY_INT"} is replaced with {@code "-?\\d+"}.
+     */
+    private static String
+    cookRegex(String regex) {
+
+        regex = PatternUtil.replaceSome(
+            Pattern.compile("@ABS_FILES(?!/)").matcher(regex),
+            mr -> FindTest.ap(FindTest.FILES)
+        );
+        regex = PatternUtil.replaceSome(
+            Pattern.compile("@ABS_FILES/([\\w/]*)").matcher(regex),
+            mr -> FindTest.ap(FindTest.FILES, AssertionUtil.notNull(mr).group(1))
+        );
+
+        regex = PatternUtil.replaceSome(
+            Pattern.compile("@FILES(?!/)").matcher(regex),
+            mr -> FindTest.p(FindTest.FILES)
+        );
+        regex = PatternUtil.replaceSome(
+            Pattern.compile("@FILES/([\\w/]*)").matcher(regex),
+            mr -> FindTest.p(FindTest.FILES, AssertionUtil.notNull(mr).group(1))
+        );
+
+        regex = regex.replace("@ANY_DATE", "\\w{3} \\w{3} \\d\\d \\d\\d:\\d\\d:\\d\\d \\w+ \\d{4}");
+
+        regex = regex.replace("@ANY_INT",  "-?\\d+");
+
+        return regex;
+    }
+
+    /**
+     * @return The path of the file represented by the <var>dir</var> and <var>name</var>
+     */
+    private static String
+    p(File dir, String name) { return FindTest.p(new File(dir, name)); }
+
+    /**
+     * @return The path of the <var>file</var>
+     */
+    private static String
+    p(File file) { return Pattern.quote(file.getPath()); }
+
+    /**
+     * @return The absolute path of the file represented by the <var>dir</var> and <var>name</var>
+     */
+    private static String
+    ap(File dir, String name) { return FindTest.ap(new File(dir, name)); }
+
+    /**
+     * @return The absolute path of the <var>file</var>
+     */
+    private static String
+    ap(File file) { return Pattern.quote(file.getAbsolutePath()); }
+
+    /**
+     * Executes a {@link Find} search on the {@link #FILES} directory (see {@link #setUp()}) with the given
+     * <var>expression</var>.
      *
-     * @param expression The FIND expression, e.g. <code>{ "-echo", "@{path}" }</code>
-     * @return           The lines of output
+     * @param expression The FIND expression, e.g. <code>{ "-echo", "${path}" }</code>
+     * @return           The lines of INFO output (see {@link Printers#info(String)})
      */
     private static List<String>
     find(final Find find, String[] expression) throws ParseException, IOException {
@@ -504,6 +575,12 @@ class FindTest extends TestCase {
         return FindTest.find(find);
     }
 
+    /**
+     * Executes a FIND on the {@link #FILES} directory (see {@link #setUp()}).
+     *
+     * @param find The pre-configured {@link Find} object to use
+     * @return     The lines of INFO output (see {@link Printers#info(String)})
+     */
     private static List<String>
     find(final Find find) throws IOException {
 
