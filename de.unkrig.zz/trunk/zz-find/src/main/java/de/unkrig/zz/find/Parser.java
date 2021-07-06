@@ -119,7 +119,7 @@ class Parser {
 
     /**
      * <pre>
-     * expression := [ or-expression ]
+     * expression := [ comma-expression ]
      * </pre>
      * "No token" means "-print".
      * <p>
@@ -178,7 +178,7 @@ class Parser {
 
         return (
             this.parser.peekRead("-a", "-and", "&&") != -1
-            || this.parser.peek("-o", "-or", "||", ")", ",", null) == -1
+            || this.parser.peek("-o", "-or", "||", ")", ",", null) == -1 // Operators of lower precedence
         ) ? new AndTest(lhs, this.parseAnd()) : lhs;
     }
 
