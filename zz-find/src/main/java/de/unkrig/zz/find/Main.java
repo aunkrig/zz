@@ -243,7 +243,8 @@ class Main {
      *   </dt>
      *   <dd>
      *     Parses the Java class file, evaluates the given expression (where parameter "cf" represents the
-     *     {@code de.unkrig.jdisasm.ClassFile}) and prints the result on stdout
+     *     {@code de.unkrig.jdisasm.ClassFile}) and prints the result on stdout; example: "-java-class-file
+     *     cf.majorVersion"
      *   </dd>
      *   <dt>{@code -digest} <var>algorithm</var></dt>
      *   <dd>
