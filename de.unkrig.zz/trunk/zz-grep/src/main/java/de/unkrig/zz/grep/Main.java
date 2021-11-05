@@ -29,6 +29,8 @@ package de.unkrig.zz.grep;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,8 +42,10 @@ import de.unkrig.commons.file.org.apache.commons.compress.compressors.Compressio
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
+import de.unkrig.commons.text.AbstractPrinter;
 import de.unkrig.commons.text.LevelFilteredPrinter;
 import de.unkrig.commons.text.Printers;
+import de.unkrig.commons.text.RedirectablePrinter;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.IncludeExclude;
 import de.unkrig.commons.text.pattern.Pattern2;
@@ -75,7 +79,8 @@ class Main {
 
     private final List<String> regexes = new ArrayList<String>();
 
-    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter();
+    private final RedirectablePrinter  redirectablePrinter  = new RedirectablePrinter();
+    private final LevelFilteredPrinter levelFilteredPrinter = new LevelFilteredPrinter(this.redirectablePrinter);
 
     /**
      * <h2>Usage:</h2>
@@ -197,9 +202,6 @@ class Main {
             System.exit(2);
         }
 
-        // If neither "--with-path" nor "--no-path" was configured on the command line, compute the default behavior.
-        this.grep.setWithPath(this.withPath != null ? this.withPath : args.length >= 2);
-
         int argi = 0;
 
         // Next command line argument is the regex (unless "-e" was used).
@@ -215,6 +217,9 @@ class Main {
         for (String regex : this.regexes) {
             this.grep.addSearch(this.includeExclude, regex, this.caseSensitive);
         }
+
+        // If neither "--with-path" nor "--no-path" was configured on the command line, compute the default behavior.
+        this.grep.setWithPath(this.withPath != null ? this.withPath : args.length - argi >= 2);
 
         // Process files command line arguments.
         final List<File> files = new ArrayList<File>();
@@ -282,12 +287,42 @@ class Main {
     lookInto(@RegexFlags(Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES) Glob glob) { this.grep.setLookIntoFormat(glob); }
 
     /**
+     * Input contents encoding, default is "${file.encoding}".
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setInputEncoding(Charset charset) { this.grep.setCharset(charset); }
+
+    /**
      * Contents encoding, default is "${file.encoding}".
      *
      * @main.commandLineOptionGroup Contents-Processing
      */
     @CommandLineOption public void
-    setEncoding(Charset charset) { this.grep.setCharset(charset); }
+    setOutputEncoding(Charset charset) {
+
+    	PrintWriter stdout = new PrintWriter(new OutputStreamWriter(System.out, charset), /*autoFlush*/ true);
+    	PrintWriter stderr = new PrintWriter(new OutputStreamWriter(System.err, charset), /*autoFlush*/ true);
+    	this.redirectablePrinter.setDelegate(new AbstractPrinter() {
+            @Override public void error(@Nullable String message)   { stderr.println(message); }
+            @Override public void warn(@Nullable String message)    { stderr.println(message); }
+            @Override public void info(@Nullable String message)    { stdout.println(message); }
+            @Override public void verbose(@Nullable String message) { stdout.println(message); }
+            @Override public void debug(@Nullable String message)   { stdout.println(message); }
+        });
+    }
+
+    /**
+     * Input and output contents encoding, default is "${file.encoding}".
+     *
+     * @main.commandLineOptionGroup Contents-Processing
+     */
+    @CommandLineOption public void
+    setEncoding(Charset charset) {
+    	this.setInputEncoding(charset);
+    	this.setOutputEncoding(charset);
+    }
 
     /**
      * Print only filename/path, colon, and match count.
