@@ -104,7 +104,7 @@ class Grep {
     private boolean                       withPath;
     private boolean                       withLineNumber;
     private boolean                       withByteOffset;
-    private int                           afterContext, beforeContext;
+    private int                           beforeContext = -1, afterContext = -1;
     private Predicate<? super String>     lookIntoFormat = PredicateUtil.always();
     private Charset                       charset        = Charset.defaultCharset();
     private Operation                     operation      = Operation.NORMAL;
@@ -405,13 +405,21 @@ class Grep {
                         switch (Grep.this.operation) {
 
                         case NORMAL:
+
+                        	// Iff a "context" is configured (and be it zero!), print a separator line between chunks:
                             if (
-                                beforeContext.size() == Grep.this.beforeContext
+                        	    (Grep.this.beforeContext != -1 || Grep.this.afterContext != -1)
+                                && beforeContext.size() == (Grep.this.beforeContext == -1 ? 0 : Grep.this.beforeContext)
                                 && afterContextLinesToPrint == 0
                                 && Grep.this.totalMatchCount > 1
                             ) Printers.info("--");
+
+                            // Print the "before context lines".
                             while (!beforeContext.isEmpty()) Printers.info(beforeContext.remove());
+
+                            // Print the matching line.
                             Printers.info(this.composeMatch(path, lineNumber, byteOffset, line, ':'));
+
                             afterContextLinesToPrint = Grep.this.afterContext + 1;
                             break;
 
@@ -438,9 +446,7 @@ class Grep {
                     // Keep a copy of the current line in case a future match would like to print "before context".
                     if (afterContextLinesToPrint == 0 && Grep.this.beforeContext > 0) {
                         if (beforeContext.size() >= Grep.this.beforeContext) beforeContext.remove();
-                        beforeContext.add(
-                            this.composeMatch(path, lineNumber, byteOffset, line, '-')
-                        );
+                        beforeContext.add(this.composeMatch(path, lineNumber, byteOffset, line, '-'));
                     }
 
                     if (afterContextLinesToPrint > 0) afterContextLinesToPrint--;
