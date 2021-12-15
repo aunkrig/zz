@@ -406,9 +406,9 @@ class Grep {
 
                         case NORMAL:
 
-                        	// Iff a "context" is configured (and be it zero!), print a separator line between chunks:
+                            // Iff a "context" is configured (and be it zero!), print a separator line between chunks:
                             if (
-                        	    (Grep.this.beforeContext != -1 || Grep.this.afterContext != -1)
+                                (Grep.this.beforeContext != -1 || Grep.this.afterContext != -1)
                                 && beforeContext.size() == (Grep.this.beforeContext == -1 ? 0 : Grep.this.beforeContext)
                                 && afterContextLinesToPrint == 0
                                 && Grep.this.totalMatchCount > 1

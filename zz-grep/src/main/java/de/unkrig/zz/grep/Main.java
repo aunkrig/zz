@@ -302,9 +302,9 @@ class Main {
     @CommandLineOption public void
     setOutputEncoding(Charset charset) {
 
-    	PrintWriter stdout = new PrintWriter(new OutputStreamWriter(System.out, charset), /*autoFlush*/ true);
-    	PrintWriter stderr = new PrintWriter(new OutputStreamWriter(System.err, charset), /*autoFlush*/ true);
-    	this.redirectablePrinter.setDelegate(new AbstractPrinter() {
+        PrintWriter stdout = new PrintWriter(new OutputStreamWriter(System.out, charset), /*autoFlush*/ true);
+        PrintWriter stderr = new PrintWriter(new OutputStreamWriter(System.err, charset), /*autoFlush*/ true);
+        this.redirectablePrinter.setDelegate(new AbstractPrinter() {
             @Override public void error(@Nullable String message)   { stderr.println(message); }
             @Override public void warn(@Nullable String message)    { stderr.println(message); }
             @Override public void info(@Nullable String message)    { stdout.println(message); }
@@ -320,8 +320,8 @@ class Main {
      */
     @CommandLineOption public void
     setEncoding(Charset charset) {
-    	this.setInputEncoding(charset);
-    	this.setOutputEncoding(charset);
+        this.setInputEncoding(charset);
+        this.setOutputEncoding(charset);
     }
 
     /**
