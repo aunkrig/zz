@@ -35,6 +35,7 @@ import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.compressors.CompressorException;
 
 import de.unkrig.commons.file.ExceptionHandler;
+import de.unkrig.commons.file.fileprocessing.FileProcessings;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
@@ -168,6 +169,8 @@ class Main {
 
         try (Closeable c = this.pack.setArchiveFile(archiveFile)) {
             for (int i = 1; i < args.length; i++) {
+                Glob g = Glob.compile(args[i], Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES | Glob.REPLACEMENT);
+                FileProcessings.sel
                 File file = new File(args[i]);
                 fp.process(file.getPath(), file);
             }
