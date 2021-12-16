@@ -48,9 +48,11 @@ import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.commons.util.CommandLineOptionException;
 import de.unkrig.commons.util.CommandLineOptions;
+import de.unkrig.commons.util.MavenUtil;
 import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
+import de.unkrig.zip4jadapter.archivers.zip.ZipArchiveFormat;
 
 /**
  * A FIND utility that can recurse into directories, archive files and compressed files.
@@ -576,6 +578,17 @@ class Main {
     }
 
     /**
+     * Print the tool version and terminate.
+     */
+    @CommandLineOption public static void
+    version() throws IOException {
+        System.out.println(MavenUtil.getMavenArtifactVersion(
+            "de.unkrig.zz", // groupId
+            "zz-find"       // artifactId
+        ));
+    }
+
+    /**
      * Look into compressed and archive contents if the format and the path match the globs.
      * The default is to look into any recognised archive or compressed contents.
      * <br />
@@ -625,6 +638,15 @@ class Main {
     @CommandLineOption public void
     set7zInputFilePassword(String value) {
         System.setProperty(SevenZArchiveFormat.SYSTEM_PROPERTY_SEVEN_Z_INPUT_FILE_PASSWORD, value);
+    }
+
+    /**
+     * Password to decrypt password-protected zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipInputFilePassword(String value) {
+        System.setProperty(ZipArchiveFormat.SYSTEM_PROPERTY_INPUT_FILE_PASSWORD, value);
     }
 
     /**
