@@ -32,11 +32,14 @@ import java.nio.charset.Charset;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.compress.utils.Charsets;
+
 import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
 import de.unkrig.commons.file.filetransformation.FileTransformations;
 import de.unkrig.commons.file.filetransformation.FileTransformer;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
+import de.unkrig.commons.file.org.apache.commons.compress.archivers.sevenz.SevenZArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.Mappings;
@@ -59,8 +62,11 @@ import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.CommandLineOptionGroup;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
+import de.unkrig.zip4jadapter.archivers.zip.ZipArchiveFormat;
 import de.unkrig.zz.patch.SubstitutionContentsTransformer.Mode;
 import de.unkrig.zz.patch.diff.DiffParser.Hunk;
+import net.lingala.zip4j.model.enums.CompressionLevel;
+import net.lingala.zip4j.model.enums.EncryptionMethod;
 
 /**
  * Implementation of a PATCH command line utility with the following features:
@@ -645,6 +651,55 @@ class Main {
      */
     @CommandLineOption public void
     keepGoing() { this.patch.setExceptionHandler(Main.PRINT_AND_CONTINUE); }
+
+    /**
+     * Compression level of zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipOutputEntryCompressionLevel(CompressionLevel value) { ZipArchiveFormat.setOutputEntryCompressionLevel(value); }
+
+    /**
+     * Password to decrypt password-protected 7ZIP input files. (Encryption of 7ZIP output files is not supported.)
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    set7zInputFilePassword(String value) { SevenZArchiveFormat.setPassword(value.getBytes(Charsets.UTF_16LE)); }
+
+    /**
+     * Password to decrypt password-protected zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipInputFilePassword(String value) { ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray()); }
+
+    /**
+     * Password to encrypt password-protected zip archive entries (sets encryption method to ZIP_STANDARD).
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipOutputFilePassword(String value) {
+        ZipArchiveFormat.setOutputEntryEncrypt(true);
+        ZipArchiveFormat.setOutputEntryEncryptionMethod(EncryptionMethod.ZIP_STANDARD);
+        ZipArchiveFormat.setOutputFilePasswordChars(value.toCharArray());
+    }
+
+    /**
+     * All of the above.
+     */
+    @CommandLineOption public void
+    setPassword(String value) {
+        this.set7zInputFilePassword(value);
+        this.setZipInputFilePassword(value);
+        this.setZipOutputFilePassword(value);
+    }
+
+    /**
+     * Method to encrypt password-protected zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipOutputFileEncryptionMethod(EncryptionMethod value) { ZipArchiveFormat.setOutputEntryEncryptionMethod(value); }
 
     /**
      * Suppress all messages except errors.
