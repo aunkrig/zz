@@ -48,13 +48,17 @@
 					* ... to run the command line tool with a single .jar file on the classpath:
 						java -cp path/to/zz-diff-x.y.z-jar-with-dependencies.jar de.unkrig.zz.diff.Main
 				-->
+				<!--
+					Because we want to merge the "formats" files, we must use a custom "descriptor" instead of descriptor-ref
+					"jar-with-dependencies". The "file-aggregator" works like sh...:
+					* It must be executed *twice* because otherwise the output file is empty
+					* It can handle only one pattern+outputfile (we need two for compressors and archives)
+				-->
 				<plugin>
 					<artifactId>maven-assembly-plugin</artifactId>
 					<version>2.6</version>
 					<configuration>
-						<descriptorRefs>
-							<descriptorRef>jar-with-dependencies</descriptorRef>
-						</descriptorRefs>
+						<descriptor>../zz-parent/mydesc.xml</descriptor>
 						<archive>
 							<manifest>
 								<mainClass>${jar-with-dependencies.mainClass}</mainClass>
@@ -64,6 +68,12 @@
 					<executions>
 						<execution>
 							<id>make-jar-with-dependencies</id>
+							<phase>package</phase>
+							<goals><goal>single</goal></goals>
+						</execution>
+						<!-- Execute it twice; otherwise it won't work. -->
+						<execution>
+							<id>make-jar-with-dependencies2</id>
 							<phase>package</phase>
 							<goals><goal>single</goal></goals>
 						</execution>
