@@ -40,6 +40,11 @@
 			<version>1.8.4</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>de.unkrig.zip4j</groupId>
+			<artifactId>zip4j-adapter</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 	<properties>
