@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.compress.utils.Charsets;
+
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.sevenz.SevenZArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
@@ -636,17 +638,22 @@ class Main {
      */
     @SuppressWarnings("static-method")
     @CommandLineOption public void
-    set7zInputFilePassword(String value) {
-        System.setProperty(SevenZArchiveFormat.SYSTEM_PROPERTY_SEVEN_Z_INPUT_FILE_PASSWORD, value);
-    }
+    set7zInputFilePassword(String value) { SevenZArchiveFormat.setPassword(value.getBytes(Charsets.UTF_16LE)); }
 
     /**
      * Password to decrypt password-protected zip archive entries.
      */
     @SuppressWarnings("static-method")
     @CommandLineOption public void
-    setZipInputFilePassword(String value) {
-        System.setProperty(ZipArchiveFormat.SYSTEM_PROPERTY_INPUT_FILE_PASSWORD, value);
+    setZipInputFilePassword(String value) { ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray()); }
+
+    /**
+     * All of the above.
+     */
+    @CommandLineOption public void
+    setPassword(String value) {
+        this.set7zInputFilePassword(value);
+        this.setZipInputFilePassword(value);
     }
 
     /**
