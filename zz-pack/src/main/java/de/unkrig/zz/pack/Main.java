@@ -33,10 +33,12 @@ import java.nio.charset.Charset;
 
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.compressors.CompressorException;
+import org.apache.commons.compress.utils.Charsets;
 
 import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.fileprocessing.FileProcessor;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
+import de.unkrig.commons.file.org.apache.commons.compress.archivers.sevenz.SevenZArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.text.LevelFilteredPrinter;
 import de.unkrig.commons.text.Printers;
@@ -46,6 +48,9 @@ import de.unkrig.commons.util.CommandLineOptions;
 import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
+import de.unkrig.zip4jadapter.archivers.zip.ZipArchiveFormat;
+import net.lingala.zip4j.model.enums.CompressionLevel;
+import net.lingala.zip4j.model.enums.EncryptionMethod;
 
 /**
  * The ZZGREP command line utility.
@@ -189,7 +194,7 @@ class Main {
     }
 
     /**
-     * The archive format to use (one of ${archive.formats}; defaults is determined from the archive file name).
+     * The archive format to use (one of ${archive.formats}; the default is determined from the archive file name).
      */
     @CommandLineOption public void
     setArchiveFormat(String format) throws ArchiveException {
@@ -228,6 +233,55 @@ class Main {
     lookInto(@RegexFlags(Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES) Glob discriminator) {
         this.pack.setLookIntoFormat(discriminator);
     }
+
+    /**
+     * Compression level of zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipOutputEntryCompressionLevel(CompressionLevel value) { ZipArchiveFormat.setOutputEntryCompressionLevel(value); }
+
+    /**
+     * Password to decrypt password-protected 7ZIP input files. (Encryption of 7ZIP output files is not supported.)
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    set7zInputFilePassword(String value) { SevenZArchiveFormat.setPassword(value.getBytes(Charsets.UTF_16LE)); }
+
+    /**
+     * Password to decrypt password-protected zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipInputFilePassword(String value) { ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray()); }
+
+    /**
+     * Password to encrypt password-protected zip archive entries (sets encryption method to ZIP_STANDARD).
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipOutputFilePassword(String value) {
+        ZipArchiveFormat.setOutputEntryEncrypt(true);
+        ZipArchiveFormat.setOutputEntryEncryptionMethod(EncryptionMethod.ZIP_STANDARD);
+        ZipArchiveFormat.setOutputFilePasswordChars(value.toCharArray());
+    }
+
+    /**
+     * All of the above.
+     */
+    @CommandLineOption public void
+    setPassword(String value) {
+        this.set7zInputFilePassword(value);
+        this.setZipInputFilePassword(value);
+        this.setZipOutputFilePassword(value);
+    }
+
+    /**
+     * Method to encrypt password-protected zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipOutputFileEncryptionMethod(EncryptionMethod value) { ZipArchiveFormat.setOutputEntryEncryptionMethod(value); }
 
     /**
      * Suppress all messages except errors.
