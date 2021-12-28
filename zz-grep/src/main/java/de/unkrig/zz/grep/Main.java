@@ -35,9 +35,12 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.compress.utils.Charsets;
+
 import de.unkrig.commons.file.ExceptionHandler;
 import de.unkrig.commons.file.fileprocessing.FileProcessings;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
+import de.unkrig.commons.file.org.apache.commons.compress.archivers.sevenz.SevenZArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
 import de.unkrig.commons.lang.AssertionUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
@@ -54,6 +57,7 @@ import de.unkrig.commons.util.CommandLineOptions;
 import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
+import de.unkrig.zip4jadapter.archivers.zip.ZipArchiveFormat;
 import de.unkrig.zz.grep.Grep.Operation;
 
 /**
@@ -529,6 +533,29 @@ class Main {
 
         this.levelFilteredPrinter.setQuiet();
         SimpleLogging.setQuiet();
+    }
+
+    /**
+     * Password to decrypt password-protected 7ZIP input files.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    set7zInputFilePassword(String value) { SevenZArchiveFormat.setPassword(value.getBytes(Charsets.UTF_16LE)); }
+
+    /**
+     * Password to decrypt password-protected zip archive entries.
+     */
+    @SuppressWarnings("static-method")
+    @CommandLineOption public void
+    setZipInputFilePassword(String value) { ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray()); }
+
+    /**
+     * All of the above.
+     */
+    @CommandLineOption public void
+    setPassword(String value) {
+        this.set7zInputFilePassword(value);
+        this.setZipInputFilePassword(value);
     }
 
     /**
