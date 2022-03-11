@@ -327,7 +327,7 @@ class Main {
      * <br />
      * {@code ${compression.formats}}
      *
-     * @param glob                <var>format-glob</var>{@code :}<var>path-glob</var>
+     * @param glob                  <var>format-glob</var>{@code :}<var>path-glob</var>
      * @main.commandLineOptionGroup File-Processing
      */
     @CommandLineOption public void
@@ -393,8 +393,8 @@ class Main {
      * Replace the contents of files/archive entries that match <var>glob</var> (see below) with that of the
      * <var>update-file</var>.
      *
-     * @param specification       <var>glob</var>{@code =}<var>update-file</var>
-     * @param updateConditions    [ <var>condition</var> ... ]
+     * @param specification         <var>glob</var>{@code =}<var>update-file</var>
+     * @param updateConditions      [ <var>condition</var> ... ]
      * @main.commandLineOptionGroup File-Transformation
      */
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
@@ -495,7 +495,7 @@ class Main {
      *
      * @param patchConditions             [ <var>condition</var> ... ]
      * @throws UnexpectedElementException The {@code patchFile} does not contain a valid DIFF document
-     * @main.commandLineOptionGroup         File-Transformation
+     * @main.commandLineOptionGroup       File-Transformation
      */
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
     addPatch(
@@ -541,7 +541,7 @@ class Main {
     /**
      * Remove all files/archive entries that match <var>glob</var> (see below).
      *
-     * @param removeConditions    [ <var>condition</var> ... ]
+     * @param removeConditions      [ <var>condition</var> ... ]
      * @main.commandLineOptionGroup File-Transformation
      */
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
@@ -556,7 +556,7 @@ class Main {
      * Rename files/archive entries according to <var>glob</var> (see below), e.g. "{@code (*).c=$1.c.orig}".
      * Multiple "{@code --rename}" options are applied in the given order.
      *
-     * @param renameConditions    [ <var>condition</var> ... ]
+     * @param renameConditions      [ <var>condition</var> ... ]
      * @main.commandLineOptionGroup File-Transformation
      */
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
@@ -586,7 +586,7 @@ class Main {
      * To all directories and archives that match <var>glob</var>, add a member/entry <var>name</var>, and fill it
      * from <var>contents-file</var>.
      *
-     * @param addConditions       [ <var>condition</var> ... ]
+     * @param addConditions         [ <var>condition</var> ... ]
      * @main.commandLineOptionGroup File-Transformation
      */
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
