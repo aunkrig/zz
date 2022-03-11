@@ -46,6 +46,7 @@ import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
 import de.unkrig.commons.lang.protocol.ProducerUtil;
 import de.unkrig.commons.text.LevelFilteredPrinter;
 import de.unkrig.commons.text.Printers;
+import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
 import de.unkrig.commons.util.CommandLineOptionException;
@@ -516,6 +517,9 @@ class Main {
         try {
             Parser parser = new Parser(ProducerUtil.fromArray(args, i, args.length));
             this.find.setExpression(parser.parse());
+        } catch (ParseException pe) {
+            Printers.error("Parsing predicates: " + pe.getMessage());
+            System.exit(1);
         } catch (Exception e) {
             Printers.error("Parsing predicates", e);
             System.exit(1);
