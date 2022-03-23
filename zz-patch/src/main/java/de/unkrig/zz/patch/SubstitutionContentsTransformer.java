@@ -71,7 +71,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
     private final Charset                                                              inputCharset;
     private final Charset                                                              outputCharset;
     private final Pattern                                                              pattern;
-    private final FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer;
+    private       FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> replacer;
     private final Condition                                                            condition;
 
     private int initialBufferCapacity = 8192;
@@ -124,6 +124,26 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
             SubstitutionContentsTransformer.makeReplacer(replacementMode, replacement), // replacer
             condition
         );
+    }
+
+    /**
+     * The given <var>replacementListener</var> will be {@link Function#call(Object)}ed for each replacement, and has
+     * the chance to modify the replacement string.
+     */
+    public void
+    addReplacementListener(Function<String, String> replacementListener) {
+
+        FunctionWhichThrows<MatchResult, String, ? extends RuntimeException> delegate = this.replacer;
+        this.replacer = new Function<MatchResult, String>() {
+
+            @Override @Nullable public String
+            call(@Nullable MatchResult matchResult) {
+                return replacementListener.call(delegate.call(matchResult));
+            }
+
+            @Override
+            public String toString() { return delegate.toString(); }
+        };
     }
 
     /**
@@ -208,24 +228,24 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
         Writer out = new OutputStreamWriter(os, this.outputCharset);
 
         int count = PatternUtil.replaceSome(
-            new InputStreamReader(is, this.inputCharset), // reader
+            new InputStreamReader(is, this.inputCharset), // in
             this.pattern,                                 // pattern
-            r,                                            // replacer
+            r,                                            // matchReplacer
             out,                                          // out
-            this.initialBufferCapacity                    // initialBufferCapacity
+            this.initialBufferCapacity                    // bufferCapacity
         );
 
         if (count == 0) {
             SubstitutionContentsTransformer.LOGGER.log(
                 Level.FINE,
-                "No matches of ''{0}'' in ''{1}'' were replaced with ''{2}''",
+                "No matches of \"{0}\" in \"{1}\" to replace with \"{2}\"",
                 new Object[] { this.pattern, path, this.replacer }
             );
         } else {
             SubstitutionContentsTransformer.LOGGER.log(
                 Level.CONFIG,
-                "{0} matches of ''{1}'' were replaced with ''{2}'' in ''{3}''",
-                new Object[] { count, this.pattern, this.replacer, path }
+                "{0} {0,choice,1#match|1<matches} of \"{1}\" in \"{2}\" {0,choice,1#was|1<were} replaced with \"{3}\"",
+                new Object[] { count, this.pattern, path, this.replacer }
             );
         }
 

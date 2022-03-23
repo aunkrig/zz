@@ -46,6 +46,7 @@ import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
+import de.unkrig.commons.util.CommandLineOptions;
 import de.unkrig.commons.util.logging.SimpleLogging;
 import de.unkrig.zz.patch.Main;
 import de.unkrig.zz.patch.Patch;
@@ -157,8 +158,8 @@ class PatchTest {
     substitute() throws Exception {
         PatchTest.assertMain(
             new String[] {
-                "-substitute", "**file1", "line2", "foo",
-                "-substitute", "***file1", "line3", "bar",
+                "-substitute", "**file1",  "line2", "foo", "--assert-count", "1",
+                "-substitute", "***file1", "line3", "bar", "--assert-count", "2",
                 PatchTest.UNPATCHED.getPath(),
                 PatchTest.PATCHED.getPath()
             },
@@ -235,12 +236,9 @@ class PatchTest {
             "xxxAAAxxx xxxBBBxxx xxxAAAxxx", // expectedPatchedContents
             "xxxAAAxxx xxxAAAxxx xxxAAAxxx", // unpatchedContents
             new String[] {                   // args
-                "--substitute",
-                "**",
-                "AAA",
-                "BBB",
-                "--iff",
-                "occurrence==1"
+                "--substitute", "**", "AAA", "BBB",
+                "--iff", "occurrence==1",
+                "--assert-count", "1",
             }
         );
     }
@@ -338,7 +336,8 @@ class PatchTest {
                 + "-line2\n"
                 + "+LINE2\r\n"
                 + " line3\n"
-            )
+            ),
+            1 // expectedHunkCount
         );
     }
 
@@ -402,7 +401,8 @@ class PatchTest {
                 + "  line15\n"
                 + "  line16\n"
                 + "  line17\n"
-            )
+            ),
+            2 // expectedHunkCount
         );
     }
 
@@ -440,7 +440,8 @@ class PatchTest {
                 + "< line14\n"
                 + "---\n"
                 + "> line144\n"
-            )
+            ),
+            4 // expectedHunkCount
         );
     }
 
@@ -488,7 +489,8 @@ class PatchTest {
                 + " line15\n"
                 + " line16\n"
                 + " line17\n"
-            )
+            ),
+            2 // expectedHunkCount
         );
     }
 
@@ -501,14 +503,14 @@ class PatchTest {
             new String[] {
 
                 // Rename file 'dir1/dir2/file1' twice:
-                "-rename", "(files/unpatched/dir1/dir2)/file1=$1/file11",
-                "-rename", "(files/unpatched/dir1/dir2)/file11=$1/file33",
+                "-rename", "(files/unpatched/dir1/dir2)/file1=$1/file11",  "--assert-count", "1",
+                "-rename", "(files/unpatched/dir1/dir2)/file11=$1/file33", "--assert-count", "1",
 
                 // Rename archive entry 'dir1/dir2/file.zip!dir1/dir2/file1' twice:
-                "-rename", "(files/unpatched/dir1/dir2/file.zip)!**/dir2/file1=$1!dir11/file11",
-                "-rename", "(files/unpatched/dir1/dir2/file.zip)!**/file11=$1!dir1/file22",
+                "-rename", "(files/unpatched/dir1/dir2/file.zip)!**/dir2/file1=$1!dir11/file11", "--assert-count", "1",
+                "-rename", "(files/unpatched/dir1/dir2/file.zip)!**/file11=$1!dir1/file22",      "--assert-count", "1",
                 PatchTest.UNPATCHED.getPath(),
-                PatchTest.PATCHED.getPath()
+                PatchTest.PATCHED.getPath(),
             },
             new Files(new Object[] {
                 "dir1", new Object[] {
@@ -535,7 +537,7 @@ class PatchTest {
 
                 // Update file 'dir1/dir2/file.zip!dir3/dir4/file2' from 'dir1/dir2/file1':
                 "-update", prefix + "/dir1/dir2/file.zip!dir3/dir4/file2=" + prefix + "/dir1/dir2/file1",
-//                "-debug",
+                "--assert-count", "1",
 
                 PatchTest.UNPATCHED.getPath(),
                 PatchTest.PATCHED.getPath()
@@ -560,8 +562,8 @@ class PatchTest {
     @Test public void
     add() throws Exception {
         PatchTest.assertMain(new String[] {
-            "-add", "**1",         "newfile",         PatchTest.UNPATCHED + "/dir1/dir2/file1",
-            "-add", "***file.zip", "dir/dir/newfile", PatchTest.UNPATCHED + "/dir1/dir2/file1",
+            "-add", "**1",         "newfile",         PatchTest.UNPATCHED + "/dir1/dir2/file1", "--assert-count", "1",
+            "-add", "***file.zip", "dir/dir/newfile", PatchTest.UNPATCHED + "/dir1/dir2/file1", "--assert-count", "1",
             PatchTest.UNPATCHED.getPath(),
             PatchTest.PATCHED.getPath()
         }, new Files(new Object[] {
@@ -599,9 +601,9 @@ class PatchTest {
 
         Patch patch = new Patch();
         patch.addAddition(
-            Glob.compile("-,***.zip", Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES),
-            "newfile",
-            new File(PatchTest.UNPATCHED, "newfile")
+            Glob.compile("-,***.zip", Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES), // condition
+            "newfile",                                                             // name
+            new File(PatchTest.UNPATCHED, "newfile")                               // contents
         );
 
         if (PatchTest.PATCHED.exists()) FileUtil.deleteRecursively(PatchTest.PATCHED);
@@ -665,7 +667,10 @@ class PatchTest {
         if (PatchTest.PATCHED.exists()) FileUtil.deleteRecursively(PatchTest.PATCHED);
 
         SimpleLogging.setNormal();
-        Main.main(args);
+
+        Main main = new Main();
+        args = CommandLineOptions.parse(args, main);
+        main.main3(args);
 
         Files actual = new Files(PatchTest.PATCHED);
         PatchTest.assertNoDiff(expected, actual);
@@ -684,7 +689,9 @@ class PatchTest {
         args[args.length - 2] = PatchTest.UNPATCHED.getPath() + "/file.txt";
         args[args.length - 1] = PatchTest.PATCHED.getPath()   + "/file.txt";
 
-        Main.main(args);
+        Main main = new Main();
+        args = CommandLineOptions.parse(args, main);
+        main.main3(args);
 
         Files expected = new Files(new Object[] { "file.txt", expectedPatchedContents });
         Files actual   = new Files(PatchTest.PATCHED);
@@ -692,7 +699,7 @@ class PatchTest {
     }
 
     private static void
-    assertPatch(String unpatchedContents, String patchedContents, String patch) throws IOException, Exception {
+    assertPatch(String unpatchedContents, String patchedContents, String patch, int expectedHunkCount) throws Exception {
         if (PatchTest.UNPATCHED.exists()) FileUtil.deleteRecursively(PatchTest.UNPATCHED);
         new Files(new Object[] {
             "dir1", new Object[] {
@@ -710,11 +717,17 @@ class PatchTest {
         }).save(PatchTest.PATCHES);
 
         if (PatchTest.PATCHED.exists()) FileUtil.deleteRecursively(PatchTest.PATCHED);
-        Main.main(new String[] {
+
+        String[] args = {
             "-patch", "***file1", new File(PatchTest.PATCHES, "patch.txt").getPath(),
+            "--assert-count", Integer.toString(expectedHunkCount),
             PatchTest.UNPATCHED.getPath(),
             PatchTest.PATCHED.getPath()
-        });
+        };
+
+        Main main = new Main();
+        args = CommandLineOptions.parse(args, main);
+        main.main3(args);
 
         Files expected = new Files(new Object[] {
             "dir1", new Object[] {

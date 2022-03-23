@@ -30,14 +30,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
 import de.unkrig.commons.file.contentstransformation.TextTransformer;
 import de.unkrig.commons.io.IoUtil;
 import de.unkrig.commons.io.LineUtil;
+import de.unkrig.commons.lang.protocol.Consumer;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
 import de.unkrig.commons.text.StringStream.UnexpectedElementException;
 import de.unkrig.zz.patch.diff.DiffException;
@@ -47,15 +48,17 @@ import de.unkrig.zz.patch.diff.DiffParser.Hunk;
 import de.unkrig.zz.patch.diff.DiffParser.LineChange;
 
 /**
- * A {@link ContentsTransformer} that applies a patch in NORMAL, CONTEXT or UNIFIED DIFF format.
+ * A {@link TextTransformer} that applies a patch in NORMAL, CONTEXT or UNIFIED DIFF format.
  */
 public
 class PatchTextTransformer implements TextTransformer {
 
     private static final Logger LOGGER = Logger.getLogger(PatchTextTransformer.class.getName());
 
-    private final List<Hunk> hunks;
-    private final Condition  condition;
+    private final List<Hunk>           hunks;
+    private final Condition            condition;
+    private final List<Consumer<Hunk>> hunkListeners = new ArrayList<Consumer<Hunk>>();
+
 
     /**
      * Parses a DIFF document from {@code patches}. If it describes more than on {@link Differential}, then all but
@@ -221,6 +224,8 @@ class PatchTextTransformer implements TextTransformer {
                     new Object[] { path, hunk.from1 + 1, i }
                 );
             }
+
+            for (Consumer<Hunk> hl : this.hunkListeners) hl.consume(hunk);
         }
 
         // Copy lines after last hunk.
@@ -238,4 +243,7 @@ class PatchTextTransformer implements TextTransformer {
             new Object[] { path, this.hunks.size() }
         );
     }
+
+    public void
+    addHunkListener(Consumer<Hunk> hunkListener) { this.hunkListeners.add(hunkListener); }
 }

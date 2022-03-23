@@ -31,11 +31,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
 import de.unkrig.commons.io.IoUtil;
+import de.unkrig.commons.lang.protocol.Consumer;
 import de.unkrig.commons.text.pattern.Glob;
 
 /**
@@ -48,6 +51,8 @@ implements ContentsTransformer {
     private static final Logger LOGGER = Logger.getLogger(UpdateContentsTransformer.class.getName());
 
     private final Glob updateFile;
+
+    private final List<Consumer<String>> updateListeners = new ArrayList<Consumer<String>>();
 
     public
     UpdateContentsTransformer(Glob updateFile) { this.updateFile = updateFile; }
@@ -67,9 +72,17 @@ implements ContentsTransformer {
                 new Object[] { path, updateFilePath }
             );
             IoUtil.copy(new FileInputStream(new File(updateFilePath)), true, os, false);
+
+            for (Consumer<String> ul : this.updateListeners) ul.consume(path + " => " + updateFilePath);
         }
     }
 
     @Override public String
     toString() { return "UPDATE with '" + this.updateFile + "'"; }
+
+    /**
+     * The given <var>updateListener</var> will be called for each update.
+     */
+    public void
+    addUpdateListener(Consumer<String> updateListener) { this.updateListeners.add(updateListener); }
 }

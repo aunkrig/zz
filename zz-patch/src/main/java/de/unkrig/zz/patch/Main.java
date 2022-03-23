@@ -29,20 +29,24 @@ package de.unkrig.zz.patch;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.compress.utils.Charsets;
 
 import de.unkrig.commons.file.ExceptionHandler;
-import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
 import de.unkrig.commons.file.filetransformation.FileTransformations;
 import de.unkrig.commons.file.filetransformation.FileTransformer;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.ArchiveFormatFactory;
 import de.unkrig.commons.file.org.apache.commons.compress.archivers.sevenz.SevenZArchiveFormat;
 import de.unkrig.commons.file.org.apache.commons.compress.compressors.CompressionFormatFactory;
+import de.unkrig.commons.lang.protocol.Consumer;
+import de.unkrig.commons.lang.protocol.Function;
 import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.Mappings;
+import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.LevelFilteredPrinter;
@@ -87,8 +91,6 @@ import net.lingala.zip4j.model.enums.EncryptionMethod;
 public final
 class Main {
 
-    private Main() {}
-
     private static final ExceptionHandler<IOException> PRINT_AND_CONTINUE = new ExceptionHandler<IOException>() {
 
         @Override public void
@@ -117,6 +119,26 @@ class Main {
             throw rte;
         }
     };
+
+    /**
+     * Dictates that the command line tool should {@link System#exit(int)} with the given status.
+     */
+    public static
+    class ExitException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        private final int exitStatus;
+
+        public
+        ExitException(@Nullable String message, int exitStatus) {
+            super(message);
+            this.exitStatus = exitStatus;
+        }
+
+        public int
+        getStatus() { return this.exitStatus; }
+    }
 
     /**
      * <h2>Usage</h2>
@@ -163,6 +185,11 @@ class Main {
      *     Execute the preceding file transformation only iff <var>expr</var> evaluates to true. The parameters of the
      *     <var>expr</var> depend on the file transformation (see above).
      *   </dd>
+     *   <dt>--assert-count <var>n</var></dt>
+     *   <dd>
+     *     Assert that exactly <var>n</var> updates/substitution replacements/patch hunks/removals/renamings/additions
+     *     were executed; otherwise exit with status 2.
+     *   </dd>
      *   <dt>{@code --mode} {@code REPLACEMENT_STRING|CONSTANT|EXPRESSION} (only with "--substitute")</dt>
      *   <dd>
      *     Determines how the replacement is processed:
@@ -179,7 +206,8 @@ class Main {
      *       <dt>{@code EXPRESSION}</dt>
      *       <dd>
      *         A <a href="http://commons.unkrig.de/commons-text/apidocs/de/unkrig/commons/text/pattern/Expressio
-     *nMatchReplacer.html#parse-java.lang.String-">Java-like expression</a>
+     *nMatchReplacer.html#parse-java.lang.String-">Java-like expression</a>; variable "m" is the {@code
+     *         java.util.regex.Matcher} object
      *       </dd>
      *     </dl>
      *   </dd>
@@ -294,6 +322,9 @@ class Main {
     main2(String[] args) {
         try {
             this.main3(args);
+        } catch (ExitException ee) {
+            Printers.verbose(ee.getLocalizedMessage());
+            System.exit(ee.getStatus());
         } catch (Exception e) {
             if (e == FileTransformer.NOT_IDENTICAL) {
                 System.exit(1);
@@ -310,6 +341,11 @@ class Main {
     private Charset                    inputCharset         = Charset.defaultCharset();
     private Charset                    outputCharset        = Charset.defaultCharset();
     private Charset                    patchFileCharset     = Charset.defaultCharset();
+
+    /**
+     * These are {@link Runnable#run()} after all files given on the command line have been processed.
+     */
+    private final List<Runnable> postProcessors = new ArrayList<Runnable>();
 
     { this.patch.setExceptionHandler(Main.RETHROW); }
 
@@ -403,11 +439,36 @@ class Main {
         UpdateConditions                                                                updateConditions
     ) {
 
-        ContentsTransformer contentsTransformer = new UpdateContentsTransformer(specification);
+        UpdateContentsTransformer uct = new UpdateContentsTransformer(specification);
+
+        if (updateConditions.expectedCount != -1) {
+            uct.addUpdateListener(new Consumer<String>() {
+                @Override public void consume(String replacement) { updateConditions.actualCount++; }
+            });
+
+            this.addPostprocessor(new Runnable() {
+
+                @Override public void
+                run() {
+
+                    if (updateConditions.actualCount != updateConditions.expectedCount) {
+                        throw new ExitException(MessageFormat.format(
+                            (
+                                "Update \"{0}\": "
+                                + "Expected {1} {1,choice,1#update|1<updates}, but {2,choice,1#was|1<were} {2}"
+                            ),
+                            specification,
+                            updateConditions.expectedCount,
+                            updateConditions.actualCount
+                        ), 2);
+                    }
+                }
+            });
+        }
 
         this.patch.addContentsTransformation(
             PredicateUtil.and(specification, ExpressionUtil.toPredicate(updateConditions.result, "path")),
-            contentsTransformer
+            uct
         );
     }
 
@@ -440,7 +501,7 @@ class Main {
     ) throws ParseException {
         final Expression condition = substituteConditions.result;
 
-        ContentsTransformer contentsTransformer = new SubstitutionContentsTransformer(
+        SubstitutionContentsTransformer sct = new SubstitutionContentsTransformer(
             this.inputCharset,                    // inputCharset
             this.outputCharset,                   // outputCharset
             pattern,                              // pattern
@@ -472,8 +533,43 @@ class Main {
             )
         );
 
-        this.patch.addContentsTransformation(glob, contentsTransformer);
+        if (substituteConditions.expectedCount != -1) {
+
+            sct.addReplacementListener(new Function<String, String>() {
+
+                @Override @Nullable public String
+                call(@Nullable String replacement) {
+                    substituteConditions.actualCount++;
+                    return replacement;
+                }
+            });
+
+            this.addPostprocessor(new Runnable() {
+
+                @Override public void
+                run() {
+
+                    if (substituteConditions.actualCount != substituteConditions.expectedCount) {
+                        throw new ExitException(MessageFormat.format(
+                            (
+                                "Substitution \"{0}\": "
+                                + "Expected {1} {1,choice,1#replacement|1<replacements}, "
+                                + "but {2,choice,1#was|1<were} {2}"
+                            ),
+                            glob + " " + pattern + " " + replacement,
+                            substituteConditions.expectedCount,
+                            substituteConditions.actualCount
+                        ), 2);
+                    }
+                }
+            });
+        }
+
+        this.patch.addContentsTransformation(glob, sct);
     }
+
+    private void
+    addPostprocessor(Runnable runnable) { this.postProcessors.add(runnable); }
 
     /**
      * Apply <var>patch-file</var> to all files/archive entries that match <var>glob</var> (see below).
@@ -504,7 +600,7 @@ class Main {
         final PatchConditions                                        patchConditions
     ) throws IOException, UnexpectedElementException {
 
-        ContentsTransformer contentsTransformer = new PatchContentsTransformer(
+        PatchContentsTransformer pct = new PatchContentsTransformer(
             this.inputCharset,
             this.outputCharset,
             patchFile,
@@ -535,7 +631,30 @@ class Main {
             }
         );
 
-        this.patch.addContentsTransformation(glob, contentsTransformer);
+        if (patchConditions.expectedCount != -1) {
+
+            pct.addHunkListener(new Consumer<Hunk>() {
+                @Override public void consume(Hunk hunk) { patchConditions.actualCount++; }
+            });
+
+            this.addPostprocessor(new Runnable() {
+
+                @Override public void
+                run() {
+
+                    if (patchConditions.actualCount != patchConditions.expectedCount) {
+                        throw new ExitException(MessageFormat.format(
+                            "Patch \"{0}\": Expected {1} {1,choice,1#hunk|1<hunks}, but {2,choice,1#was|1<were} {2}",
+                            glob + " " + patchFile,
+                            patchConditions.expectedCount,
+                            patchConditions.actualCount
+                        ), 2);
+                    }
+                }
+            });
+        }
+
+        this.patch.addContentsTransformation(glob, pct);
     }
 
     /**
@@ -549,7 +668,39 @@ class Main {
         @RegexFlags(Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES) Glob glob,
         RemoveConditions                                             removeConditions
     ) {
-        this.patch.addRemoval(PredicateUtil.and(glob, ExpressionUtil.toPredicate(removeConditions.result, "path")));
+        Predicate<String> p = ExpressionUtil.toPredicate(removeConditions.result, "path");
+
+        if (removeConditions.expectedCount != -1) {
+            p = PredicateUtil.and(p, new Predicate<String>() {
+
+                @Override public boolean
+                evaluate(String path) {
+                    removeConditions.actualCount++;
+                    return true;
+                }
+            });
+
+            this.addPostprocessor(new Runnable() {
+
+                @Override public void
+                run() {
+
+                    if (removeConditions.actualCount != removeConditions.expectedCount) {
+                        throw new ExitException(MessageFormat.format(
+                            (
+                                "Remove \"{0}\": "
+                                + "Expected {1} {1,choice,1#removal|1<removals}, but {2,choice,1#was|1<were} {2}"
+                            ),
+                            glob,
+                            removeConditions.expectedCount,
+                            removeConditions.actualCount
+                        ), 2);
+                    }
+                }
+            });
+        }
+
+        this.patch.addRemoval(PredicateUtil.and(glob, p));
     }
 
     /**
@@ -574,12 +725,39 @@ class Main {
             replace(String subject) {
                 String result = glob.replace(subject);
 
-                return result != null && ExpressionUtil.<String>toPredicate(
+                if (result != null && ExpressionUtil.<String>toPredicate(
                     renameConditions.result,
                     "path"
-                ).evaluate(subject) ? result : null;
+                ).evaluate(subject)) {
+                    renameConditions.actualCount++;
+                    return result;
+                } else {
+                    return null;
+                }
             }
         });
+
+        if (renameConditions.expectedCount != -1) {
+
+            this.addPostprocessor(new Runnable() {
+
+                @Override public void
+                run() {
+
+                    if (renameConditions.actualCount != renameConditions.expectedCount) {
+                        throw new ExitException(MessageFormat.format(
+                            (
+                                "Rename \"{0}\": "
+                                + "Expected {1} {1,choice,1#renaming|1<renamings}, but {2,choice,1#was|1<were} {2}"
+                            ),
+                            glob,
+                            renameConditions.expectedCount,
+                            renameConditions.actualCount
+                        ), 2);
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -597,10 +775,42 @@ class Main {
         AddConditions                                                addConditions
     ) {
 
-        this.patch.addAddition(PredicateUtil.and(glob, ExpressionUtil.<String>toPredicate(
+        Predicate<String> p = PredicateUtil.and(glob, ExpressionUtil.<String>toPredicate(
             addConditions.result,
             "path"
-        )), name, contentsFile);
+        ));
+
+        if (addConditions.expectedCount != -1) {
+            p = PredicateUtil.and(p, new Predicate<String>() {
+
+                @Override public boolean
+                evaluate(String path) {
+                    addConditions.actualCount++;
+                    return true;
+                }
+            });
+
+            this.addPostprocessor(new Runnable() {
+
+                @Override public void
+                run() {
+
+                    if (addConditions.actualCount != addConditions.expectedCount) {
+                        throw new ExitException(MessageFormat.format(
+                            (
+                                "Add \"{0}\": "
+                                + "Expected {1} {1,choice,1#addition|1<additions}, but {2,choice,1#was|1<were} {2}"
+                            ),
+                            glob + " " + name + " " + contentsFile,
+                            addConditions.expectedCount,
+                            addConditions.actualCount
+                        ), 2);
+                    }
+                }
+            });
+        }
+
+        this.patch.addAddition(p, name, contentsFile);
     }
 
     /**
@@ -749,7 +959,7 @@ class Main {
     @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public static void
     addLog(String spec) { SimpleLogging.configureLoggers(spec); }
 
-    private void
+    public void
     main3(String[] args) throws IOException {
 
         if (args.length == 0) {
@@ -774,6 +984,8 @@ class Main {
                 this.patch.getExceptionHandler()
             );
         }
+
+        for (Runnable postprocessor : this.postProcessors) postprocessor.run();
     }
 
     /**
@@ -850,6 +1062,8 @@ class Main {
 
         private final String[] variableNames;
 
+        int expectedCount = -1, actualCount;
+
         /**
          * The expression that implents the "{@code --iff}"s and "{@code --report}"s. Iff none of these is configured,
          * then the this field is {@link Expression#TRUE}.
@@ -895,5 +1109,13 @@ class Main {
 
             this.result = ExpressionUtil.logicalAnd(this.result, iffExpression);
         }
+
+        /**
+         * Assert that exactly <var>n</var> updates/substitution replacements/patch hunks/removals/renamings/additions
+         * were executed; otherwise exit with status 2.
+         */
+        @SuppressWarnings("static-method")
+        @CommandLineOption public void
+        assertCount(int expectedCount) { this.expectedCount = expectedCount; }
     }
 }
