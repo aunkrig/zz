@@ -138,7 +138,7 @@ class Grep {
     // BEGIN CONFIGURATION SETTERS
 
     /**
-     * @param value Is printed instead of file/path names
+     * @param value Is printed instead of file/path names (Implements {@code "--label"}.)
      */
     public void
     setLabel(String value) { this.label = value; }
@@ -150,25 +150,25 @@ class Grep {
     setWithPath(boolean value) { this.withPath = value; }
 
     /**
-     * Whether to prefix each match with the line number.
+     * Whether to prefix each match with the line number. (Implements {@code "-n"}.)
      */
     public void
     setWithLineNumber(boolean value) { this.withLineNumber = value; }
 
     /**
-     * Whether to prefix each match with the byte offset.
+     * Whether to prefix each match with the byte offset. (Implements {@code "-b"}.)
      */
     public void
     setWithByteOffset(boolean value) { this.withByteOffset = value; }
 
     /**
-     * Print <var>n</var> lines of context after matching lines.
+     * Print <var>n</var> lines of context after matching lines. (Implements {@code "-A"}.)
      */
     public void
     setAfterContext(int value) { this.afterContext = value; }
 
     /**
-     * Print <var>n</var> lines of context before matching lines.
+     * Print <var>n</var> lines of context before matching lines. (Implements {@code "-B".)
      */
     public void
     setBeforeContext(int value) { this.beforeContext = value; }
@@ -196,13 +196,13 @@ class Grep {
     setOperation(Operation value) { this.operation = value; }
 
     /**
-     * Stop reading the current document after <var>n</var> matches.
+     * Stop reading the current document after <var>n</var> matches. (Implements {@code "-m"}.)
      */
     public void
     setMaxCount(int n) { this.maxCount = n; }
 
     /**
-     * @param value Whether matching lines should be treated as non-matching, and vice versa
+     * Configures whether matching lines should be treated as non-matching, and vice versa. (Implements {@code "-v"}.)
      */
     public void
     setInverted(boolean value) { this.inverted = value; }
