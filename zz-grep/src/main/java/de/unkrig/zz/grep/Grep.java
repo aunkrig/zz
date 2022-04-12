@@ -543,7 +543,7 @@ class Grep {
         };
 
         ConsumerWhichThrows<Character, ? extends IOException>
-        nonMatch = Grep.<IOException>lineCounter(
+        nonMatch = ConsumerUtil.<IOException>lineCounter(
             new ConsumerWhichThrows<Character, IOException>() { // lineChar
                 @Override public void consume(Character c) { currentLine.append(c); }
             },
@@ -645,7 +645,7 @@ class Grep {
         };
 
         final ConsumerWhichThrows<Character, ? extends IOException>
-        nonMatch = Grep.<IOException>lineCounter(
+        nonMatch = ConsumerUtil.<IOException>lineCounter(
             ConsumerUtil.<Character, IOException>widen2(ConsumerUtil.nop()), // lineChar
             new ConsumerWhichThrows<Integer, IOException>() {                // lineComplete
 
@@ -748,36 +748,5 @@ class Grep {
         sb.append(text);
 
         return sb.toString();
-    }
-
-    private static <EX extends Throwable> ConsumerWhichThrows<Character, ? extends EX>
-    lineCounter(
-        ConsumerWhichThrows<Character, ? extends EX> lineChar,
-        ConsumerWhichThrows<Integer, ? extends EX>   lineComplete
-    ) {
-
-        return new ConsumerWhichThrows<Character, EX>() {
-
-            int     lineNumber = 1;
-            boolean crPending;
-
-            @Override public void
-            consume(Character c) throws EX {
-                if (c == '\n') {
-                    if (this.crPending) {
-                        this.crPending = false;
-                    } else {
-                        lineComplete.consume(this.lineNumber++);
-                    }
-                } else
-                if (c == '\r') {
-                    this.crPending = true;
-                    lineComplete.consume(this.lineNumber++);
-                } else
-                {
-                    lineChar.consume(c);
-                }
-            }
-        };
     }
 }
