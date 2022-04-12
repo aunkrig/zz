@@ -59,10 +59,10 @@ import de.unkrig.commons.io.OutputStreams;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
 import de.unkrig.commons.lang.protocol.ConsumerUtil.Produmer;
 import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
+import de.unkrig.commons.lang.protocol.NoException;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
-import de.unkrig.commons.lang.protocol.RunnableUtil;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.Printers;
@@ -319,249 +319,6 @@ class Grep {
     // END SEARCH RESULT GETTERS
 
     /**
-     * @return A {@link ContentsProcessor} which executes the search and prints results to STDOUT
-     */
-    public ContentsProcessor<Void>
-    contentsProcessor() {
-
-        return new ContentsProcessor<Void>() {
-
-            @Override @Nullable public Void
-            process(
-                String                                                            path,
-                InputStream                                                       is,
-                @Nullable Date                                                    lastModifiedDate,
-                long                                                              size,
-                long                                                              crc32,
-                ProducerWhichThrows<? extends InputStream, ? extends IOException> opener
-            ) throws IOException {
-
-//                if (!Grep.this.includeExclude.matches(name)) return null;
-
-                // Check which searches apply to this path.
-                final List<Pattern> patterns = new ArrayList<Pattern>();
-                for (Search search : Grep.this.searches) {
-                    if (search.path.matches(path)) patterns.add(search.pattern);
-                }
-                if (patterns.isEmpty()) return null;
-
-                Printers.verbose(path);
-
-                if (Grep.this.disassembleClassFiles && path.endsWith(".class")) {
-
-                    // Wrap the input stream in a Java disassembler.
-                    DisassemblerByteFilter disassemblerByteFilter = new DisassemblerByteFilter();
-
-                    disassemblerByteFilter.setVerbose(Grep.this.disassembleClassFilesVerbose);
-                    disassemblerByteFilter.setSourceDirectory(Grep.this.disassembleClassFilesSourceDirectory);
-                    disassemblerByteFilter.setHideLines(Grep.this.disassembleClassFilesButHideLines);
-                    disassemblerByteFilter.setHideVars(Grep.this.disassembleClassFilesButHideVars);
-                    disassemblerByteFilter.setSymbolicLabels(Grep.this.disassembleClassFilesSymbolicLabels);
-                    is = new ByteFilterInputStream(is, disassemblerByteFilter);
-                }
-
-                // For printing byte offsets ("-b").
-                Produmer<Long, Number> bytesRead = ConsumerUtil.cumulate();
-                if (Grep.this.withByteOffset) {
-                    is = InputStreams.wye(is, OutputStreams.lengthWritten(bytesRead));
-                }
-
-                int[] matchCountInDocument = new int[1];
-                int[] lineNumber           = { 1 };
-
-                Reader r = new BufferedReader(new InputStreamReader(is, Grep.this.charset));
-
-                // These will be called which the contents is processed.
-                ConsumerWhichThrows<MatchResult2, ? extends IOException> match;
-                ConsumerWhichThrows<Character, ? extends IOException>    nonMatch;
-                RunnableWhichThrows<? extends IOException>               flush;
-
-                switch (Grep.this.operation) {
-
-                case NORMAL:
-                    StringBuilder      currentLine              = new StringBuilder();
-                    boolean[]          currentLineHasMatches    = new boolean[1];
-                    boolean[]          crPending                = new boolean[1];
-                    LinkedList<String> beforeContext            = new LinkedList<String>();
-                    int[]              afterContextLinesToPrint = new int[1];
-
-                    match = new ConsumerWhichThrows<MatchResult2, IOException>() {
-
-                        @Override public void
-                        consume(MatchResult2 mr2) {
-                            currentLineHasMatches[0] = true;
-                            crPending[0] = false;
-                            currentLine.append(mr2.group());
-                        }
-                    };
-
-                    nonMatch = new ConsumerWhichThrows<Character, IOException>() {
-
-                        @Override public void
-                        consume(Character c) {
-
-                            if (crPending[0] && c == '\n') return;
-
-                            if (c == '\r') {
-                                crPending[0] = true;
-                            } else
-                            if (c == '\n') {
-                                ;
-                            } else
-                            {
-                                currentLine.append(c);
-                                return;
-                            }
-
-                            if (currentLineHasMatches[0] ^ Grep.this.inverted) {
-                                this.matchingLine(currentLine.toString(), bytesRead.produce());
-                                matchCountInDocument[0]++;
-                                Grep.this.totalMatchCount++;
-                                if (matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
-                            } else {
-                                this.nonMatchingLine(currentLine.toString(), bytesRead.produce());
-                            }
-                            lineNumber[0]++;
-                            currentLine.setLength(0);
-                            currentLineHasMatches[0] = false;
-                        }
-
-                        private void
-                        matchingLine(String line, long byteOffset) {
-
-                            // Iff a "context" is configured (and be it zero!), print a separator line between chunks:
-                            if (
-                                (Grep.this.beforeContext != -1 || Grep.this.afterContext != -1)
-                                && beforeContext.size() == (Grep.this.beforeContext == -1 ? 0 : Grep.this.beforeContext)
-                                && afterContextLinesToPrint[0] == 0
-                                && Grep.this.totalMatchCount > 0
-                            ) Printers.info("--");
-
-                            // Print the "before context lines".
-                            while (!beforeContext.isEmpty()) Printers.info(beforeContext.remove());
-
-                            // Print the matching line.
-                            Printers.info(composeMatch(path, lineNumber[0], byteOffset, line, ':'));
-
-                            // Remember how many "after context" lines are to be printed.
-                            afterContextLinesToPrint[0] = Grep.this.afterContext;
-                        }
-
-                        private void
-                        nonMatchingLine(String line, long byteOffset) {
-
-                            // Are there any context lines to print after a preceeding match?
-                            if (afterContextLinesToPrint[0] > 0) {
-                                Printers.info(composeMatch(path, lineNumber[0], byteOffset, line, '-'));
-                                afterContextLinesToPrint[0]--;
-                            } else
-                            if (Grep.this.beforeContext > 0) {
-
-                                // Keep a copy of the line in case a future match would like to print "before context".
-                                if (beforeContext.size() >= Grep.this.beforeContext) beforeContext.remove();
-                                beforeContext.add(composeMatch(path, lineNumber[0], byteOffset, line, '-'));
-                            }
-                        }
-                    };
-
-                    flush = new RunnableWhichThrows<IOException>() {
-
-                        @Override public void
-                        run() throws IOException {
-                            if (currentLine.length() > 0) nonMatch.consume('\n');
-                        }
-                    };
-                    break;
-
-                // In these modes, we don't have to track line numbers.
-                case COUNT:
-                case ONLY_MATCHING:
-                    match = new ConsumerWhichThrows<MatchResult2, IOException>() {
-                        @Override public void consume(MatchResult2 mr2) {
-                            matchCountInDocument[0]++;
-                            Grep.this.totalMatchCount++;
-                            if (Grep.this.operation == Operation.ONLY_MATCHING) {
-                                Printers.info(composeMatch(path, lineNumber[0], bytesRead.produce(), mr2.group(), ':'));
-                            }
-                            if (matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
-                        }
-                    };
-                    nonMatch = ConsumerUtil.<Character, IOException>widen2(ConsumerUtil.nop());
-                    flush    = RunnableUtil.asRunnableWhichThrows(RunnableUtil.NOP);
-                    break;
-
-                // In these modes, we don't have to track line numbers, and we only check if there *is* a match.
-                case FILES_WITH_MATCHES:
-                case FILES_WITHOUT_MATCH:
-                case QUIET:
-                    match = new ConsumerWhichThrows<MatchResult2, IOException>() {
-                        @Override public void consume(MatchResult2 mr2) {
-                            matchCountInDocument[0]++;
-                            Grep.this.totalMatchCount++;
-                            throw Grep.STOP_DOCUMENT;
-                        }
-                    };
-                    nonMatch = ConsumerUtil.<Character, IOException>widen2(ConsumerUtil.nop());
-                    flush    = RunnableUtil.asRunnableWhichThrows(RunnableUtil.NOP);
-                    break;
-
-                default:
-                    throw new AssertionError();
-                }
-
-                Writer w = PatternUtil.patternFinderWriter(patterns.toArray(new Pattern[patterns.size()]), match, nonMatch);
-
-                try {
-                    IoUtil.copy(r, w);
-                    flush.run();
-                } catch (RuntimeException re) {
-                    if (re != Grep.STOP_DOCUMENT) throw re;
-                }
-
-                // Per document:
-                switch (Grep.this.operation) {
-
-                case NORMAL:
-                case QUIET:
-                case ONLY_MATCHING:
-                    break;
-
-                case COUNT:
-                    Printers.info(path + ':' + matchCountInDocument[0]);
-                    break;
-
-                case FILES_WITH_MATCHES:
-                    if (matchCountInDocument[0] > 0) Printers.info(path);
-                    break;
-
-                case FILES_WITHOUT_MATCH:
-                    if (matchCountInDocument[0] == 0) Printers.info(path);
-                    break;
-                }
-
-                return null;
-            }
-
-            private String
-            composeMatch(String path, int lineNumber, long byteOffset, String text, char separator) {
-
-                StringBuilder sb = new StringBuilder();
-                if (Grep.this.withPath) {
-                    sb.append(Grep.this.label != null ? Grep.this.label : path).append(separator);
-                }
-
-                if (Grep.this.withLineNumber) sb.append(lineNumber).append(separator);
-
-                if (Grep.this.withByteOffset) sb.append(byteOffset).append(separator);
-
-                sb.append(text);
-
-                return sb.toString();
-            }
-        };
-    }
-
-    /**
      * @return A {@link FileProcessor} which executes the search and prints results to STDOUT
      */
     public FileProcessor<Void>
@@ -598,5 +355,429 @@ class Grep {
         }
 
         return fp;
+    }
+
+    /**
+     * @return A {@link ContentsProcessor} which executes the search and prints results to STDOUT
+     */
+    public ContentsProcessor<Void>
+    contentsProcessor() {
+
+        return new ContentsProcessor<Void>() {
+
+            @Override @Nullable public Void
+            process(
+                String                                                            path,
+                InputStream                                                       is,
+                @Nullable Date                                                    lastModifiedDate,
+                long                                                              size,
+                long                                                              crc32,
+                ProducerWhichThrows<? extends InputStream, ? extends IOException> opener
+            ) throws IOException {
+
+//                if (!Grep.this.includeExclude.matches(name)) return null;
+
+                // Check which searches apply to this path.
+                Pattern[] patterns;
+                {
+                    final List<Pattern> l = new ArrayList<Pattern>();
+                    for (Search search : Grep.this.searches) {
+                        if (search.path.matches(path)) l.add(search.pattern);
+                    }
+                    if (l.isEmpty()) return null;
+                    patterns = l.toArray(new Pattern[l.size()]);
+                }
+
+                Printers.verbose(path);
+
+                if (Grep.this.disassembleClassFiles && path.endsWith(".class")) {
+
+                    // Wrap the input stream in a Java disassembler.
+                    DisassemblerByteFilter disassemblerByteFilter = new DisassemblerByteFilter();
+
+                    disassemblerByteFilter.setVerbose(Grep.this.disassembleClassFilesVerbose);
+                    disassemblerByteFilter.setSourceDirectory(Grep.this.disassembleClassFilesSourceDirectory);
+                    disassemblerByteFilter.setHideLines(Grep.this.disassembleClassFilesButHideLines);
+                    disassemblerByteFilter.setHideVars(Grep.this.disassembleClassFilesButHideVars);
+                    disassemblerByteFilter.setSymbolicLabels(Grep.this.disassembleClassFilesSymbolicLabels);
+                    is = new ByteFilterInputStream(is, disassemblerByteFilter);
+                }
+
+                // For printing byte offsets ("-b").
+                Produmer<Long, Number> bytesRead = ConsumerUtil.cumulate();
+                if (Grep.this.withByteOffset) {
+                    is = InputStreams.wye(is, OutputStreams.lengthWritten(bytesRead));
+                }
+
+                int[] matchCountInDocument = new int[1];
+
+                Reader r = new BufferedReader(new InputStreamReader(is, Grep.this.charset));
+
+                Writer w;
+                switch (Grep.this.operation) {
+
+                case NORMAL:
+                    w = Grep.this.grepNormal(
+                        path,
+                        patterns,
+                        Grep.this.inverted,
+                        Grep.this.beforeContext,
+                        Grep.this.afterContext,
+                        bytesRead,
+                        matchCountInDocument
+                    );
+                    break;
+
+                case ONLY_MATCHING:
+                    // In this mode, we may or may not track line numbers.
+                    if (Grep.this.withLineNumber) {
+                        w = Grep.this.grepPrintMatchesWithLineNumber(
+                            path,
+                            patterns,
+                            Grep.this.inverted,
+                            Grep.this.maxCount,
+                            bytesRead,
+                            matchCountInDocument
+                        );
+                    } else {
+                        w = Grep.this.grepPrintMatches(
+                            path,
+                            patterns,
+                            true, // printMatches
+                            bytesRead,
+                            matchCountInDocument
+                        );
+                    }
+                    break;
+
+                case COUNT:
+                    // In this mode, we don't have to track line numbers.
+                    w = Grep.this.grepPrintMatches(
+                        path,
+                        patterns,
+                        false, // printMatches
+                        bytesRead,
+                        matchCountInDocument
+                    );
+                    break;
+
+                case FILES_WITH_MATCHES:
+                case FILES_WITHOUT_MATCH:
+                case QUIET:
+                    // In these modes, we don't have to track line numbers, and we only check if there *is* a match.
+                    w = Grep.grepCheck(patterns, matchCountInDocument);
+                    break;
+
+                default:
+                    throw new AssertionError(Grep.this.operation);
+                }
+
+                // Now process the contents.
+                try {
+                    IoUtil.copy(r, w);
+                    w.close();
+                } catch (RuntimeException re) {
+                    if (re != Grep.STOP_DOCUMENT) throw re;
+                }
+
+                Grep.this.totalMatchCount += matchCountInDocument[0];
+
+                // Print the per-document epilog.
+                switch (Grep.this.operation) {
+
+                case NORMAL:
+                case QUIET:
+                case ONLY_MATCHING:
+                    break;
+
+                case COUNT:
+                    Printers.info(path + ':' + matchCountInDocument[0]);
+                    break;
+
+                case FILES_WITH_MATCHES:
+                    if (matchCountInDocument[0] > 0) Printers.info(path);
+                    break;
+
+                case FILES_WITHOUT_MATCH:
+                    if (matchCountInDocument[0] == 0) Printers.info(path);
+                    break;
+
+                default:
+                    throw new AssertionError(Grep.this.operation);
+                }
+
+                return null;
+            }
+        };
+    }
+
+    /**
+     * Creates and returns a writer which implements a "normal" grep, optionally with line number, before-context, and
+     * after-context.
+     *
+     * @param matchCountInDocument Reflects the current number of matches
+     */
+    private Writer
+    grepNormal(
+        String                                 path,
+        Pattern[]                              patterns,
+        boolean                                inverted,
+        int                                    beforeContext,
+        int                                    afterContext,
+        ProducerWhichThrows<Long, NoException> bytesRead,
+        int[]                                  matchCountInDocument
+    ) {
+        StringBuilder currentLine           = new StringBuilder();
+        boolean[]     currentLineHasMatches = new boolean[1];
+
+        ConsumerWhichThrows<MatchResult2, ? extends IOException>
+        match = new ConsumerWhichThrows<MatchResult2, IOException>() {
+
+            @Override public void
+            consume(MatchResult2 mr2) {
+
+                // Don't print the match *now*, only when the line is completely read.
+                currentLineHasMatches[0] = true;
+                currentLine.append(mr2.group());
+            }
+        };
+
+        ConsumerWhichThrows<Character, ? extends IOException>
+        nonMatch = Grep.<IOException>lineCounter(
+            new ConsumerWhichThrows<Character, IOException>() { // lineChar
+                @Override public void consume(Character c) { currentLine.append(c); }
+            },
+            new ConsumerWhichThrows<Integer, IOException>() {   // lineComplete
+
+                LinkedList<String> beforeContextLines = new LinkedList<String>();
+                int                afterContextLinesToPrint;
+
+                @Override public void
+                consume(Integer lineNumber) {
+                    if (currentLineHasMatches[0] ^ inverted) {
+                        this.matchingLine(currentLine.toString(), lineNumber, bytesRead.produce());
+                        matchCountInDocument[0]++;
+                        if (matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
+                    } else {
+                        this.nonMatchingLine(currentLine.toString(), lineNumber, bytesRead.produce());
+                    }
+                    currentLine.setLength(0);
+                    currentLineHasMatches[0] = false;
+                }
+
+                private void
+                matchingLine(String line, int lineNumber, long byteOffset) {
+
+                    // Iff a "context" is configured (and be it zero!), print a separator line between chunks:
+                    if (
+                        (Grep.this.beforeContext != -1 || Grep.this.afterContext != -1)
+                        && this.beforeContextLines.size() == (Grep.this.beforeContext == -1 ? 0 : Grep.this.beforeContext)
+                        && this.afterContextLinesToPrint == 0
+                        && matchCountInDocument[0] > 0
+                    ) Printers.info("--");
+
+                    // Print the "before context lines".
+                    while (!this.beforeContextLines.isEmpty()) Printers.info(this.beforeContextLines.remove());
+
+                    // Print the matching line.
+                    Printers.info(Grep.this.composeMatch(path, lineNumber, byteOffset, line, ':'));
+
+                    // Remember how many "after context" lines are to be printed.
+                    this.afterContextLinesToPrint = Grep.this.afterContext;
+                }
+
+                private void
+                nonMatchingLine(String line, int lineNumber, long byteOffset) {
+
+                    // Are there any context lines to print after a preceeding match?
+                    if (this.afterContextLinesToPrint > 0) {
+                        Printers.info(Grep.this.composeMatch(path, lineNumber, byteOffset, line, '-'));
+                        this.afterContextLinesToPrint--;
+                    } else
+                    if (Grep.this.beforeContext > 0) {
+
+                        // Keep a copy of the line in case a future match would like to print "before context".
+                        if (this.beforeContextLines.size() >= Grep.this.beforeContext) this.beforeContextLines.remove();
+                        this.beforeContextLines.add(Grep.this.composeMatch(path, lineNumber, byteOffset, line, '-'));
+                    }
+                }
+            }
+        );
+
+        RunnableWhichThrows<? extends IOException>
+        flush = new RunnableWhichThrows<IOException>() {
+
+            @Override public void
+            run() throws IOException {
+                if (currentLine.length() > 0) nonMatch.consume('\n');
+            }
+        };
+
+        return PatternUtil.patternFinderWriter(patterns, match, nonMatch, flush);
+    }
+
+    /**
+     * Creates and returns a writer which info-prints matches of the <var>patterns</var> within the character
+     * stream, together with <var>path</var>, line number, and <var>bytesRead</var>.
+     *
+     * @param matchCountInDocument Reflects the current number of matches
+     */
+    private Writer
+    grepPrintMatchesWithLineNumber(
+        String                                 path,
+        Pattern[]                              patterns,
+        boolean                                inverted,
+        int                                    maxCount,
+        ProducerWhichThrows<Long, NoException> bytesRead,
+        int[]                                  matchCountInDocument
+    ) {
+        int[]     lineNumber            = new int[1];
+        boolean[] currentLineHasMatches = new boolean[1];
+
+        ConsumerWhichThrows<MatchResult2, ? extends IOException>
+        match = new ConsumerWhichThrows<MatchResult2, IOException>() {
+
+            @Override public void
+            consume(MatchResult2 mr2) {
+                currentLineHasMatches[0] = true;
+                Printers.info(Grep.this.composeMatch(path, lineNumber[0] + 1, bytesRead.produce(), mr2.group(), ':'));
+            }
+        };
+
+        final ConsumerWhichThrows<Character, ? extends IOException>
+        nonMatch = Grep.<IOException>lineCounter(
+            ConsumerUtil.<Character, IOException>widen2(ConsumerUtil.nop()), // lineChar
+            new ConsumerWhichThrows<Integer, IOException>() {                // lineComplete
+
+                @Override public void
+                consume(Integer lineNumber2) {
+                    lineNumber[0] = lineNumber2;
+                    if (currentLineHasMatches[0] ^ inverted) {
+                        matchCountInDocument[0]++;
+                        if (matchCountInDocument[0] >= maxCount) throw Grep.STOP_DOCUMENT;
+                    }
+                    currentLineHasMatches[0] = false;
+                }
+            }
+        );
+
+        RunnableWhichThrows<? extends IOException>
+        flush = new RunnableWhichThrows<IOException>() {
+            @Override public void run() throws IOException { nonMatch.consume('\n'); }
+        };
+
+        return PatternUtil.patternFinderWriter(patterns, match, nonMatch, flush);
+    }
+
+    /**
+     * Creates and returns a writer which counts matches of the <var>patterns</var> within the character
+     * stream.
+     * <p>
+     *   If <var>printMatches</var>, then each match is info-printed together with <var>path</var> and
+     *   <var>bytesRead</var>.
+     * </p>
+     *
+     * @param printMatches         Whether also to info-print the matches
+     * @param matchCountInDocument Reflects the current number of matches
+     */
+    private Writer
+    grepPrintMatches(
+        String                                 path,
+        Pattern[]                              patterns,
+        boolean                                printMatches,
+        ProducerWhichThrows<Long, NoException> bytesRead,
+        int[]                                  matchCountInDocument
+    ) {
+
+        ConsumerWhichThrows<MatchResult2, ? extends IOException>
+        match = new ConsumerWhichThrows<MatchResult2, IOException>() {
+            @Override public void consume(MatchResult2 mr2) {
+                matchCountInDocument[0]++;
+                if (printMatches) {
+                    Printers.info(Grep.this.composeMatch(
+                        path,                // path
+                        -1,                  // lineNumber
+                        bytesRead.produce(), // byteOffset
+                        mr2.group(),         // text
+                        ':'                  // separator
+                    ));
+                }
+                if (matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
+            }
+        };
+
+        ConsumerWhichThrows<Character, ? extends IOException>
+        nonMatch = ConsumerUtil.<Character, IOException>widen2(ConsumerUtil.nop());
+
+        return PatternUtil.patternFinderWriter(patterns, match, nonMatch);
+    }
+
+    /**
+     * Creates and returns a writer which, on the first match of any of the <var>patterns</var> within the character
+     * stream, increments the <var>matchCountInDocument</var> and throws {@link #STOP_DOCUMENT}.
+     */
+    private static Writer
+    grepCheck(Pattern[] patterns, int[] matchCountInDocument) {
+
+        ConsumerWhichThrows<MatchResult2, ? extends IOException>
+        match = new ConsumerWhichThrows<MatchResult2, IOException>() {
+            @Override public void consume(MatchResult2 mr2) {
+                matchCountInDocument[0]++;
+                throw Grep.STOP_DOCUMENT;
+            }
+        };
+
+        ConsumerWhichThrows<Character, ? extends IOException>
+        nonMatch = ConsumerUtil.<Character, IOException>widen2(ConsumerUtil.nop());
+
+        return PatternUtil.patternFinderWriter(patterns, match, nonMatch);
+    }
+
+    private String
+    composeMatch(String path, int lineNumber, long byteOffset, String text, char separator) {
+
+        StringBuilder sb = new StringBuilder();
+        if (Grep.this.withPath) {
+            sb.append(Grep.this.label != null ? Grep.this.label : path).append(separator);
+        }
+
+        if (Grep.this.withLineNumber) sb.append(lineNumber).append(separator);
+
+        if (Grep.this.withByteOffset) sb.append(byteOffset).append(separator);
+
+        sb.append(text);
+
+        return sb.toString();
+    }
+
+    private static <EX extends Throwable> ConsumerWhichThrows<Character, ? extends EX>
+    lineCounter(
+        ConsumerWhichThrows<Character, ? extends EX> lineChar,
+        ConsumerWhichThrows<Integer, ? extends EX>   lineComplete
+    ) {
+
+        return new ConsumerWhichThrows<Character, EX>() {
+
+            int     lineNumber = 1;
+            boolean crPending;
+
+            @Override public void
+            consume(Character c) throws EX {
+                if (c == '\n') {
+                    if (this.crPending) {
+                        this.crPending = false;
+                    } else {
+                        lineComplete.consume(this.lineNumber++);
+                    }
+                } else
+                if (c == '\r') {
+                    this.crPending = true;
+                    lineComplete.consume(this.lineNumber++);
+                } else
+                {
+                    lineChar.consume(c);
+                }
+            }
+        };
     }
 }
