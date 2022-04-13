@@ -62,6 +62,8 @@ import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
 import de.unkrig.commons.lang.protocol.NoException;
 import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
+import de.unkrig.commons.lang.protocol.Producer;
+import de.unkrig.commons.lang.protocol.ProducerUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
 import de.unkrig.commons.lang.protocol.RunnableWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
@@ -404,10 +406,17 @@ class Grep {
                 }
 
                 // For printing byte offsets ("-b").
-                Produmer<Long, Number> bytesRead = ConsumerUtil.cumulate();
+                Producer<Long> bytesRead;
                 if (Grep.this.withByteOffset) {
-                    is = InputStreams.wye(is, OutputStreams.lengthWritten(bytesRead));
+                    Produmer<Long, Number> p = ConsumerUtil.cumulate();
+                    is = InputStreams.wye(is, OutputStreams.lengthWritten(p));
+                    bytesRead = p;
+                } else {
+                    bytesRead = ProducerUtil.constantProducer(-1L);
                 }
+
+                // For printing path (-H) or label (--label).
+                String label = Grep.this.label != null ? Grep.this.label : Grep.this.withPath ? path : null;
 
                 int[] matchCountInDocument = new int[1];
 
@@ -417,10 +426,12 @@ class Grep {
                 switch (Grep.this.operation) {
 
                 case NORMAL:
-                    w = Grep.this.grepNormal(
-                        path,
+                    w = Grep.grepNormal(
                         patterns,
                         Grep.this.inverted,
+                        Grep.this.maxCount,
+                        label,
+                        Grep.this.withLineNumber,
                         Grep.this.beforeContext,
                         Grep.this.afterContext,
                         bytesRead,
@@ -431,19 +442,20 @@ class Grep {
                 case ONLY_MATCHING:
                     // In this mode, we may or may not track line numbers.
                     if (Grep.this.withLineNumber) {
-                        w = Grep.this.grepPrintMatchesWithLineNumber(
-                            path,
+                        w = Grep.grepPrintMatchesWithLineNumber(
                             patterns,
                             Grep.this.inverted,
                             Grep.this.maxCount,
+                            label,
                             bytesRead,
                             matchCountInDocument
                         );
                     } else {
-                        w = Grep.this.grepPrintMatches(
-                            path,
+                        w = Grep.grepPrintMatches(
                             patterns,
                             true, // printMatches
+                            Grep.this.maxCount,
+                            label,
                             bytesRead,
                             matchCountInDocument
                         );
@@ -452,10 +464,11 @@ class Grep {
 
                 case COUNT:
                     // In this mode, we don't have to track line numbers.
-                    w = Grep.this.grepPrintMatches(
-                        path,
+                    w = Grep.grepPrintMatches(
                         patterns,
                         false, // printMatches
+                        Grep.this.maxCount,
+                        label,
                         bytesRead,
                         matchCountInDocument
                     );
@@ -491,15 +504,15 @@ class Grep {
                     break;
 
                 case COUNT:
-                    Printers.info(path + ':' + matchCountInDocument[0]);
+                    Printers.info((Grep.this.label != null ? Grep.this.label : path) + ':' + matchCountInDocument[0]);
                     break;
 
                 case FILES_WITH_MATCHES:
-                    if (matchCountInDocument[0] > 0) Printers.info(path);
+                    if (matchCountInDocument[0] > 0) Printers.info(Grep.this.label != null ? Grep.this.label : path);
                     break;
 
                 case FILES_WITHOUT_MATCH:
-                    if (matchCountInDocument[0] == 0) Printers.info(path);
+                    if (matchCountInDocument[0] == 0) Printers.info(Grep.this.label != null ? Grep.this.label : path);
                     break;
 
                 default:
@@ -512,16 +525,19 @@ class Grep {
     }
 
     /**
-     * Creates and returns a writer which implements a "normal" grep, optionally with line number, before-context, and
-     * after-context.
+     * Creates and returns a writer which implements a "normal" grep, optionally with label, line number,
+     * before-context, and after-context.
      *
+     * @param label                Printed before each match, if non-null
      * @param matchCountInDocument Reflects the current number of matches
      */
-    private Writer
+    private static Writer
     grepNormal(
-        String                                 path,
         Pattern[]                              patterns,
         boolean                                inverted,
+        int                                    maxCount,
+        @Nullable String                       label,
+        boolean                                withLineNumber,
         int                                    beforeContext,
         int                                    afterContext,
         ProducerWhichThrows<Long, NoException> bytesRead,
@@ -557,7 +573,7 @@ class Grep {
                     if (currentLineHasMatches[0] ^ inverted) {
                         this.matchingLine(currentLine.toString(), lineNumber, bytesRead.produce());
                         matchCountInDocument[0]++;
-                        if (matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
+                        if (matchCountInDocument[0] >= maxCount) throw Grep.STOP_DOCUMENT;
                     } else {
                         this.nonMatchingLine(currentLine.toString(), lineNumber, bytesRead.produce());
                     }
@@ -570,8 +586,8 @@ class Grep {
 
                     // Iff a "context" is configured (and be it zero!), print a separator line between chunks:
                     if (
-                        (Grep.this.beforeContext != -1 || Grep.this.afterContext != -1)
-                        && this.beforeContextLines.size() == (Grep.this.beforeContext == -1 ? 0 : Grep.this.beforeContext)
+                        (beforeContext != -1 || afterContext != -1)
+                        && this.beforeContextLines.size() == (beforeContext == -1 ? 0 : beforeContext)
                         && this.afterContextLinesToPrint == 0
                         && matchCountInDocument[0] > 0
                     ) Printers.info("--");
@@ -580,10 +596,10 @@ class Grep {
                     while (!this.beforeContextLines.isEmpty()) Printers.info(this.beforeContextLines.remove());
 
                     // Print the matching line.
-                    Printers.info(Grep.this.composeMatch(path, lineNumber, byteOffset, line, ':'));
+                    Printers.info(Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, ':'));
 
                     // Remember how many "after context" lines are to be printed.
-                    this.afterContextLinesToPrint = Grep.this.afterContext;
+                    this.afterContextLinesToPrint = afterContext;
                 }
 
                 private void
@@ -591,14 +607,14 @@ class Grep {
 
                     // Are there any context lines to print after a preceeding match?
                     if (this.afterContextLinesToPrint > 0) {
-                        Printers.info(Grep.this.composeMatch(path, lineNumber, byteOffset, line, '-'));
+                        Printers.info(Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, '-'));
                         this.afterContextLinesToPrint--;
                     } else
-                    if (Grep.this.beforeContext > 0) {
+                    if (beforeContext > 0) {
 
                         // Keep a copy of the line in case a future match would like to print "before context".
-                        if (this.beforeContextLines.size() >= Grep.this.beforeContext) this.beforeContextLines.remove();
-                        this.beforeContextLines.add(Grep.this.composeMatch(path, lineNumber, byteOffset, line, '-'));
+                        if (this.beforeContextLines.size() >= beforeContext) this.beforeContextLines.remove();
+                        this.beforeContextLines.add(Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, '-'));
                     }
                 }
             }
@@ -622,12 +638,12 @@ class Grep {
      *
      * @param matchCountInDocument Reflects the current number of matches
      */
-    private Writer
+    private static Writer
     grepPrintMatchesWithLineNumber(
-        String                                 path,
         Pattern[]                              patterns,
         boolean                                inverted,
         int                                    maxCount,
+        @Nullable String                       label,
         ProducerWhichThrows<Long, NoException> bytesRead,
         int[]                                  matchCountInDocument
     ) {
@@ -640,7 +656,7 @@ class Grep {
             @Override public void
             consume(MatchResult2 mr2) {
                 currentLineHasMatches[0] = true;
-                Printers.info(Grep.this.composeMatch(path, lineNumber[0] + 1, bytesRead.produce(), mr2.group(), ':'));
+                Printers.info(Grep.composeMatch(label, lineNumber[0] + 1, bytesRead.produce(), mr2.group(), ':'));
             }
         };
 
@@ -680,11 +696,12 @@ class Grep {
      * @param printMatches         Whether also to info-print the matches
      * @param matchCountInDocument Reflects the current number of matches
      */
-    private Writer
+    private static Writer
     grepPrintMatches(
-        String                                 path,
         Pattern[]                              patterns,
         boolean                                printMatches,
+        int                                    maxCount,
+        @Nullable String                       label,
         ProducerWhichThrows<Long, NoException> bytesRead,
         int[]                                  matchCountInDocument
     ) {
@@ -694,15 +711,15 @@ class Grep {
             @Override public void consume(MatchResult2 mr2) {
                 matchCountInDocument[0]++;
                 if (printMatches) {
-                    Printers.info(Grep.this.composeMatch(
-                        path,                // path
+                    Printers.info(Grep.composeMatch(
+                        label,               // label
                         -1,                  // lineNumber
                         bytesRead.produce(), // byteOffset
                         mr2.group(),         // text
                         ':'                  // separator
                     ));
                 }
-                if (matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
+                if (matchCountInDocument[0] >= maxCount) throw Grep.STOP_DOCUMENT;
             }
         };
 
@@ -733,18 +750,15 @@ class Grep {
         return PatternUtil.patternFinderWriter(patterns, match, nonMatch);
     }
 
-    private String
-    composeMatch(String path, int lineNumber, long byteOffset, String text, char separator) {
+    private static String
+    composeMatch(@Nullable String label, int lineNumber, long byteOffset, String text, char separator) {
+
+        if (label == null && lineNumber < 0 && byteOffset < 0) return text;
 
         StringBuilder sb = new StringBuilder();
-        if (Grep.this.withPath) {
-            sb.append(Grep.this.label != null ? Grep.this.label : path).append(separator);
-        }
-
-        if (Grep.this.withLineNumber) sb.append(lineNumber).append(separator);
-
-        if (Grep.this.withByteOffset) sb.append(byteOffset).append(separator);
-
+        if (label != null) sb.append(label).append(separator);
+        if (lineNumber >= 0) sb.append(lineNumber).append(separator);
+        if (byteOffset >= 0) sb.append(byteOffset).append(separator);
         sb.append(text);
 
         return sb.toString();
