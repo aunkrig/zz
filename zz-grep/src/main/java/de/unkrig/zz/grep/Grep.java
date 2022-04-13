@@ -113,7 +113,7 @@ class Grep {
     private boolean                       withPath;
     private boolean                       withLineNumber;
     private boolean                       withByteOffset;
-    private int                           beforeContext = -1, afterContext = -1;
+    private int                           beforeContext, afterContext;
     private Predicate<? super String>     lookIntoFormat = PredicateUtil.always();
     private Charset                       charset        = Charset.defaultCharset();
     private Operation                     operation      = Operation.NORMAL;
@@ -171,16 +171,22 @@ class Grep {
     setWithByteOffset(boolean value) { this.withByteOffset = value; }
 
     /**
-     * Print <var>n</var> lines of context after matching lines. (Implements {@code "-A"}.)
-     */
-    public void
-    setAfterContext(int value) { this.afterContext = value; }
-
-    /**
      * Print <var>n</var> lines of context before matching lines. (Implements {@code "-B"}.)
      */
     public void
-    setBeforeContext(int value) { this.beforeContext = value; }
+    setBeforeContext(int value) {
+        if (value < 0) throw new IllegalArgumentException("Before-context-size must not be negative");
+        this.beforeContext = value;
+    }
+
+    /**
+     * Print <var>n</var> lines of context after matching lines. (Implements {@code "-A"}.)
+     */
+    public void
+    setAfterContext(int value) {
+        if (value < 0) throw new IllegalArgumentException("After-context-size must not be negative");
+        this.afterContext = value;
+    }
 
     /**
      * @param value Is evaluated against <code>"<i>format</i>:<i>path</i>"</code>
@@ -418,7 +424,14 @@ class Grep {
                 // For printing path (-H) or label (--label).
                 String label = Grep.this.label != null ? Grep.this.label : Grep.this.withPath ? path : null;
 
-                int[] matchCountInDocument = new int[1];
+                int[]    matchCountInDocument = new int[1];
+                Runnable incrementMatchCount = new Runnable() {
+
+                    @Override public void
+                    run() {
+                        if (++matchCountInDocument[0] >= Grep.this.maxCount) throw Grep.STOP_DOCUMENT;
+                    }
+                };
 
                 Reader r = new BufferedReader(new InputStreamReader(is, Grep.this.charset));
 
@@ -429,13 +442,12 @@ class Grep {
                     w = Grep.grepNormal(
                         patterns,
                         Grep.this.inverted,
-                        Grep.this.maxCount,
                         label,
                         Grep.this.withLineNumber,
                         Grep.this.beforeContext,
                         Grep.this.afterContext,
                         bytesRead,
-                        matchCountInDocument
+                        incrementMatchCount
                     );
                     break;
 
@@ -445,19 +457,17 @@ class Grep {
                         w = Grep.grepPrintMatchesWithLineNumber(
                             patterns,
                             Grep.this.inverted,
-                            Grep.this.maxCount,
                             label,
                             bytesRead,
-                            matchCountInDocument
+                            incrementMatchCount
                         );
                     } else {
                         w = Grep.grepPrintMatches(
                             patterns,
                             true, // printMatches
-                            Grep.this.maxCount,
                             label,
                             bytesRead,
-                            matchCountInDocument
+                            incrementMatchCount
                         );
                     }
                     break;
@@ -467,10 +477,9 @@ class Grep {
                     w = Grep.grepPrintMatches(
                         patterns,
                         false, // printMatches
-                        Grep.this.maxCount,
                         label,
                         bytesRead,
-                        matchCountInDocument
+                        incrementMatchCount
                     );
                     break;
 
@@ -478,7 +487,7 @@ class Grep {
                 case FILES_WITHOUT_MATCH:
                 case QUIET:
                     // In these modes, we don't have to track line numbers, and we only check if there *is* a match.
-                    w = Grep.grepCheck(patterns, matchCountInDocument);
+                    w = Grep.grepCheck(patterns, incrementMatchCount);
                     break;
 
                 default:
@@ -528,20 +537,21 @@ class Grep {
      * Creates and returns a writer which implements a "normal" grep, optionally with label, line number,
      * before-context, and after-context.
      *
-     * @param label                Printed before each match, if non-null
-     * @param matchCountInDocument Reflects the current number of matches
+     * @param label         Printed before each match, if non-null
+     * @param beforeContext Number of lines to print before each match
+     * @param afterContext  Number of lines to print after each match
+     * @param countMatch    Is called after each match
      */
     private static Writer
     grepNormal(
         Pattern[]                              patterns,
         boolean                                inverted,
-        int                                    maxCount,
         @Nullable String                       label,
         boolean                                withLineNumber,
         int                                    beforeContext,
         int                                    afterContext,
         ProducerWhichThrows<Long, NoException> bytesRead,
-        int[]                                  matchCountInDocument
+        Runnable                               countMatch
     ) {
         StringBuilder currentLine           = new StringBuilder();
         boolean[]     currentLineHasMatches = new boolean[1];
@@ -570,27 +580,31 @@ class Grep {
 
                 @Override public void
                 consume(Integer lineNumber) {
+
                     if (currentLineHasMatches[0] ^ inverted) {
                         this.matchingLine(currentLine.toString(), lineNumber, bytesRead.produce());
-                        matchCountInDocument[0]++;
-                        if (matchCountInDocument[0] >= maxCount) throw Grep.STOP_DOCUMENT;
+                        countMatch.run();
                     } else {
                         this.nonMatchingLine(currentLine.toString(), lineNumber, bytesRead.produce());
                     }
+
                     currentLine.setLength(0);
                     currentLineHasMatches[0] = false;
                 }
+
+                boolean hadMatch;
 
                 private void
                 matchingLine(String line, int lineNumber, long byteOffset) {
 
                     // Iff a "context" is configured (and be it zero!), print a separator line between chunks:
                     if (
-                        (beforeContext != -1 || afterContext != -1)
-                        && this.beforeContextLines.size() == (beforeContext == -1 ? 0 : beforeContext)
+                        (beforeContext > 0 || afterContext > 0)
+                        && this.beforeContextLines.size() == beforeContext
                         && this.afterContextLinesToPrint == 0
-                        && matchCountInDocument[0] > 0
+                        && this.hadMatch
                     ) Printers.info("--");
+                    this.hadMatch = true;
 
                     // Print the "before context lines".
                     while (!this.beforeContextLines.isEmpty()) Printers.info(this.beforeContextLines.remove());
@@ -636,16 +650,15 @@ class Grep {
      * Creates and returns a writer which info-prints matches of the <var>patterns</var> within the character
      * stream, together with <var>path</var>, line number, and <var>bytesRead</var>.
      *
-     * @param matchCountInDocument Reflects the current number of matches
+     * @param countMatch Is called after each match
      */
     private static Writer
     grepPrintMatchesWithLineNumber(
         Pattern[]                              patterns,
         boolean                                inverted,
-        int                                    maxCount,
         @Nullable String                       label,
         ProducerWhichThrows<Long, NoException> bytesRead,
-        int[]                                  matchCountInDocument
+        Runnable                               countMatch
     ) {
         int[]     lineNumber            = new int[1];
         boolean[] currentLineHasMatches = new boolean[1];
@@ -669,8 +682,7 @@ class Grep {
                 consume(Integer lineNumber2) {
                     lineNumber[0] = lineNumber2;
                     if (currentLineHasMatches[0] ^ inverted) {
-                        matchCountInDocument[0]++;
-                        if (matchCountInDocument[0] >= maxCount) throw Grep.STOP_DOCUMENT;
+                        countMatch.run();
                     }
                     currentLineHasMatches[0] = false;
                 }
@@ -693,23 +705,21 @@ class Grep {
      *   <var>bytesRead</var>.
      * </p>
      *
-     * @param printMatches         Whether also to info-print the matches
-     * @param matchCountInDocument Reflects the current number of matches
+     * @param printMatches Whether also to info-print the matches
+     * @param countMatch   Is called after each match
      */
     private static Writer
     grepPrintMatches(
         Pattern[]                              patterns,
         boolean                                printMatches,
-        int                                    maxCount,
         @Nullable String                       label,
         ProducerWhichThrows<Long, NoException> bytesRead,
-        int[]                                  matchCountInDocument
+        Runnable                               countMatch
     ) {
 
         ConsumerWhichThrows<MatchResult2, ? extends IOException>
         match = new ConsumerWhichThrows<MatchResult2, IOException>() {
             @Override public void consume(MatchResult2 mr2) {
-                matchCountInDocument[0]++;
                 if (printMatches) {
                     Printers.info(Grep.composeMatch(
                         label,               // label
@@ -719,7 +729,7 @@ class Grep {
                         ':'                  // separator
                     ));
                 }
-                if (matchCountInDocument[0] >= maxCount) throw Grep.STOP_DOCUMENT;
+                countMatch.run();
             }
         };
 
@@ -731,15 +741,15 @@ class Grep {
 
     /**
      * Creates and returns a writer which, on the first match of any of the <var>patterns</var> within the character
-     * stream, increments the <var>matchCountInDocument</var> and throws {@link #STOP_DOCUMENT}.
+     * stream, runs <var>countMatch</var> and throws {@link #STOP_DOCUMENT}.
      */
     private static Writer
-    grepCheck(Pattern[] patterns, int[] matchCountInDocument) {
+    grepCheck(Pattern[] patterns, Runnable countMatch) {
 
         ConsumerWhichThrows<MatchResult2, ? extends IOException>
         match = new ConsumerWhichThrows<MatchResult2, IOException>() {
             @Override public void consume(MatchResult2 mr2) {
-                matchCountInDocument[0]++;
+                countMatch.run();
                 throw Grep.STOP_DOCUMENT;
             }
         };

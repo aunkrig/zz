@@ -395,20 +395,20 @@ class Main {
     setByteOffset() { this.grep.setWithByteOffset(true); }
 
     /**
-     * Print <var>n</var> lines of context after matching lines
-     *
-     * @main.commandLineOptionGroup Output-Generation
-     */
-    @CommandLineOption(name = { "-A", "--after-context" }) public void
-    setAfterContext(int n) { this.grep.setAfterContext(n); }
-
-    /**
      * Print <var>n</var> lines of context before matching lines
      *
      * @main.commandLineOptionGroup Output-Generation
      */
     @CommandLineOption(name = { "-B", "--before-context" }) public void
     setBeforeContext(int n) { this.grep.setBeforeContext(n); }
+
+    /**
+     * Print <var>n</var> lines of context after matching lines
+     *
+     * @main.commandLineOptionGroup Output-Generation
+     */
+    @CommandLineOption(name = { "-A", "--after-context" }) public void
+    setAfterContext(int n) { this.grep.setAfterContext(n); }
 
     /**
      * Print <var>n</var> lines of context before and after matching lines
