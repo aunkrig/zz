@@ -337,7 +337,7 @@ class Main {
      *
      * <h3>Properties of files and archive entries</h3>
      * <p>
-     *   Various tests and actions (e.g. "{@code -echo}") have access to a set of "variabales" related to the current
+     *   Various tests and actions (e.g. "{@code -echo}") have access to a set of "variables" related to the current
      *   file or archive entry.
      * </p>
      * <dl>
