@@ -341,6 +341,13 @@ class Main {
      *   file or archive entry.
      * </p>
      * <dl>
+     *   <dt>{@code "archiveEntry"}:</dt>
+     *   <dd>
+     *     For types "archive-*": The raw {@code ArchiveEntry} object, which has archive-format-specific
+     *     subproperties. Use {@code archiveEntry._properties} to get a list of all accessible properties.
+     *     <br />
+     *     For all other types: Empty.
+     *   </dd>
      *   <dt>{@code "archiveFormat"}:</dt>
      *   <dd>
      *     For types "archive-contents", "archive-file" and "archive-xxx-resource": The format.
