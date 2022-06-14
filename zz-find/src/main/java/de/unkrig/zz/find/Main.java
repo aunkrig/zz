@@ -55,7 +55,6 @@ import de.unkrig.commons.util.MavenUtil;
 import de.unkrig.commons.util.annotation.CommandLineOption;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
-import de.unkrig.zip4jadapter.archivers.zip.ZipArchiveFormat;
 
 /**
  * A FIND utility that can recurse into directories, archive files and compressed files.
@@ -249,7 +248,7 @@ class Main {
      *   <dd>
      *     Parses the Java class file, evaluates the given expression (where parameter "cf" represents the
      *     {@code de.unkrig.jdisasm.ClassFile}) and prints the result on stdout; example: "-java-class-file
-     *     cf.majorVersion"
+     *     cf.javaVersion"
      *   </dd>
      *   <dt>{@code -digest} <var>algorithm</var></dt>
      *   <dd>
@@ -656,7 +655,7 @@ class Main {
      */
     @SuppressWarnings("static-method")
     @CommandLineOption public void
-    setZipInputFilePassword(String value) { ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray()); }
+    setZipInputFilePassword(String value) { throw new UnsupportedOperationException(); /*ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray());*/ }
 
     /**
      * All of the above.
