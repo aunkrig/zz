@@ -1713,9 +1713,9 @@ class Find {
                             properties2.put("name",                   properties.get("name"));
                             properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune));
                             Find.copyProperty(properties, "size",        properties2);
-                            Find.copyProperty(properties, "readable",    properties2);
-                            Find.copyProperty(properties, "writable",    properties2);
-                            Find.copyProperty(properties, "executable",  properties2);
+                            Find.copyOptionalProperty(properties, "writable",          properties2);
+                            Find.copyOptionalProperty(properties, "executable",        properties2);
+                            Find.copyOptionalProperty(properties, "readable",          properties2);
                             Find.copyOptionalProperty(properties, "archiveEntry",      properties2);
                             Find.copyOptionalProperty(properties, "file",              properties2);
                             Find.copyOptionalProperty(properties, "lastModified",      properties2);
