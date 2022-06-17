@@ -48,7 +48,6 @@ import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.CRC32;
@@ -76,7 +75,6 @@ import de.unkrig.commons.lang.ExceptionUtil;
 import de.unkrig.commons.lang.ProcessUtil;
 import de.unkrig.commons.lang.protocol.ConsumerUtil;
 import de.unkrig.commons.lang.protocol.ConsumerWhichThrows;
-import de.unkrig.commons.lang.protocol.Function;
 import de.unkrig.commons.lang.protocol.Mapping;
 import de.unkrig.commons.lang.protocol.Mappings;
 import de.unkrig.commons.lang.protocol.Predicate;
@@ -1312,21 +1310,20 @@ class Find {
                 run() {
 
                     // Evaluate the FIND expression for the directory.
-                    Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
-                    properties2.put("type",                   Find.cp("directory"));
-                    properties2.put("name",                   Find.cp(directory.getName()));
-                    properties2.put("path",                   Find.cp(directoryPath));
-                    properties2.put("file",                   Find.cp(directory));
-                    properties2.put("depth",                  Find.cp(currentDepth));
-                    properties2.put("inputStream",            Find.cp(null));
-                    properties2.put("readable",               () -> directory.canRead());
-                    properties2.put("writable",               () -> directory.canWrite());
-                    properties2.put("executable",             () -> directory.canExecute());
-                    properties2.put("lastModified",           () -> directory.lastModified());
-                    properties2.put("lastModifiedDate",       () -> new Date(directory.lastModified()));
-                    properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune)); // <= The "-prune" action will potentially change this value
-
-                    Find.this.evaluateExpression(properties2);
+                    Find.this.evaluateExpression(MapUtil.map(
+                        "type",                   Find.cp("directory"),
+                        "name",                   Find.cp(directory.getName()),
+                        "path",                   Find.cp(directoryPath),
+                        "file",                   Find.cp(directory),
+                        "depth",                  Find.cp(currentDepth),
+                        "inputStream",            Find.cp(null),
+                        "readable",               (Producer<?>) () -> directory.canRead(),
+                        "writable",               (Producer<?>) () -> directory.canWrite(),
+                        "executable",             (Producer<?>) () -> directory.canExecute(),
+                        "lastModified",           (Producer<?>) () -> directory.lastModified(),
+                        "lastModifiedDate",       (Producer<?>) () -> new Date(directory.lastModified()),
+                        Find.PRUNE_PROPERTY_NAME, Find.cp(prune) // <= The "-prune" action will potentially change this value
+                    ));
                 }
             },
             new RunnableWhichThrows<IOException>() {
@@ -1612,24 +1609,17 @@ class Find {
                         @Override public void
                         run() {
 
-                            Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
-                            properties2.put("type",              Find.cp("compressed-" + properties.get("type").produce()));
-                            properties2.put("name",              properties.get("name"));
-                            properties2.put("readable",          Find.cp(true));
-                            properties2.put("writable",          Find.cp(false));
-                            properties2.put("executable",        Find.cp(false));
-                            properties2.put("path",              Find.cp(path));
-                            properties2.put("compressionFormat", Find.cp(compressionFormat));
-                            properties2.put("depth",             Find.cp(currentDepth));
-                            // We define "no input stream", because otherwise we couldn't process the CONTENTS of the
-                            // compressed resource.
-                            properties2.put("inputStream",       Find.cp(null));
-                            Find.copyOptionalProperty(properties, "archiveEntry",     properties2);
-                            Find.copyOptionalProperty(properties, "file",             properties2);
-                            Find.copyOptionalProperty(properties, "lastModified",     properties2);
-                            Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
-
-                            Find.this.evaluateExpression(properties2);
+                            Find.this.evaluateExpression(MapUtil.combine(
+                                MapUtil.map(
+                                    "type",              Find.cp("compressed-" + properties.get("type").produce()),
+                                    "compressionFormat", Find.cp(compressionFormat),
+                                    "depth",             Find.cp(currentDepth),
+                                    // We define "no input stream", because otherwise we couldn't process the CONTENTS of the
+                                    // compressed resource.
+                                    "inputStream",       Find.cp(null)
+                                ),
+                                properties
+                            ));
                         }
                     },
                     new RunnableWhichThrows<IOException>() {
@@ -1644,17 +1634,6 @@ class Find {
                                 Object name = vg.produce();
                                 assert name != null;
 
-                                Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
-                                properties2.put("compressionFormat", Find.cp(compressionFormat));
-                                properties2.put("name",              Find.cp(name + "%"));
-                                properties2.put("size",              Find.cp(-1L));
-                                Find.copyProperty(properties, "readable",   properties2);
-                                Find.copyProperty(properties, "writable",   properties2);
-                                Find.copyProperty(properties, "executable", properties2);
-                                Find.copyOptionalProperty(properties, "lastModified",     properties2);
-                                Find.copyOptionalProperty(properties, "lastModifiedDate", properties2);
-
-                                // "Inherit" lastModifiedDate from compression container.
                                 Date lastModifiedDate = null;
                                 {
                                     Producer<? extends Object> p = properties.get("lastModifiedDate");
@@ -1668,7 +1647,11 @@ class Find {
                                     path + '%',
                                     compressorInputStream,
                                     lastModifiedDate,
-                                    properties2,
+                                    MapUtil.combine(MapUtil.map(
+                                        "compressionFormat", Find.cp(compressionFormat),
+                                        "name",              Find.cp(name + "%"),
+                                        "size",              Find.cp(-1L)
+                                    ), properties),
                                     currentDepth + 1
                                 );
                             }
@@ -1704,25 +1687,15 @@ class Find {
                         run() {
 
                             // Evaluate the FIND expression for the archive resource.
-                            Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
-                            properties2.put("type",                   Find.cp("archive-" + properties.get("type").produce()));
-                            properties2.put("path",                   Find.cp(path));
-                            properties2.put("archiveFormat",          Find.cp(archiveFormat));
-                            properties2.put("depth",                  Find.cp(currentDepth));
-                            properties2.put("inputStream",            Find.cp(null));
-                            properties2.put("name",                   properties.get("name"));
-                            properties2.put(Find.PRUNE_PROPERTY_NAME, Find.cp(prune));
-                            Find.copyProperty(properties, "size",        properties2);
-                            Find.copyOptionalProperty(properties, "writable",          properties2);
-                            Find.copyOptionalProperty(properties, "executable",        properties2);
-                            Find.copyOptionalProperty(properties, "readable",          properties2);
-                            Find.copyOptionalProperty(properties, "archiveEntry",      properties2);
-                            Find.copyOptionalProperty(properties, "file",              properties2);
-                            Find.copyOptionalProperty(properties, "lastModified",      properties2);
-                            Find.copyOptionalProperty(properties, "lastModifiedDate",  properties2);
-                            Find.copyOptionalProperty(properties, "compressionMethod", properties2);
-
-                            Find.this.evaluateExpression(properties2);
+                            Find.this.evaluateExpression(MapUtil.combine(MapUtil.map(
+                                "type",                   Find.cp("archive-" + properties.get("type").produce()),
+                                "path",                   Find.cp(path),
+                                "archiveFormat",          Find.cp(archiveFormat),
+                                "depth",                  Find.cp(currentDepth),
+                                "inputStream",            Find.cp(null),
+                                "name",                   properties.get("name"),
+                                Find.PRUNE_PROPERTY_NAME, Find.cp(prune)
+                            ), properties));
                         }
                     },
                     new RunnableWhichThrows<IOException>() {
@@ -1839,18 +1812,7 @@ class Find {
             @Override @Nullable public Void
             handleNormalContents(final InputStream inputStream, @Nullable Date lastModifiedDate) {
 
-                // Evaluate the FIND expression for the nested normal contents.
-                Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>(properties);
-                properties2.put("path",             Find.cp(path));
-                properties2.put("type",             () -> "normal-" + properties.get("type").produce());
-                properties2.put("lastModifiedDate", () -> lastModifiedDate);
-                Find.copyProperty(properties, "readable",   properties2);
-                Find.copyProperty(properties, "writable",   properties2);
-                Find.copyProperty(properties, "executable", properties2);
-                Find.copyOptionalProperty(properties, "archiveEntry", properties2);
-                properties2.put("inputStream",      Find.cp(inputStream));
-                properties2.put("depth",            Find.cp(currentDepth));
-                properties2.put("crc",              () -> {
+                Producer<Integer> crcGetter = () -> {
                     final CRC32 cs = new java.util.zip.CRC32();
                     try {
                         ChecksumAction.updateAll(cs, inputStream);
@@ -1858,9 +1820,8 @@ class Find {
                         throw ExceptionUtil.wrap("Computing CRC of \"" + path + "\"", ioe, RuntimeException.class);
                     }
                     return (int) cs.getValue();
-                });
-
-                properties2.put("size",        () -> {
+                };
+                Producer<Long> sizeGetter = () -> {
 
                     // Check if the "size" property inherited from the ArchiveEntry has a reasonable
                     // value (ZipArchiveEntries have size -1 iff the archive was created in "streaming
@@ -1883,9 +1844,18 @@ class Find {
                             RuntimeException.class
                         );
                     }
-                });
+                };
 
-                Find.this.evaluateExpression(properties2);
+                // Evaluate the FIND expression for the nested normal contents.
+                Find.this.evaluateExpression(MapUtil.combine(MapUtil.map(
+                    "path",             Find.cp(path),
+                    "type",             Find.cp("normal-" + properties.get("type").produce()),
+                    "lastModifiedDate", Find.cp(lastModifiedDate),
+                    "inputStream",      Find.cp(inputStream),
+                    "depth",            Find.cp(currentDepth),
+                    "crc",              crcGetter,
+                    "size",             sizeGetter
+                ), properties));
 
                 return null;
             }
@@ -1960,21 +1930,9 @@ class Find {
             private Map<String, Object>
             getLazyMap() {
                 Map<String, Object> result = this.lazyMap;
-                return result != null ? result : (result = Find.lazyMap(map));
+                return result != null ? result : (result = MapUtil.<String, Object>lazyMap(map));
             }
         };
-    }
-
-    private static Map<String, Object>
-    lazyMap(Map<String, Producer<? extends Object>> map) {
-
-        Map<String, Function<Object, Object>> functionMap = new HashMap<>();
-
-        for (Entry<String, Producer<? extends Object>> e : map.entrySet()) {
-            functionMap.put(e.getKey(), in -> e.getValue().produce());
-        }
-
-        return MapUtil.lazyMap(functionMap, null);
     }
 
     /**
@@ -2002,30 +1960,6 @@ class Find {
                 throw ExceptionUtil.wrap(methodName, e, RuntimeException.class);
             }
         };
-    }
-
-    /**
-     * Verifies that the named property exists, then copies the property's value.
-     */
-    private static <T> void
-    copyProperty(
-        Map<String, ? extends T> source,
-        String                   propertyName,
-        Map<String, ? super T>   destination
-    ) {
-        T value = source.get(propertyName);
-        assert value != null || source.containsKey(propertyName) : propertyName;
-        destination.put(propertyName, value);
-    }
-
-    private static <T> void
-    copyOptionalProperty(
-        Map<String, ? extends T> source,
-        String                   propertyName,
-        Map<String, ? super T>   destination
-    ) {
-        T value = source.get(propertyName);
-        if (value != null) destination.put(propertyName, value);
     }
 
     /**
