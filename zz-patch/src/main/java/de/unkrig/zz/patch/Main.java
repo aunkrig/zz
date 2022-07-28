@@ -121,7 +121,8 @@ class Main {
     };
 
     /**
-     * Dictates that the command line tool should {@link System#exit(int)} with the given status.
+     * Dictates that the command line tool should {@link Printers#info(String)} the exception's message, and then
+     * {@link System#exit(int)} with the given status.
      */
     public static
     class ExitException extends RuntimeException {
@@ -323,7 +324,7 @@ class Main {
         try {
             this.main3(args);
         } catch (ExitException ee) {
-            Printers.verbose(ee.getLocalizedMessage());
+            Printers.info(ee.getLocalizedMessage());
             System.exit(ee.getStatus());
         } catch (Exception e) {
             if (e == FileTransformer.NOT_IDENTICAL) {
@@ -998,11 +999,6 @@ class Main {
 
         public SubstituteConditions() { super("path", "match", "occurrence"); }
 
-        /**
-         * Evaluate and print the <var>expression</var> each time the preceding file transformation is executed, e.g.
-         * "{@code path + ": Add '" + name + "' from '" + contentsFile + "'"}". The parameters of the
-         * <var>expression</var> depend on the file transformation (see above).
-         */
         @CommandLineOption public void
         addMode(SubstitutionContentsTransformer.Mode replacementMode) {
             this.replacementMode = replacementMode;
