@@ -232,7 +232,7 @@ class Patch {
     }
 
     /**
-     * @param condition Determines whether the contents will be added
+     * @param condition Applied to each directory or archive path; determines whether the contents will be added
      * @param name      File name or archive entry name to add
      * @param contents  Contents to add
      */
