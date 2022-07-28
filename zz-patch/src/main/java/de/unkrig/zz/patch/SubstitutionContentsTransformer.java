@@ -42,6 +42,8 @@ import java.util.regex.Pattern;
 import de.unkrig.commons.file.contentstransformation.ContentsTransformer;
 import de.unkrig.commons.lang.protocol.Function;
 import de.unkrig.commons.lang.protocol.FunctionWhichThrows;
+import de.unkrig.commons.lang.protocol.Predicate;
+import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.nullanalysis.Nullable;
 import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.ExpressionMatchReplacer;
@@ -258,7 +260,8 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
         switch (mode) {
 
         case REPLACEMENT_STRING:
-            return PatternUtil.<RuntimeException>replacementStringMatchReplacer(s);
+            Predicate<String> ppp = PredicateUtil.<String>equal("m");
+            return ExpressionMatchReplacer.parseExt(s); // Supports "${...}" for embedded expressions.
 
         case CONSTANT:
             return PatternUtil.constantMatchReplacer(s);
