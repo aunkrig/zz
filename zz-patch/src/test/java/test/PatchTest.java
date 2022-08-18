@@ -186,12 +186,11 @@ class PatchTest {
         Patch   patch = new Patch();
         Pattern regex = Pattern.compile("\\s*/\\*[\\s*]*@author\\s+[\\w.]+\\s*\\*/\\s*", Pattern.MULTILINE);
         patch.addContentsTransformation(PredicateUtil.always(), new SubstitutionContentsTransformer(
-            Charset.defaultCharset(),                                // inputCharset
-            Charset.defaultCharset(),                                // outputCharset
-            regex,                                                   // regex
-            SubstitutionContentsTransformer.Mode.REPLACEMENT_STRING, // replacementMode
-            "\n",                                                    // replacement
-            Condition.ALWAYS                                         // condition
+            Charset.defaultCharset(), // inputCharset
+            Charset.defaultCharset(), // outputCharset
+            regex,                    // regex
+            "\n",                     // replacement
+            Condition.ALWAYS          // condition
         ));
 
         PatchTest.assertContentsTransformer(

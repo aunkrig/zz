@@ -67,7 +67,6 @@ import de.unkrig.commons.util.annotation.CommandLineOptionGroup;
 import de.unkrig.commons.util.annotation.RegexFlags;
 import de.unkrig.commons.util.logging.SimpleLogging;
 import de.unkrig.zip4jadapter.archivers.zip.ZipArchiveFormat;
-import de.unkrig.zz.patch.SubstitutionContentsTransformer.Mode;
 import de.unkrig.zz.patch.diff.DiffParser.Hunk;
 import net.lingala.zip4j.model.enums.CompressionLevel;
 import net.lingala.zip4j.model.enums.EncryptionMethod;
@@ -190,27 +189,6 @@ class Main {
      *   <dd>
      *     Assert that exactly <var>n</var> updates/substitution replacements/patch hunks/removals/renamings/additions
      *     were executed; otherwise exit with status 2.
-     *   </dd>
-     *   <dt>{@code --mode} {@code REPLACEMENT_STRING|CONSTANT|EXPRESSION} (only with "--substitute")</dt>
-     *   <dd>
-     *     Determines how the replacement is processed:
-     *     <dl>
-     *       <dt>{@code REPLACEMENT_STRING}</dt>
-     *       <dd>
-     *         A JRE <a href="http://docs.oracle.com/javase/7/docs/api/java/util/regex/Matcher.html#appendRepl
-     *acement%28java.lang.StringBuffer,%20java.lang.String%29">replacement string</a>
-     *       </dd>
-     *       <dt>{@code CONSTANT}</dt>
-     *       <dd>
-     *         A constant string - no character (esp. dollar, backslash) has a special meaning
-     *       </dd>
-     *       <dt>{@code EXPRESSION}</dt>
-     *       <dd>
-     *         A <a href="http://commons.unkrig.de/commons-text/apidocs/de/unkrig/commons/text/pattern/Expressio
-     *nMatchReplacer.html#parse-java.lang.String-">Java-like expression</a>; variable "m" is the {@code
-     *         java.util.regex.Matcher} object
-     *       </dd>
-     *     </dl>
      *   </dd>
      * </dl>
      *
@@ -475,8 +453,12 @@ class Main {
 
     /**
      * Replace all matches of <var>pattern</var> in files/archive entries that match <var>glob</var> (see below) with
-     * the <var>replacement</var> string. "{@code $0}", "{@code $1}", "{@code $2}", etc. expand to the captured groups
-     * of the match.
+     * the <var>replacement</var> string, which supports:
+     * <ul>
+     *   <li>"{@code $0}", "{@code $1}", "{@code $2}", etc. expand to the captured groups of the match.</li>
+     *   <li>"<code>${...}</code>" is expanded as an expression, e.g. "<code>${m.group().toUpperCase()}</code>"</li>
+     *   <li>Escape sequences "{@code xutnrfaebQE}" are supported as in a {@link java.util.regex.Pattern regex}</li>
+     * </ul>
      * <p>
      *   Conditions (see below) apply per match; the parameters of the "{@code --report}" and "{@code --iff}"
      *   conditions are:
@@ -503,12 +485,11 @@ class Main {
         final Expression condition = substituteConditions.result;
 
         SubstitutionContentsTransformer sct = new SubstitutionContentsTransformer(
-            this.inputCharset,                    // inputCharset
-            this.outputCharset,                   // outputCharset
-            pattern,                              // pattern
-            substituteConditions.replacementMode, // replacementMode
-            replacement,                          // replacement
-            (                                     // condition
+            this.inputCharset,  // inputCharset
+            this.outputCharset, // outputCharset
+            pattern,            // pattern
+            replacement,        // replacement
+            (                   // condition
                 condition == Expression.TRUE  ? SubstitutionContentsTransformer.Condition.ALWAYS :
                 condition == Expression.FALSE ? SubstitutionContentsTransformer.Condition.NEVER  :
                 new SubstitutionContentsTransformer.Condition() {
@@ -995,14 +976,7 @@ class Main {
     public static
     class SubstituteConditions extends Conditions {
 
-        public Mode replacementMode = Mode.REPLACEMENT_STRING;
-
         public SubstituteConditions() { super("path", "match", "occurrence"); }
-
-        @CommandLineOption public void
-        addMode(SubstitutionContentsTransformer.Mode replacementMode) {
-            this.replacementMode = replacementMode;
-        }
     }
 
     /**

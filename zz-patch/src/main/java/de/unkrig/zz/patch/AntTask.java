@@ -62,7 +62,6 @@ import de.unkrig.commons.text.expression.ExpressionUtil;
 import de.unkrig.commons.text.parser.ParseException;
 import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.text.pattern.Pattern2;
-import de.unkrig.zz.patch.SubstitutionContentsTransformer.Mode;
 import de.unkrig.zz.patch.diff.DiffParser.Hunk;
 
 /**
@@ -227,7 +226,6 @@ class AntTask extends Task {
                 element.inputCharset,
                 element.outputCharset,
                 Pattern.compile(element.getRegex(), Pattern.MULTILINE),
-                element.getMode(),
                 element.getReplacement(),
                 AntTask.expressionToSubstitutionCondition(element.condition)
             )
@@ -273,7 +271,6 @@ class AntTask extends Task {
         private Charset          outputCharset   = Charset.defaultCharset();
         private Expression       condition       = Expression.TRUE;
         @Nullable private String regex;
-        private  Mode            replacementMode = Mode.REPLACEMENT_STRING;
         @Nullable private String replacement;
 
         /**
@@ -327,30 +324,6 @@ class AntTask extends Task {
         }
 
         /**
-         * Determines how the {@link #setReplacement(String)} is processed.
-         * <dl>
-         *   <dt>{@code REPLACEMENT_STRING}</dt>
-         *   <dd>
-         *     A JRE <a href="http://docs.oracle.com/javase/7/docs/api/java/util/regex/Matcher.html#appendRepl
-         *acement%28java.lang.StringBuffer,%20java.lang.String%29">replacement string</a>
-         *   </dd>
-         *   <dt>{@code CONSTANT}</dt>
-         *   <dd>A constant string - no character (esp. dollar, backslash) has a special meaning</dd>
-         *   <dt>{@code EXPRESSION}</dt>
-         *   <dd>
-         *     A <a href="http://commons.unkrig.de/commons-text/apidocs/de/unkrig/commons/text/pattern/Expressio
-         *nMatchReplacer.html#parse-java.lang.String-">Java-like expression</a>
-         *   </dd>
-         * </dl>
-         *
-         * @ant.defaultValue REPLACEMENT_STRING
-         */
-        public void
-        setReplacementMode(SubstitutionContentsTransformer.Mode replacementMode) {
-            this.replacementMode = replacementMode;
-        }
-
-        /**
          * The "replacement" that determines how each match is replaced.
          * <p>
          *   For the precise description of the format, see <a href="http://docs.oracle.com/javase/7/docs/api/java/ut
@@ -379,9 +352,6 @@ class AntTask extends Task {
             }
             this.replacement = subelement.text;
         }
-
-        public SubstitutionContentsTransformer.Mode
-        getMode() { return this.replacementMode; }
 
         /**
          * Getter for the mandatory {@code replacement=...} attribute or {@code <replacement>} subelement.

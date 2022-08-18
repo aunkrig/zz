@@ -56,18 +56,6 @@ import de.unkrig.commons.text.pattern.PatternUtil;
 public
 class SubstitutionContentsTransformer implements ContentsTransformer {
 
-    public enum Mode {
-
-        /** @see PatternUtil#replacementStringMatchReplacer(String) */
-        REPLACEMENT_STRING,
-
-        /** @see PatternUtil#constantMatchReplacer(String) */
-        CONSTANT,
-
-        /** @see ExpressionMatchReplacer#parse(String) */
-        EXPRESSION,
-    }
-
     private static final Logger LOGGER = Logger.getLogger(SubstitutionContentsTransformer.class.getName());
 
     private final Charset                                                              inputCharset;
@@ -77,29 +65,6 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
     private final Condition                                                            condition;
 
     private int initialBufferCapacity = 8192;
-
-    /**
-     * Replaces all matches of the <var>regex</var> according to the <var>replacementString</var>.
-     *
-     * @param condition                Is checked for each match, and determines whether or not the match is replaced
-     * @see Matcher#replaceAll(String) For the format of the <var>replacementString</var>
-     */
-    public
-    SubstitutionContentsTransformer(
-        Charset     inputCharset,
-        Charset     outputCharset,
-        Pattern     pattern,
-        String      replacementString,
-        Condition   condition
-    ) {
-        this(
-            inputCharset,
-            outputCharset,
-            pattern,
-            PatternUtil.<RuntimeException>replacementStringMatchReplacer(replacementString), // replacer
-            condition
-        );
-    }
 
     /**
      * Replaces all matches of the <var>regex</var> according to the <var>replacementMode</var> and the
@@ -115,7 +80,6 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
         Charset     inputCharset,
         Charset     outputCharset,
         Pattern     pattern,
-        Mode        replacementMode,
         String      replacement,
         Condition   condition
     ) throws ParseException {
@@ -123,7 +87,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
             inputCharset,
             outputCharset,
             pattern,
-            SubstitutionContentsTransformer.makeReplacer(replacementMode, replacement), // replacer
+            SubstitutionContentsTransformer.makeReplacer(replacement, PredicateUtil.never()), // replacer
             condition
         );
     }
@@ -255,23 +219,8 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
     }
 
     private static FunctionWhichThrows<MatchResult, String, ? extends RuntimeException>
-    makeReplacer(Mode mode, String s) throws ParseException {
-
-        switch (mode) {
-
-        case REPLACEMENT_STRING:
-            Predicate<String> ppp = PredicateUtil.<String>equal("m");
-            return ExpressionMatchReplacer.parseExt(s); // Supports "${...}" for embedded expressions.
-
-        case CONSTANT:
-            return PatternUtil.constantMatchReplacer(s);
-
-        case EXPRESSION:
-            return ExpressionMatchReplacer.parse(s);
-
-        default:
-            throw new AssertionError(mode);
-        }
+    makeReplacer(String spec, Predicate<String> isValidVariableName) throws ParseException {
+        return ExpressionMatchReplacer.parseExt(spec);
     }
 
     private static FunctionWhichThrows<MatchResult, String, ? extends RuntimeException>
