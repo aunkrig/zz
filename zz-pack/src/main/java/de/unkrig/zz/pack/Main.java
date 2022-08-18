@@ -235,6 +235,12 @@ class Main {
     }
 
     /**
+     * Modifies entry names, e.g. {@code "(*).c=$1.c.bak"}.
+     */
+    @CommandLineOption(cardinality = CommandLineOption.Cardinality.ANY) public void
+    addRename(@RegexFlags(Pattern2.WILDCARD | Glob.REPLACEMENT) Glob glob) { this.pack.addRename(glob); }
+
+    /**
      * Compression level of zip archive entries.
      */
     @SuppressWarnings("static-method")

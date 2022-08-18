@@ -33,8 +33,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.Collator;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.compress.archivers.ArchiveException;
@@ -58,6 +60,7 @@ import de.unkrig.commons.lang.protocol.Predicate;
 import de.unkrig.commons.lang.protocol.PredicateUtil;
 import de.unkrig.commons.lang.protocol.ProducerWhichThrows;
 import de.unkrig.commons.nullanalysis.Nullable;
+import de.unkrig.commons.text.pattern.Glob;
 import de.unkrig.commons.util.concurrent.ConcurrentUtil;
 import de.unkrig.commons.util.concurrent.SquadExecutor;
 
@@ -75,6 +78,7 @@ class Pack {
     @Nullable private CompressionFormat   compressionFormat;
     @Nullable private ArchiveOutputStream archiveOutputStream;
     private Predicate<? super String>     lookIntoFormat                = PredicateUtil.always();
+    private final List<Glob>              renames                       = new ArrayList<>();
     @Nullable private Comparator<Object>  directoryMemberNameComparator = Collator.getInstance();
     private ExceptionHandler<IOException> exceptionHandler              = ExceptionHandler.defaultHandler();
 
@@ -162,6 +166,9 @@ class Pack {
     public void
     setLookIntoFormat(Predicate<? super String> value) { this.lookIntoFormat = value; }
 
+    public void
+    addRename(Glob glob) { this.renames.add(glob); }
+
     /**
      * Only files/entries who's name matches {@code value} are packed.
      */
@@ -216,6 +223,12 @@ class Pack {
 
                 ArchiveFormat af = Pack.this.archiveFormat;
                 assert af != null;
+
+                // Apply the "renames", i.e. modify the archive entry name.
+                for (Glob r : Pack.this.renames) {
+                    String tmp = r.replace(name);
+                    if (tmp != null) name = tmp;
+                }
 
                 af.writeEntry(
                     AssertionUtil.notNull(Pack.this.archiveOutputStream),
