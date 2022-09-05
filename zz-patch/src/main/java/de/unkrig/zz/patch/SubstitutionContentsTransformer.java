@@ -71,8 +71,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
      * <var>replacement</var>.
      *
      * @param condition                Is checked for each match, and determines whether or not the match is replaced
-     * @throws ParseException          <var>mode</var> was {@link Mode#EXPRESSION}, and <var>s</var> contained
-     *                                 syntax errors
+     * @throws ParseException          Problems parsing the <var>replacement</var>
      * @see Matcher#replaceAll(String) For the format of the <var>replacementString</var>
      */
     public
@@ -155,7 +154,7 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
          * @param occurrence The index of the occurrence within the document, starting at zero
          * @return           Whether the matching text should be replaced, see {@link
          *                   SubstitutionContentsTransformer#SubstitutionContentsTransformer(Charset, Charset, Pattern,
-         *                   Mode, String, Condition)}
+         *                   String, Condition)}
          */
         boolean evaluate(String path, CharSequence match, int occurrence);
 
