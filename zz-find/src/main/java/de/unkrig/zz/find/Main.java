@@ -234,7 +234,7 @@ class Main {
      *     the value of the property. For the list of supported properties, see section "Properties of files and
      *     archive entries", below.
      *     <br />
-     *     {@code --mkdirs} (or {@code -p}) silently create any missing directory.
+     *     {@code --mkdirs} (or {@code -p}) Silently create any missing directory.
      *   </dd>
      *   <dt>
      *     {@code -disassemble} [ {@code -verbose} ] [ {@code -sourceDirectory} <var>dir</var> ] [ {@code -hideLines} ]
