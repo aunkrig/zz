@@ -1238,6 +1238,7 @@ class Find {
         if (this.maxDepth < 0) return;
 
         final Map<String, Producer<? extends Object>> properties = new HashMap<String, Producer<? extends Object>>();
+        properties.put("type", Find.cp("stream"));
         properties.put("path", Find.cp("-"));
         properties.put("size", Find.cp(-1L));
 
@@ -1419,100 +1420,98 @@ class Find {
 
         Find.LOGGER.log(Level.FINER, "Processing \"{0}\" (path is \"{1}\")", new Object[] { resource, path });
 
+        if (resource.equals(ResourceProcessings.STDIN_URL)) {
+            this.findInStream(System.in);
+            return;
+        }
+
         Map<String, Producer<? extends Object>> resourceProperties = new HashMap<String, Producer<? extends Object>>();
-        {
-            File file = ResourceProcessings.isFile(resource);
-            if (file != null) {
 
-                if (file.isDirectory()) {
+        File file = ResourceProcessings.isFile(resource);
+        if (file != null) {
 
-                    // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
-                    // handle directories, only normal files!)
-                    this.findInDirectory(path, file, currentDepth);
-                    return;
-                }
-                resourceProperties.put("type",             Find.cp("file"));
-                resourceProperties.put("name",             Find.cp(file.getName()));
-                resourceProperties.put("size",             () -> file.length());
-                resourceProperties.put("readable",         () -> file.canRead());
-                resourceProperties.put("writable",         () -> file.canWrite());
-                resourceProperties.put("executable",       () -> file.canExecute());
-                resourceProperties.put("inputStream",      () -> {
-                    try {
-                        return new FileInputStream(file);
-                    } catch (FileNotFoundException fnfe) {
-                        throw ExceptionUtil.wrap(
-                            "Reading file \"" + resource + "\"",
-                            fnfe,
-                            RuntimeException.class
-                        );
-                    }
-                });
-                resourceProperties.put("crc",              () -> {
-                    final CRC32 cs = new java.util.zip.CRC32();
-                    try (InputStream is = new FileInputStream(file)) {
-                        ChecksumAction.updateAll(cs, is);
-                    } catch (IOException ioe) {
-                        throw ExceptionUtil.wrap(
-                            "Computing CRC of file \"" + resource + "\"",
-                            ioe,
-                            RuntimeException.class
-                        );
-                    }
-                    return (int) cs.getValue();
-                });
-                resourceProperties.put("file",             Find.cp(file));
-                resourceProperties.put("lastModified",     () -> file.lastModified());
-                resourceProperties.put("lastModifiedDate", () -> new Date(file.lastModified()));
-            } else {
-                resourceProperties.put("type",             Find.cp(resource.getProtocol() + "-resource"));
-                String up = resource.getPath();
-                resourceProperties.put("name",             Find.cp(up.substring(up.lastIndexOf('/') + 1)));
-                resourceProperties.put("size",             () -> {
-                    try {
-                        return resource.openConnection().getContentLengthLong();
-                    } catch (IOException ioe) {
-                        throw ExceptionUtil.wrap(
-                            "Querying size of resource \"" + resource + "\"",
-                            ioe,
-                            RuntimeException.class
-                        );
-                    }
-                });
-                resourceProperties.put("readable",         Find.cp(true));
-                resourceProperties.put("writable",         Find.cp(false));
-                resourceProperties.put("executable",       Find.cp(false));
-                resourceProperties.put("crc",              () -> {
-                    final CRC32 cs = new java.util.zip.CRC32();
-                    try (InputStream is = resource.openConnection().getInputStream()) {
-                        ChecksumAction.updateAll(cs, is);
-                    } catch (IOException ioe) {
-                        throw ExceptionUtil.wrap(
-                            "Computing CRC of resource \"" + resource + "\"",
-                            ioe,
-                            RuntimeException.class
-                        );
-                    }
-                    return (int) cs.getValue();
-                });
+            if (file.isDirectory()) {
+
+                // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
+                // handle directories, only normal files!)
+                this.findInDirectory(path, file, currentDepth);
+                return;
             }
+            resourceProperties.put("type",             Find.cp("file"));
+            resourceProperties.put("name",             Find.cp(file.getName()));
+            resourceProperties.put("size",             () -> file.length());
+            resourceProperties.put("readable",         () -> file.canRead());
+            resourceProperties.put("writable",         () -> file.canWrite());
+            resourceProperties.put("executable",       () -> file.canExecute());
+            resourceProperties.put("inputStream",      () -> {
+                try {
+                    return new FileInputStream(file);
+                } catch (FileNotFoundException fnfe) {
+                    throw ExceptionUtil.wrap(
+                        "Reading file \"" + resource + "\"",
+                        fnfe,
+                        RuntimeException.class
+                    );
+                }
+            });
+            resourceProperties.put("crc",              () -> {
+                final CRC32 cs = new java.util.zip.CRC32();
+                try (InputStream is = new FileInputStream(file)) {
+                    ChecksumAction.updateAll(cs, is);
+                } catch (IOException ioe) {
+                    throw ExceptionUtil.wrap(
+                        "Computing CRC of file \"" + resource + "\"",
+                        ioe,
+                        RuntimeException.class
+                    );
+                }
+                return (int) cs.getValue();
+            });
+            resourceProperties.put("file",             Find.cp(file));
+            resourceProperties.put("lastModified",     () -> file.lastModified());
+            resourceProperties.put("lastModifiedDate", () -> new Date(file.lastModified()));
+        } else {
+
+            // The URL designates a non-file resource.
+            resourceProperties.put("type",             Find.cp(resource.getProtocol() + "-resource"));
+            String up = resource.getPath();
+            resourceProperties.put("name",             Find.cp(up.substring(up.lastIndexOf('/') + 1)));
+            resourceProperties.put("size",             () -> {
+                try {
+                    return resource.openConnection().getContentLengthLong();
+                } catch (IOException ioe) {
+                    throw ExceptionUtil.wrap(
+                        "Querying size of resource \"" + resource + "\"",
+                        ioe,
+                        RuntimeException.class
+                    );
+                }
+            });
+            resourceProperties.put("readable",         Find.cp(true));
+            resourceProperties.put("writable",         Find.cp(false));
+            resourceProperties.put("executable",       Find.cp(false));
+            resourceProperties.put("crc",              () -> {
+                final CRC32 cs = new java.util.zip.CRC32();
+                try (InputStream is = resource.openConnection().getInputStream()) {
+                    ChecksumAction.updateAll(cs, is);
+                } catch (IOException ioe) {
+                    throw ExceptionUtil.wrap(
+                        "Computing CRC of resource \"" + resource + "\"",
+                        ioe,
+                        RuntimeException.class
+                    );
+                }
+                return (int) cs.getValue();
+            });
         }
 
-        ArchiveHandler<Void>        archiveHandler;
-        CompressorHandler<Void>     compressorHandler;
-        NormalContentsHandler<Void> normalContentsHandler;
-        {
-//            Mapping<String, Object> resourceProperties = Find.resourceProperties(path, resource);
+        resourceProperties.put("url",  Find.cp(resource));
+        resourceProperties.put("path", Find.cp(path));
 
-            resourceProperties.put("url",  Find.cp(resource));
-            resourceProperties.put("path", Find.cp(path));
+        ArchiveHandler<Void>        archiveHandler        = this.archiveHandler(path, resourceProperties, currentDepth);
+        CompressorHandler<Void>     compressorHandler     = this.compressorHandler(path, resourceProperties, currentDepth);
+        NormalContentsHandler<Void> normalContentsHandler = this.normalContentsHandler(path, resourceProperties, currentDepth);
 
-            archiveHandler        = this.archiveHandler(path, resourceProperties, currentDepth);
-            compressorHandler     = this.compressorHandler(path, resourceProperties, currentDepth);
-            normalContentsHandler = this.normalContentsHandler(path, resourceProperties, currentDepth);
-        }
-
-        final File file = ResourceProcessings.isFile(resource);
         if (file != null) {
             CompressUtil.processFile(
                 path,

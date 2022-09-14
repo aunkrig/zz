@@ -550,11 +550,7 @@ class Main {
         try {
             for (String file : files) {
                 try {
-                    if ("-".equals(file)) {
-                        this.find.findInStream(System.in);
-                    } else {
-                        this.find.findInResource(file, ResourceProcessings.toUrl(file));
-                    }
+                    this.find.findInResource(file, ResourceProcessings.toUrl(file));
                 } catch (IOException ioe) {
                     exceptionHandler.consume(ioe);
                 }
