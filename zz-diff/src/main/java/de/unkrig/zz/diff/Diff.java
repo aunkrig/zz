@@ -199,6 +199,9 @@ class Diff extends DocumentDiff {
     /**
      * Creates two trees of directories, normal files, compressed files, archive files and archive entries, compares
      * them and reports all differences.
+     * <p>
+     *   The special URL "file:-" designates {@code System.in}.
+     * </p>
      */
     public long
     execute(URL resource1, URL resource2) throws IOException, InterruptedException {
@@ -652,13 +655,13 @@ class Diff extends DocumentDiff {
 
         case EXIST:
         case BRIEF:
-            Printers.info(path2.length() == 0 ? "File changed" : "! " + path2.substring(1));
+            Printers.info(!path1.isEmpty() && !path2.isEmpty() ? "File changed" : "! " + path2.substring(1));
             break;
 
         case NORMAL:
         case CONTEXT:
         case UNIFIED:
-            if (path1.length() > 0) Printers.info("File changed " + path2.substring(1));
+            if (!path1.isEmpty() && !path2.isEmpty()) Printers.info("File changed " + path2.substring(1));
             break;
         }
     }
