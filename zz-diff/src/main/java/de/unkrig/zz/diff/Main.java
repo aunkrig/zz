@@ -76,6 +76,7 @@ class Main {
      *   <dd>
      *     Show contents differences between <var>file-or-url1</var> and <var>file-or-url2</var> in DIFF format.
      *     The "path" (relevant, e.g., for the "--path" command line option, see below) is "" (the empty string).
+     *     One of the two inputs may be "-" (standard input).
      *   </dd>
      *   <dt>{@code zzdiff} [ <var>option</var> ] ... <var>dir1</var> <var>dir2</var></dt>
      *   <dd>

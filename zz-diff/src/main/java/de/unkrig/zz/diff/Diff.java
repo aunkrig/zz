@@ -200,7 +200,7 @@ class Diff extends DocumentDiff {
      * Creates two trees of directories, normal files, compressed files, archive files and archive entries, compares
      * them and reports all differences.
      * <p>
-     *   The special URL "file:-" designates {@code System.in}.
+     *   The special URL {@link ResourceProcessings#STDIN_URL} designates {@code System.in}.
      * </p>
      */
     public long
