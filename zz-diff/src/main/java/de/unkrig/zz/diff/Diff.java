@@ -206,6 +206,13 @@ class Diff extends DocumentDiff {
     public long
     execute(URL resource1, URL resource2) throws IOException, InterruptedException {
 
+        if (
+            resource1.equals(ResourceProcessings.STDIN_URL)
+            && resource2.equals(ResourceProcessings.STDIN_URL)
+        ) {
+            throw new IOException("At most one of the two inputs can be \"-\" (standard input)");
+        }
+
         SquadExecutor<NodeWithPath> squadExecutor = new SquadExecutor<NodeWithPath>(
             this.sequential || Diff.PARALLEL_EXECUTOR_SERVICE.getQueue().size() > 0 ? ConcurrentUtil.SEQUENTIAL_EXECUTOR_SERVICE : Diff.PARALLEL_EXECUTOR_SERVICE
         );
