@@ -71,8 +71,9 @@ class PatchContentsTransformer extends PatchTextTransformer implements ContentsT
     ) throws IOException, UnexpectedElementException {
 
         super(
-            DiffParser.parse(patchFile, patchFileCharset).get(0).hunks,
-            condition
+            DiffParser.parse(patchFile, patchFileCharset),
+            condition,
+            99 // unused
         );
 
         this.inputCharset  = inputCharset;

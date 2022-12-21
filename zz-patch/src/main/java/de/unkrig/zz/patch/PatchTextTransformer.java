@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -59,13 +60,7 @@ class PatchTextTransformer implements TextTransformer {
     private final Condition            condition;
     private final List<Consumer<Hunk>> hunkListeners = new ArrayList<Consumer<Hunk>>();
 
-
     /**
-     * Parses a DIFF document from {@code patches}. If it describes more than on {@link Differential}, then all but
-     * the first differential is ignored.
-     * <p>
-     * The file name information in the differential is ignored.
-     *
      * @param condition                      Is evaluated for each hunk, and determines whether or not the hunk is
      *                                       applied
      * @see DiffParser#parse(java.io.Reader)
@@ -75,6 +70,21 @@ class PatchTextTransformer implements TextTransformer {
     PatchTextTransformer(List<Hunk> hunks, Condition condition) {
         this.hunks     = hunks;
         this.condition = condition;
+    }
+
+    /**
+     * Use the first of the <var>differentials</var>.
+     * <p>
+     * The file name information in the differential is ignored.
+     *
+     * @param condition                      Is evaluated for each hunk, and determines whether or not the hunk is
+     *                                       applied
+     * @see DiffParser#parse(java.io.Reader)
+     * @throws UnexpectedElementException    The {@code patchFile} does not contain a valid DIFF document
+     */
+    public
+    PatchTextTransformer(List<Differential> differentials, Condition condition, int unused) {
+        this(differentials.isEmpty() ? Collections.emptyList() : differentials.get(0).hunks, condition);
     }
 
     /**
