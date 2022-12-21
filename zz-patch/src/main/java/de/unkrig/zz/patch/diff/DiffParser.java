@@ -329,7 +329,7 @@ class DiffParser {
                 }
             } else
             {
-                throw new DiffException("Unknown DIFF format '" + ss.peek() + "'");
+                throw new DiffException("Unknown DIFF format '" + ss.peek().trim() + "'");
             }
 
             differentials.add(new Differential(fileName1, fileName2, hunks));
