@@ -193,9 +193,7 @@
 						<!-- Generate the API docs. -->
 						<execution>
 							<id>attach-javadocs</id>
-							<goals>
-								<goal>jar</goal>
-							</goals>
+							<goals><goal>jar</goal></goals>
 
 							<configuration>
 								<header>${project.name} ${project.version}</header>
@@ -220,7 +218,7 @@
 							</configuration>
 						</execution>
 
-						<!-- Generate the command-line help doc. -->
+						<!-- Generate the command-line help doc ("MAINDOC"). -->
 						<execution>
 
 							<id>make-maindoc</id>
@@ -271,9 +269,11 @@
 					</dependencies>
 
 					<executions><execution>
+
 						<id>html2txt-maindoc</id>
 						<phase>compile</phase>
 						<goals><goal>java</goal></goals>
+
 						<configuration>
 							<includePluginDependencies>true</includePluginDependencies>
 							<mainClass>de.unkrig.html2txt.Main</mainClass>
