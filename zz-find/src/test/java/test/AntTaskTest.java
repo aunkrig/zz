@@ -79,11 +79,6 @@ class AntTaskTest extends BuildFileTest {
     @Test public void
     test1() {
 
-
-        // junit.framework.ComparisonFailure: expected:<
-        // [                         files\dir1\dir2\file.zip!/dir1/dir2/file1]files\dir1\dir2\file...> but was:<
-        // [C:\workspaces\zz\zz-find\files\dir1\dir2\file.zip!/dir1/dir2/file1C:\workspaces\zz\zz-find\]files\dir1\dir2\file...>
-
         this.expectLog("find1", (
             new File(AntTaskTest.FILES, "dir1/dir2/file.zip").getPath() + "!/dir1/dir2/file1"
             + new File(AntTaskTest.FILES, "dir1/dir2/file1").getPath()
