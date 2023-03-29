@@ -3,7 +3,6 @@
 	<name>zz-pack</name>
 	<comment></comment>
 	<projects>
-		<project>de.unkrig.checkstyle-configuration</project>
 		<project>org.apache.ant-1.8.4</project>
 	</projects>
 	<buildSpec>
