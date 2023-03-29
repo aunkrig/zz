@@ -49,9 +49,6 @@
 		<zzpatch>
 			<fileset dir="files" />
 			<substitute path="***" replacement="">
-<!--
-				<regex><![CDATA[(?s)\s*(?:(?><!- -.*?- ->)\s*)*<filter>\s*(?:(?><!- -.*?- ->)\s*)*<filter-name>CorsFilter</filter-name>.*?</filter>\n]]></regex>
--->
 				<regex><![CDATA[(?s)\s*(?:(?><!--.*?-->)\s*)*<filter>\s*(?:(?><!--.*?-->)\s*)*<filter-name>CorsFilter</filter-name>.*?</filter>\n]]></regex>
 			</substitute>
 		</zzpatch>
