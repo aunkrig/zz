@@ -1020,7 +1020,10 @@ class AntTask extends AbstractElementWithOperands {
 
         if (!exceptions.isEmpty()) {
             Throwable firstException = exceptions.get(0);
-            throw new BuildException(exceptions.size() + " resources had i/o exceptions; first exception is: " + firstException, firstException);
+            throw new BuildException(
+                exceptions.size() + " resources had i/o exceptions; first exception is: " + firstException,
+                firstException
+            );
         }
     }
 

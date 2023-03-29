@@ -111,9 +111,9 @@ class AntTask extends Task {
      *   <dt>{@code CHECK}</dt>
      *   <dd>
      *     Execute the operation, but do not create or modify any files, and fail iff the operation does not produce
-     *     an identical result. Since <zzpatch> is typically much cheaper in this mode than in mode TRANSFORM, it may
-     *     be efficient to execute <zzpatch> in this mode first to check whether the transformation would modify and
-     *     files, before executing it in TRANSFORM mode, particularly if you expect few or no modifications.
+     *     an identical result. Since {@code zzpatch} is typically much cheaper in this mode than in mode TRANSFORM, it
+     *     may be efficient to execute {@code zzpatch} in this mode first to check whether the transformation would
+     *     modify and files, before executing it in TRANSFORM mode, particularly if you expect few or no modifications.
      *   <dd>
      *   <dt>{@code CHECK_AND_TRANSFORM}</dt>
      *   <dd>
@@ -590,6 +590,9 @@ class AntTask extends Task {
     public static
     class Element_path extends ProjectComponent { // SUPPRESS CHECKSTYLE TypeName
 
+        /**
+         * The compilation flags that are effective for {@link #setPath(String)}.
+         */
         protected int flags = Pattern2.WILDCARD | Glob.INCLUDES_EXCLUDES;
 
         /**

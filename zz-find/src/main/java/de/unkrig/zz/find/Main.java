@@ -195,7 +195,8 @@ class Main {
      *     <blockquote>
      *       {@code -printf}                         <br />
      *       {@code '%c%c%c%c %10d %6$tF %6$tT %7$s'}<br />
-     *       {@code "type == 'directory' ? 'd' : type =* 'archive-*' ? 'a' : type == 'directory-entry' ? 'D' : '-'"}<br />
+     *       {@code "type == 'directory' ? 'd' : type =* 'archive-*' ? 'a' : type == 'directory-entry' ? 'D' : '-'"}
+     *       <br />
      *       {@code "readable   ? 'r' : '-'"}        <br />
      *       {@code "writable   ? 'w' : '-'"}        <br />
      *       {@code "executable ? 'x' : '-'"}        <br />
@@ -425,7 +426,8 @@ class Main {
      *     <dl>
      *       <dt>{@code directory}</dt>                                <dd>A directory</dd>
      *       <dt>{@code normal-file}</dt>                              <dd>A plain file</dd>
-     *       <dt>{@code normal-contents}</dt>                          <dd>Plain content in an archive or a compressed file</dd>
+     *       <dt>{@code normal-contents}</dt>                          <dd>Plain content in an archive or a compressed
+     *                                                                 file</dd>
      *       <dt>{@code normal-xxx-resource} (e.g. xxx="http")</dt>    <dd>Plain content addressed by a URL</dd>
      *       <dt>{@code archive-file}</dt>                             <dd>An archive file</dd>
      *       <dt>{@code archive-contents}</dt>                         <dd>A nested archive</dd>

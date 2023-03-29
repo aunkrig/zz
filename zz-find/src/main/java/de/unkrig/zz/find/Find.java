@@ -802,7 +802,10 @@ class Find {
                 // ignored, because that is practical: Otherwise, you'd always have to put "-type normal*" right
                 // before the "-cat" action.
                 try {
-                    this.out.write(("[Entry of type " + properties.get("type") + " has no content to cat]").getBytes(StandardCharsets.ISO_8859_1));
+                    this.out.write(
+                        ("[Entry of type " + properties.get("type") + " has no content to cat]")
+                        .getBytes(StandardCharsets.ISO_8859_1)
+                    );
                 } catch (IOException ioe) {
                     ;
                 }
@@ -1309,8 +1312,7 @@ class Find {
 
                 @Override public void
                 run() {
-
-                    // Evaluate the FIND expression for the directory.
+                    // Evaluate the FIND expression for the directory. // SUPPRESS CHECKSTYLE Wrap|LineLength:13
                     Find.this.evaluateExpression(MapUtil.map(
                         "type",                   Find.cp("directory"),
                         "name",                   Find.cp(directory.getName()),
@@ -1432,8 +1434,8 @@ class Find {
 
             if (file.isDirectory()) {
 
-                // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()" can NOT
-                // handle directories, only normal files!)
+                // Handle the special case when the resource designates a *directory*. ("CompressUtil.processFile()"
+                // can NOT handle directories, only normal files!)
                 this.findInDirectory(path, file, currentDepth);
                 return;
             }
@@ -1508,9 +1510,12 @@ class Find {
         resourceProperties.put("url",  Find.cp(resource));
         resourceProperties.put("path", Find.cp(path));
 
-        ArchiveHandler<Void>        archiveHandler        = this.archiveHandler(path, resourceProperties, currentDepth);
-        CompressorHandler<Void>     compressorHandler     = this.compressorHandler(path, resourceProperties, currentDepth);
-        NormalContentsHandler<Void> normalContentsHandler = this.normalContentsHandler(path, resourceProperties, currentDepth);
+        ArchiveHandler<Void>
+        archiveHandler        = this.archiveHandler(path, resourceProperties, currentDepth);
+        CompressorHandler<Void>
+        compressorHandler     = this.compressorHandler(path, resourceProperties, currentDepth);
+        NormalContentsHandler<Void>
+        normalContentsHandler = this.normalContentsHandler(path, resourceProperties, currentDepth);
 
         if (file != null) {
             CompressUtil.processFile(
@@ -1609,12 +1614,12 @@ class Find {
                         run() {
 
                             Find.this.evaluateExpression(MapUtil.combine(
-                                MapUtil.map(
+                                MapUtil.map( // SUPPRESS CHECKSTYLE Wrap:6
                                     "type",              Find.cp("compressed-" + properties.get("type").produce()),
                                     "compressionFormat", Find.cp(compressionFormat),
                                     "depth",             Find.cp(currentDepth),
-                                    // We define "no input stream", because otherwise we couldn't process the CONTENTS of the
-                                    // compressed resource.
+                                    // We define "no input stream", because otherwise we couldn't process the CONTENTS
+                                    // of the compressed resource:
                                     "inputStream",       Find.cp(null)
                                 ),
                                 properties
@@ -1647,7 +1652,7 @@ class Find {
                                     compressorInputStream,
                                     lastModifiedDate,
                                     MapUtil.combine(MapUtil.map(
-                                        "compressionFormat", Find.cp(compressionFormat),
+                                        "compressionFormat", Find.cp(compressionFormat), // SUPPRESS CHECKSTYLE Wrap:2
                                         "name",              Find.cp(name + "%"),
                                         "size",              Find.cp(-1L)
                                     ), properties),
@@ -1686,7 +1691,7 @@ class Find {
                         run() {
 
                             // Evaluate the FIND expression for the archive resource.
-                            Find.this.evaluateExpression(MapUtil.combine(MapUtil.map(
+                            Find.this.evaluateExpression(MapUtil.combine(MapUtil.map( // SUPPRESS CHECKSTYLE Wrap:7
                                 "type",                   Find.cp("archive-" + properties.get("type").produce()),
                                 "path",                   Find.cp(path),
                                 "archiveFormat",          Find.cp(archiveFormat),
@@ -1724,8 +1729,6 @@ class Find {
                             final ArchiveFormat      archiveFormat,
                             ArchiveEntry             ae
                         ) throws IOException {
-                            String entryName = ArchiveFormatFactory.normalizeEntryName(ae.getName());
-                            String entryPath = path + '!' + entryName;
 
                             Producer<Object> crcGetter = Find.methodPropertyGetter(ae, "getCrc");
                             if (crcGetter == null) crcGetter = Find.cp(-1);
@@ -1743,7 +1746,8 @@ class Find {
                                 lastModified     = 0;
                             }
 
-                            Map<String, Producer<? extends Object>> properties2 = new HashMap<String, Producer<? extends Object>>();
+                            Map<String, Producer<? extends Object>>
+                            properties2 = new HashMap<String, Producer<? extends Object>>();
                             properties2.put("archiveEntry",      Find.cp(ae));
                             properties2.put("lastModifiedDate",  Find.cp(lastModifiedDate));
                             properties2.put("lastModified",      Find.cp(lastModified));
@@ -1755,6 +1759,8 @@ class Find {
                             properties2.put("crc",               crcGetter);
                             properties2.put("compressionMethod", Find.cp(archiveFormat.getCompressionMethod(ae)));
 
+                            String entryName = ArchiveFormatFactory.normalizeEntryName(ae.getName());
+                            String entryPath = path + '!' + entryName;
 //                                Find.putAllPropertiesOf(ae, Find.PROPERTIES_OF_ARCHIVE_ENTRY, properties2);
                             if (ae.isDirectory()) {
 
@@ -1804,7 +1810,11 @@ class Find {
     }
 
     private NormalContentsHandler<Void>
-    normalContentsHandler(final String path, final Map<String, Producer<? extends Object>> properties, final int currentDepth) {
+    normalContentsHandler(
+        final String                                  path,
+        final Map<String, Producer<? extends Object>> properties,
+        final int                                     currentDepth
+    ) {
 
         return new NormalContentsHandler<Void>() {
 
@@ -1846,7 +1856,7 @@ class Find {
                 };
 
                 // Evaluate the FIND expression for the nested normal contents.
-                Find.this.evaluateExpression(MapUtil.combine(MapUtil.map(
+                Find.this.evaluateExpression(MapUtil.combine(MapUtil.map( // SUPPRESS CHECKSTYLE Wrap:7
                     "path",             Find.cp(path),
                     "type",             Find.cp("normal-" + properties.get("type").produce()),
                     "lastModifiedDate", Find.cp(lastModifiedDate),

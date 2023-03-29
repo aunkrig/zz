@@ -302,7 +302,7 @@ class Parser {
                 boolean hideVars        = false;
                 boolean symbolicLabels  = false;
                 File    toFile          = null;
-                for (;;) {
+                for (;;) { // SUPPRESS CHECKSTYLE LineLength:6
                     if (this.parser.peekRead("-verbose"))         { verbose         = true;                              } else
                     if (this.parser.peekRead("-sourceDirectory")) { sourceDirectory = new File(this.parser.read().text); } else
                     if (this.parser.peekRead("-hideLines"))       { hideLines       = true;                              } else
@@ -348,11 +348,11 @@ class Parser {
 
         if (text.startsWith("+")) {
             relation = Relations.greaterThan();
-            text = text.substring(1);
+            text     = text.substring(1);
         } else
         if (text.startsWith("-")) {
             relation = Relations.lessThan();
-            text = text.substring(1);
+            text     = text.substring(1);
         } else
         {
             relation = Relations.equalTo();

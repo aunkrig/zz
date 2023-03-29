@@ -214,7 +214,9 @@ class Diff extends DocumentDiff {
         }
 
         SquadExecutor<NodeWithPath> squadExecutor = new SquadExecutor<NodeWithPath>(
-            this.sequential || Diff.PARALLEL_EXECUTOR_SERVICE.getQueue().size() > 0 ? ConcurrentUtil.SEQUENTIAL_EXECUTOR_SERVICE : Diff.PARALLEL_EXECUTOR_SERVICE
+            this.sequential || Diff.PARALLEL_EXECUTOR_SERVICE.getQueue().size() > 0
+            ? ConcurrentUtil.SEQUENTIAL_EXECUTOR_SERVICE
+            : Diff.PARALLEL_EXECUTOR_SERVICE
         );
 
         ResourceProcessor<NodeWithPath> rp = this.resourceProcessor(squadExecutor);

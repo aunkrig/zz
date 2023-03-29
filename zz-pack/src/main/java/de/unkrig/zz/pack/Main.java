@@ -243,29 +243,27 @@ class Main {
     /**
      * Compression level of zip archive entries.
      */
-    @SuppressWarnings("static-method")
-    @CommandLineOption public void
-    setZipOutputEntryCompressionLevel(CompressionLevel value) { ZipArchiveFormat.setOutputEntryCompressionLevel(value); }
+    @SuppressWarnings("static-method") @CommandLineOption public void
+    setZipOutputEntryCompressionLevel(CompressionLevel value) {
+        ZipArchiveFormat.setOutputEntryCompressionLevel(value);
+    }
 
     /**
      * Password to decrypt password-protected 7ZIP input files. (Encryption of 7ZIP output files is not supported.)
      */
-    @SuppressWarnings("static-method")
-    @CommandLineOption public void
+    @SuppressWarnings("static-method") @CommandLineOption public void
     set7zInputFilePassword(String value) { SevenZArchiveFormat.setPassword(value.getBytes(Charsets.UTF_16LE)); }
 
     /**
      * Password to decrypt password-protected zip archive entries.
      */
-    @SuppressWarnings("static-method")
-    @CommandLineOption public void
+    @SuppressWarnings("static-method") @CommandLineOption public void
     setZipInputFilePassword(String value) { ZipArchiveFormat.setInputFilePasswordChars(value.toCharArray()); }
 
     /**
      * Password to encrypt password-protected zip archive entries (sets encryption method to ZIP_STANDARD).
      */
-    @SuppressWarnings("static-method")
-    @CommandLineOption public void
+    @SuppressWarnings("static-method") @CommandLineOption public void
     setZipOutputFilePassword(String value) {
         ZipArchiveFormat.setOutputEntryEncrypt(true);
         ZipArchiveFormat.setOutputEntryEncryptionMethod(EncryptionMethod.ZIP_STANDARD);

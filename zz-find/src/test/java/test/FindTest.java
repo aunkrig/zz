@@ -154,7 +154,7 @@ class FindTest extends TestCase {
         FindTest.assertFindOutputMatches(
             new Find(),                               // find
             new String[] { "-type", "archive-file" }, // expression
-            "@FILES/dir1/dir2/file\\.zip"              // expectedRegexes...
+            "@FILES/dir1/dir2/file\\.zip"             // expectedRegexes...
         );
     }
 
@@ -239,7 +239,7 @@ class FindTest extends TestCase {
         });
 
         FindTest.assertFindOutputMatches(
-            find,
+            find, // SUPPRESS CHECKSTYLE LineLength:18
             "\\{\\$PRUNE=\\[Z@\\w+, depth=0, executable=true, file=@ABS_FILES, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=files, path=@FILES, readable=true, type=directory, writable=true}",
             "\\{\\$PRUNE=\\[Z@\\w+, depth=1, executable=true, file=@ABS_FILES/dir1, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir1, path=@FILES/dir1, readable=true, type=directory, writable=true}",
             "\\{\\$PRUNE=\\[Z@\\w+, depth=2, executable=true, file=@ABS_FILES/dir1/dir2, inputStream=null, lastModified=@ANY_INT, lastModifiedDate=@ANY_DATE, name=dir2, path=@FILES/dir1/dir2, readable=true, type=directory, writable=true}",
@@ -416,8 +416,8 @@ class FindTest extends TestCase {
 
         // SUPPRESS CHECKSTYLE LineLength|Wrap:6
         FindTest.assertFindOutputMatches(
-            new Find(),                                                          // find
-            new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" }, // expression
+            new Find(),                                                                                        // find
+            new String[] { "-name", "***file3.Z%", "-print", "-digest", "MD5" },                               // expression
             "@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",            "250cf8b51c773f3f8dc8b4be867a9a02", // The MD5 of "456"
             "@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%", "68053af2923e00204c3ca7c6a3150cf7", // The MD5 of "789"
             "@FILES/dir1/dir2/file3\\.Z%",                                 "202cb962ac59075b964b07152d234b70"  // The MD5 of "123"
@@ -429,8 +429,8 @@ class FindTest extends TestCase {
 
         // SUPPRESS CHECKSTYLE Wrap:6
         FindTest.assertFindOutputMatches(
-            new Find(),                                                              // find
-            new String[] { "-name", "***file3.Z%", "-print", "-checksum", "CRC32" }, // expression
+            new Find(),                                                                // find
+            new String[] { "-name", "***file3.Z%", "-print", "-checksum", "CRC32" },   // expression
             "@FILES/dir1/dir2/file\\.zip!dir3/dir4/file3\\.Z%",            "b1a8c371", // CRC32 of "456"
             "@FILES/dir1/dir2/file\\.zip!file\\.zip!dir3/dir4/file3\\.Z%", "96ff1ef4", // CRC32 of "789"
             "@FILES/dir1/dir2/file3\\.Z%",                                 "884863d2"  // CRC32 of "123"
@@ -487,7 +487,10 @@ class FindTest extends TestCase {
     private static void
     assertFindOutputMatches(Find find, String[] expression, String... expectedRegexes) throws Exception {
 
-        AssertRegex.assertMatches(Arrays.asList(FindTest.cookRegexes(expectedRegexes)), FindTest.find(find, expression));
+        AssertRegex.assertMatches(
+            Arrays.asList(FindTest.cookRegexes(expectedRegexes)),
+            FindTest.find(find, expression)
+        );
     }
 
     private static void

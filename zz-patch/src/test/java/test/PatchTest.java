@@ -698,7 +698,12 @@ class PatchTest {
     }
 
     private static void
-    assertPatch(String unpatchedContents, String patchedContents, String patch, int expectedHunkCount) throws Exception {
+    assertPatch(
+        String unpatchedContents,
+        String patchedContents,
+        String patch,
+        int    expectedHunkCount
+    ) throws Exception {
         if (PatchTest.UNPATCHED.exists()) FileUtil.deleteRecursively(PatchTest.UNPATCHED);
         new Files(new Object[] {
             "dir1", new Object[] {

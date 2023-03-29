@@ -278,8 +278,8 @@ class Grep {
         this.searches.add(
             new Search(path, Pattern.compile(
                 regex,
-                Pattern.MULTILINE | (caseSensitive ? 0 : Pattern.CASE_INSENSITIVE))
-            )
+                Pattern.MULTILINE | (caseSensitive ? 0 : Pattern.CASE_INSENSITIVE)
+            ))
         );
     }
 
@@ -415,7 +415,7 @@ class Grep {
                 Producer<Long> bytesRead;
                 if (Grep.this.withByteOffset) {
                     Produmer<Long, Number> p = ConsumerUtil.cumulate();
-                    is = InputStreams.wye(is, OutputStreams.lengthWritten(p));
+                    is        = InputStreams.wye(is, OutputStreams.lengthWritten(p));
                     bytesRead = p;
                 } else {
                     bytesRead = ProducerUtil.constantProducer(-1L);
@@ -425,7 +425,7 @@ class Grep {
                 String label = Grep.this.label != null ? Grep.this.label : Grep.this.withPath ? path : null;
 
                 int[]    matchCountInDocument = new int[1];
-                Runnable incrementMatchCount = new Runnable() {
+                Runnable incrementMatchCount  = new Runnable() {
 
                     @Override public void
                     run() {
@@ -621,14 +621,18 @@ class Grep {
 
                     // Are there any context lines to print after a preceeding match?
                     if (this.afterContextLinesToPrint > 0) {
-                        Printers.info(Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, '-'));
+                        Printers.info(
+                            Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, '-')
+                        );
                         this.afterContextLinesToPrint--;
                     } else
                     if (beforeContext > 0) {
 
                         // Keep a copy of the line in case a future match would like to print "before context".
                         if (this.beforeContextLines.size() >= beforeContext) this.beforeContextLines.remove();
-                        this.beforeContextLines.add(Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, '-'));
+                        this.beforeContextLines.add(
+                            Grep.composeMatch(label, withLineNumber ? lineNumber : -1, byteOffset, line, '-')
+                        );
                     }
                 }
             }
@@ -719,7 +723,9 @@ class Grep {
 
         ConsumerWhichThrows<MatchResult2, ? extends IOException>
         match = new ConsumerWhichThrows<MatchResult2, IOException>() {
-            @Override public void consume(MatchResult2 mr2) {
+
+            @Override public void
+            consume(MatchResult2 mr2) {
                 if (printMatches) {
                     Printers.info(Grep.composeMatch(
                         label,               // label
@@ -748,7 +754,9 @@ class Grep {
 
         ConsumerWhichThrows<MatchResult2, ? extends IOException>
         match = new ConsumerWhichThrows<MatchResult2, IOException>() {
-            @Override public void consume(MatchResult2 mr2) {
+
+            @Override public void
+            consume(MatchResult2 mr2) {
                 countMatch.run();
                 throw Grep.STOP_DOCUMENT;
             }

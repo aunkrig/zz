@@ -106,8 +106,8 @@ class SubstitutionContentsTransformer implements ContentsTransformer {
                 return replacementListener.call(delegate.call(matchResult));
             }
 
-            @Override
-            public String toString() { return delegate.toString(); }
+            @Override public String
+            toString() { return delegate.toString(); }
         };
     }
 
