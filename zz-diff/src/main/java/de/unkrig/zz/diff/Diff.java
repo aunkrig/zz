@@ -664,13 +664,13 @@ class Diff extends DocumentDiff {
 
         case EXIST:
         case BRIEF:
-            Printers.info(!path1.isEmpty() && !path2.isEmpty() ? "File changed" : "! " + path2.substring(1));
+            Printers.info(path2.isEmpty() ? "File changed" : "! " + path2.substring(1));
             break;
 
         case NORMAL:
         case CONTEXT:
         case UNIFIED:
-            if (!path1.isEmpty() && !path2.isEmpty()) Printers.info("File changed " + path2.substring(1));
+            if (!path2.isEmpty()) Printers.info("File changed " + path2.substring(1));
             break;
         }
     }
