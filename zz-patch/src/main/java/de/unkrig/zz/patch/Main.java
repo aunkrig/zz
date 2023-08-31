@@ -29,6 +29,7 @@ package de.unkrig.zz.patch;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -833,7 +834,7 @@ class Main {
 
         System.setProperty("archive.formats",     ArchiveFormatFactory.allFormats().toString());
         System.setProperty("compression.formats", CompressionFormatFactory.allFormats().toString());
-        CommandLineOptions.printResource(Main.class, "main(String[]).txt", Charset.forName("UTF-8"), System.out);
+        CommandLineOptions.printResource(Main.class, "main(String[]).txt", StandardCharsets.UTF_8, System.out);
 
         System.exit(0);
     }
