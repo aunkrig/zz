@@ -58,7 +58,7 @@
 					<artifactId>maven-assembly-plugin</artifactId>
 					<version>2.6</version>
 					<configuration>
-						<descriptor>../zz-parent/mydesc.xml</descriptor>
+						<descriptors><descriptor>../zz-parent/mydesc.xml</descriptor></descriptors>
 						<archive>
 							<manifest>
 								<mainClass>${jar-with-dependencies.mainClass}</mainClass>
@@ -187,7 +187,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>2.10.4</version>
+					<version>3.4.0</version>
 					<executions>
 
 						<!-- Generate the API docs. -->
@@ -199,7 +199,7 @@
 								<header>${project.name} ${project.version}</header>
 								<footer>${project.name} ${project.version}</footer>
 								<javadocVersion>1.8</javadocVersion>
-								<additionalparam>-Xdoclint:none</additionalparam>
+								<additionalOptions><additionalOption>-Xdoclint:none</additionalOption></additionalOptions>
 								<quiet>true</quiet>
 								<tags>
 									<tag><name>ant.defaultValue</name>    <placement>a</placement><head>Default value:</head>              </tag>
@@ -227,7 +227,7 @@
 
 							<configuration>
 								<useStandardDocletOptions>false</useStandardDocletOptions>
-								<additionalparam>-Xdoclint:none</additionalparam>
+<!--								<additionalOptions><additionalOption>-Xdoclint:none</additionalOption></additionalOptions>-->
 
 								<quiet>true</quiet>
 
@@ -238,10 +238,10 @@
 									<version>1.0.4</version>
 								</docletArtifact>
 
-								<additionalparam>
-									-charset     UTF-8
-									-docencoding UTF-8
-								</additionalparam>
+								<additionalOptions>
+									<additionalOption>-charset     UTF-8</additionalOption>
+									<additionalOption>-docencoding UTF-8</additionalOption>
+								</additionalOptions>
 
 								<destDir>../../classes</destDir>
 							</configuration>

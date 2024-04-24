@@ -86,10 +86,10 @@
 								</docletArtifact>
 							</docletArtifacts>
 
-							<additionalparam>
-								-antlib-file ${basedir}/target/classes/de/unkrig/zz/${project.name}.xml
-								-theme       JAVA7
-							</additionalparam>
+							<additionalOptions>
+								<additionalOption>-antlib-file ${basedir}/target/classes/de/unkrig/zz/${project.name}.xml</additionalOption>
+								<additionalOption>-theme       JAVA7</additionalOption>
+							</additionalOptions>
 
 							<!-- Notice: Absolute paths don't work here: -->
 							<destDir>../../antdoc</destDir>
