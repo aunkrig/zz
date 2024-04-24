@@ -177,6 +177,28 @@ class PatchTest {
         );
     }
 
+    @Test public void
+    append() throws Exception {
+    	PatchTest.assertMain(
+			new String[] {
+				"-substitute", "**file1", "(?-m)$", "\n#IS_STRIPPED\n", // "--assert-count", "1",
+				PatchTest.UNPATCHED.getPath(),
+				PatchTest.PATCHED.getPath()
+			},
+            new Files(new Object[] {
+                "dir1", new Object[] {
+                    "dir2", new Object[] {
+                        "file1", "Aline1\nline2\nline3\n#IS_STRIPPED\n\n\n#IS_STRIPPED\n",
+                        "file.zip", new Object[] {
+                            "dir1/dir2/file1", "Bline1\nline2\nline3\n",
+                            "dir3/dir4/file2", "Cline1\nline2\nline3\n",
+                        },
+                    },
+                },
+            })
+		);
+    }
+
     /**
      * Tests complex substitutions across multiple lines.
      */
