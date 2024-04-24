@@ -123,11 +123,11 @@ import de.unkrig.jdisasm.Disassembler;
  *   find...()} methods can catch that output like
  * <p>
  * <pre>
- *     List&lt;String> lines = new ArrayList&lt;>();
+ *     List&lt;String&gt; lines = new ArrayList&lt;&gt;();
  *
  *     AbstractPrinter.getContextPrinter().redirectInfo(
  *         ConsumerUtil.addToCollection(lines)
- *     ).run((RunnableWhichThrows&lt;IOException>) () -> find.findInFile(myFile));
+ *     ).run((RunnableWhichThrows&lt;IOException&gt;) () -&gt; find.findInFile(myFile));
  * </pre>
  */
 public
@@ -535,9 +535,9 @@ class Find {
      * </dl>
      *
      * <dl>
-     *   <dt>&gt;0<dd>>= 24h
-     *   <dt>&gt;1<dd>>= 48h
-     *   <dt>&gt;2<dd>>= 72h
+     *   <dt>&gt;0<dd>&gt;= 24h
+     *   <dt>&gt;1<dd>&gt;= 48h
+     *   <dt>&gt;2<dd>&gt;= 72h
      * </dl>
      *
      * <dl>
